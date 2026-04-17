@@ -1,0 +1,4 @@
+export enum PassErrorCodes {
+  NOT_FOUND = 'PASS_NOT_FOUND',
+  WALLET_NOT_FOUND = 'PASS_WALLET_NOT_FOUND',
+}

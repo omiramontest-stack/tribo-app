@@ -1,48 +1,40 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 
-// layouts
-import MainLayout from '@/app/layouts/MainLayout.vue'
+import AdminLayout from '@/app/layouts/AdminLayout.vue'
 
-// routes
-import authRoutes from './routes/auth.routes'
-import homeRoutes from './routes/home.routes'
+import adminRoutes from './routes/admin.routes'
+import publicRoutes from './routes/public.routes'
 import sharedRoutes from './routes/shared.routes'
 
-// redirects
-import redirectsRoutes from './routes/redirects.routes'
-
-// middlewares
 import { useFlyonUIMiddleware } from './middlewares/useFlyonUIMiddleware'
+import { useAuthGuard } from './middlewares/useAuthGuard'
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    component: MainLayout,
-    children: homeRoutes,
+    redirect: '/admin/dashboard',
   },
   {
-    path: '/auth',
-    component: MainLayout,
-    children: authRoutes,
+    path: '/admin',
+    component: AdminLayout,
+    children: adminRoutes,
   },
+  ...publicRoutes,
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
-    component: MainLayout,
+    component: AdminLayout,
     children: sharedRoutes,
-    meta: {
-      layout: 'MainLayout'
-    }
   },
-  ...redirectsRoutes
 ]
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.VITE_BASE_URL),
-  routes
+  routes,
 })
 
 useFlyonUIMiddleware(router)
+useAuthGuard(router)
 
 export default router

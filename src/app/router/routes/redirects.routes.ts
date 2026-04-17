@@ -1,10 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router'
 
-const routes: RouteRecordRaw[] = [
-  {
-    path: "/commercial/*",
-    redirect: { name: "Home" },
-  },
-]
+const routes: RouteRecordRaw[] = []
 
 export default routes

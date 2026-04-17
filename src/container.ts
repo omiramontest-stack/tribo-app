@@ -4,24 +4,24 @@ import getDecorators from 'inversify-inject-decorators'
 
 const container = new Container()
 
-// domain
-import cardsContainer from '@/infrastructure/card/di/card.container'
-
 // infrastructure
-import graphqlContainer from '@/infrastructure/graphql/di/graphql.container'
 import langContainer from '@/infrastructure/lang/di/lang.container'
-import networkContainer from '@/infrastructure/network/di/network.container'
 import persistenceContainer from '@/infrastructure/persistence/di/persistence.container'
 import themeContainer from '@/infrastructure/theme/di/theme.container'
 
+// domain
+import walletContainer from '@/infrastructure/wallet/di/wallet.container'
+import passContainer from '@/infrastructure/pass/di/pass.container'
+import authContainer from '@/infrastructure/auth/di/auth.container'
+
 container.load(
   ...[
-    cardsContainer,
-    graphqlContainer,
     langContainer,
-    networkContainer,
     persistenceContainer,
     themeContainer,
+    walletContainer,
+    passContainer,
+    authContainer,
   ],
 )
 
