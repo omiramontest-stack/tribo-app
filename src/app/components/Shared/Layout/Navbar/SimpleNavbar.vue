@@ -1,28 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { ref } from 'vue'
 
-import TCGIcon from '@/app/components/Shared/TCGIcons/TCGIcon.vue'
 import TCGLangToggle from '@/app/components/Shared/TCGLangButtons/TCGLangToggle.vue'
 import TCGMenuProjects from '@/app/components/Shared/Layout/Navbar/Menu/Projects.vue'
 import TCGThemeToggle from '@/app/components/Shared/TCGThemeButtons/TCGThemeToggle.vue'
 import TCGTitle from '@/app/components/Shared/TCGTitle/TCGTitle.vue'
-
-import Blue from '@/app/assets/static/icons/blue.png'
-import Charizard from '@/app/assets/static/icons/charizard(geneticapex).png'
-import Eevee from '@/app/assets/static/icons/eevee.png'
-import Electrode from '@/app/assets/static/icons/electrode.png'
-import Erika from '@/app/assets/static/icons/erika.png'
-import Gardevoir from '@/app/assets/static/icons/gardevoir.png'
-import Giovanni from '@/app/assets/static/icons/giovanni.png'
-import Meowth from '@/app/assets/static/icons/meowth.png'
-import Mew from '@/app/assets/static/icons/mew.png'
-import Mewtwo from '@/app/assets/static/icons/mewtwo.png'
-import MewtwoGeneticApex from '@/app/assets/static/icons/mewtwo(geneticapex).png'
-import Pikachu from '@/app/assets/static/icons/pikachu.png'
-import PikachuGeneticApex from '@/app/assets/static/icons/pikachu(geneticapex).png'
-import Slowpoke from '@/app/assets/static/icons/slowpoke.png'
-import Snorlax from '@/app/assets/static/icons/snorlax.png'
-import Venusaur from '@/app/assets/static/icons/venusaur.png'
 
 export interface NavItems {
   title: string
@@ -31,64 +13,24 @@ export interface NavItems {
 
 const nav: NavItems[] = []
 
-const icons = [
-  Blue,
-  Charizard,
-  Eevee,
-  Electrode,
-  Erika,
-  Gardevoir,
-  Giovanni,
-  Meowth,
-  Mew,
-  Mewtwo,
-  MewtwoGeneticApex,
-  Pikachu,
-  PikachuGeneticApex,
-  Slowpoke,
-  Snorlax,
-  Venusaur,
-]
-
-const selectedIcon = ref<string>()
 const mobileMenuOpen = ref(false)
 
 const toggleMobileMenu = () => {
   mobileMenuOpen.value = !mobileMenuOpen.value
 }
-
-onMounted(() => {
-  const savedIcon = sessionStorage.getItem('selectedIcon')
-
-  if (savedIcon) {
-    selectedIcon.value = savedIcon
-  } else {
-    const randomIcon = icons[Math.floor(Math.random() * icons.length)]
-    selectedIcon.value = randomIcon
-    sessionStorage.setItem('selectedIcon', randomIcon)
-  }
-})
-
-const icon = computed(() => selectedIcon.value)
 </script>
 <template>
   <div class="bg-background-ligth dark:bg-background-dark">
     <nav class="container mx-auto px-5 py-3">
       <div class="flex justify-between items-center">
-        <!-- Logo y título siempre visible -->
         <div>
           <router-link to="/" class="flex items-center space-x-3">
             <span class="hover:text-gray-300 text-xl align-center font-semibold">
-              <TCGIcon
-                :src="icon"
-                class="inline-block mr-2 border-2 rounded-full border-neutral-dark dark:border-brand-primary-light"
-                :size="42"
-              />
               <TCGTitle
                 variant="primary"
                 class="!text-default-dark dark:!text-default-light font-medium !text-xl items-center text-center mt-1"
               >
-                TCG Poket
+                Home
               </TCGTitle>
             </span>
           </router-link>
@@ -158,11 +100,11 @@ const icon = computed(() => selectedIcon.value)
               {{ link.title }}
             </router-link>
           </template>
-          <div class="flex space-x-4  py-2">
+          <div class="flex space-x-4 py-2">
             <TCGLangToggle />
           </div>
           <div class="flex space-x-1 py-2">
-            <TCGThemeToggle /> <span class="py-2 font-semibold ">Mode</span>
+            <TCGThemeToggle /> <span class="py-2 font-semibold">Mode</span>
           </div>
         </div>
       </div>

@@ -32,121 +32,129 @@ export default {
         brand: {
           primary: {
             light: {
-              DEFAULT: '#3B82F6', // blue-500
-              lighter: '#60A5FA', // blue-400
-              dark: '#2563EB', // blue-600
+              DEFAULT: '#2563EB', // blue fintech fuerte
+              lighter: '#3B82F6',
+              dark: '#1D4ED8',
             },
             dark: {
-              DEFAULT: '#60A5FA', // blue-400
-              lighter: '#93C5FD', // blue-300
-              dark: '#3B82F6', // blue-500
+              DEFAULT: '#3B82F6',
+              lighter: '#60A5FA',
+              dark: '#2563EB',
             },
           },
           secondary: {
             light: {
-              DEFAULT: '#EF4444', // red-500
-              lighter: '#F87171', // red-400
-              dark: '#DC2626', // red-600
+              DEFAULT: '#0EA5E9', // cyan moderno (tech/wallet)
+              lighter: '#38BDF8',
+              dark: '#0284C7',
             },
             dark: {
-              DEFAULT: '#F87171', // red-400
-              lighter: '#FCA5A5', // red-300
-              dark: '#EF4444', // red-500
+              DEFAULT: '#38BDF8',
+              lighter: '#7DD3FC',
+              dark: '#0EA5E9',
             },
           },
         },
+
         default: {
           light: {
-            DEFAULT: '#FFFFFF', // white
-            lighter: '#FAFAFA', // gray-50
-            dark: '#F4F4F5', // zinc-100
+            DEFAULT: '#FFFFFF',
+            lighter: '#F8FAFC',
+            dark: '#E2E8F0',
           },
           dark: {
-            DEFAULT: '#18181B', // zinc-900
-            lighter: '#27272A', // zinc-800
-            dark: '#09090B', // zinc-950
+            DEFAULT: '#0B1220', // más premium que zinc
+            lighter: '#111827',
+            dark: '#020617',
           },
         },
+
         accent: {
           light: {
-            DEFAULT: '#FACC15', // yellow-400
-            lighter: '#FDE047', // yellow-300
-            dark: '#EAB308', // yellow-500
+            DEFAULT: '#A855F7', // purple fintech (acciones)
+            lighter: '#C084FC',
+            dark: '#9333EA',
           },
           dark: {
-            DEFAULT: '#FDE047', // yellow-300
-            lighter: '#FEF08A', // yellow-200
-            dark: '#FACC15', // yellow-400
+            DEFAULT: '#C084FC',
+            lighter: '#E9D5FF',
+            dark: '#A855F7',
           },
         },
+
         success: {
           light: {
-            DEFAULT: '#22C55E', // green-500
-            lighter: '#4ADE80', // green-400
-            dark: '#16A34A', // green-600
+            DEFAULT: '#16A34A', // verde dinero más serio
+            lighter: '#22C55E',
+            dark: '#15803D',
           },
           dark: {
-            DEFAULT: '#4ADE80', // green-400
-            lighter: '#86EFAC', // green-300
-            dark: '#22C55E', // green-500
+            DEFAULT: '#22C55E',
+            lighter: '#4ADE80',
+            dark: '#16A34A',
           },
         },
+
         warning: {
           light: {
-            DEFAULT: '#F97316', // orange-500
-            lighter: '#FB923C', // orange-400
-            dark: '#EA580C', // orange-600
+            DEFAULT: '#F59E0B', // amber más usable
+            lighter: '#FBBF24',
+            dark: '#D97706',
           },
           dark: {
-            DEFAULT: '#FB923C', // orange-400
-            lighter: '#FDBA74', // orange-300
-            dark: '#F97316', // orange-500
+            DEFAULT: '#FBBF24',
+            lighter: '#FDE68A',
+            dark: '#F59E0B',
           },
         },
+
         error: {
           light: {
-            DEFAULT: '#DC2626', // red-600
-            lighter: '#EF4444', // red-500
-            dark: '#B91C1C', // red-700
+            DEFAULT: '#E11D48', // rojo más moderno (rose)
+            lighter: '#FB7185',
+            dark: '#BE123C',
           },
           dark: {
-            DEFAULT: '#EF4444', // red-500
-            lighter: '#F87171', // red-400
-            dark: '#DC2626', // red-600
+            DEFAULT: '#FB7185',
+            lighter: '#FDA4AF',
+            dark: '#E11D48',
           },
         },
+
         neutral: {
           light: {
-            DEFAULT: '#6B7280', // gray-500
-            lighter: '#9CA3AF', // gray-400
-            dark: '#4B5563', // gray-600
+            DEFAULT: '#64748B', // slate mejor que gray
+            lighter: '#94A3B8',
+            dark: '#475569',
           },
           dark: {
-            DEFAULT: '#4B5563', // gray-600
-            lighter: '#6B7280', // gray-500
-            dark: '#374151', // gray-700
+            DEFAULT: '#475569',
+            lighter: '#64748B',
+            dark: '#334155',
           },
         },
+
         background: {
           light: {
-            DEFAULT: '#F3F4F6', // gray-100
-            lighter: '#F9FAFB', // gray-50
-            dark: '#E5E7EB', // gray-200
+            DEFAULT: '#F1F5F9', // más limpio tipo dashboard
+            lighter: '#FFFFFF',
+            dark: '#E2E8F0',
           },
           dark: {
-            DEFAULT: '#111827', // gray-900
-            lighter: '#1F2937', // gray-800
-            dark: '#030712', // gray-950
+            DEFAULT: '#020617', // deep dark fintech
+            lighter: '#0B1220',
+            dark: '#010409',
           },
         },
+
         gradient: {
           light: {
-            from: '#60A5FA', // blue-500
-            to: '#2563EB', // blue-300
+            from: '#3B82F6',
+            to: '#0EA5E9',
           },
           dark: {
-            from: '#60A5FA', // blue-400
-            to: '#BFDBFE', // blue-200
+            from: '#1D4ED8',
+            to: '#38BDF8',
           },
         },
       },

@@ -270,12 +270,22 @@ graph TB
 ## 🛠️ Built With
 
 <div>
-  <img src="https://img.shields.io/badge/Vue.js-35495E?style=for-the-badge&logo=vuedotjs&logoColor=4FC08D" alt="Vue.js"/>
+  <img src="https://img.shields.io/badge/Vue.js_3-35495E?style=for-the-badge&logo=vuedotjs&logoColor=4FC08D" alt="Vue.js 3"/>
   <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript"/>
-  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS"/>
   <img src="https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E" alt="Vite"/>
   <img src="https://img.shields.io/badge/Bun-000000?style=for-the-badge&logo=bun&logoColor=white" alt="Bun"/>
+  <img src="https://img.shields.io/badge/Vue_Router_4-35495E?style=for-the-badge&logo=vuedotjs&logoColor=4FC08D" alt="Vue Router 4"/>
   <img src="https://img.shields.io/badge/Pinia-yellow?style=for-the-badge&logo=vue.js&logoColor=white" alt="Pinia"/>
+  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS"/>
+  <img src="https://img.shields.io/badge/FlyonUI-6366F1?style=for-the-badge&logoColor=white" alt="FlyonUI"/>
+  <img src="https://img.shields.io/badge/Vue_I18n-35495E?style=for-the-badge&logo=vuedotjs&logoColor=4FC08D" alt="Vue I18n"/>
+  <img src="https://img.shields.io/badge/VueUse-35495E?style=for-the-badge&logo=vuedotjs&logoColor=4FC08D" alt="VueUse"/>
+  <img src="https://img.shields.io/badge/Inversify-E8272B?style=for-the-badge&logoColor=white" alt="Inversify"/>
+  <img src="https://img.shields.io/badge/Apollo_GraphQL-311C87?style=for-the-badge&logo=apollographql&logoColor=white" alt="Apollo GraphQL"/>
+  <img src="https://img.shields.io/badge/Ky-000000?style=for-the-badge&logoColor=white" alt="Ky HTTP"/>
+  <img src="https://img.shields.io/badge/Playwright-45ba4b?style=for-the-badge&logo=playwright&logoColor=white" alt="Playwright"/>
+  <img src="https://img.shields.io/badge/ESLint-4B3263?style=for-the-badge&logo=eslint&logoColor=white" alt="ESLint"/>
+  <img src="https://img.shields.io/badge/Prettier-1A2C34?style=for-the-badge&logo=prettier&logoColor=F7BA3E" alt="Prettier"/>
 </div>
 
 <br />

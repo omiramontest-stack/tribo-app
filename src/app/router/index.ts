@@ -3,12 +3,10 @@ import type { RouteRecordRaw } from 'vue-router'
 
 // layouts
 import MainLayout from '@/app/layouts/MainLayout.vue'
-import ContentLayout from '@/app/layouts/ContentLayout.vue'
 
 // routes
 import authRoutes from './routes/auth.routes'
 import homeRoutes from './routes/home.routes'
-import searchRoutes from './routes/search.routes'
 import sharedRoutes from './routes/shared.routes'
 
 // redirects
@@ -22,11 +20,6 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     component: MainLayout,
     children: homeRoutes,
-  },
-  {
-    path: '/search',
-    component: ContentLayout,
-    children: searchRoutes,
   },
   {
     path: '/auth',

@@ -1,2 +1,1 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-expressions
-declare '@vueuse/head'
+declare module '@vueuse/head'
