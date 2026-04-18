@@ -1,11 +1,11 @@
 import 'reflect-metadata'
 import { injectable } from 'inversify'
 
-import type { AuthRepository } from '@/domain/auth/repository/AuthRepository'
+import type { AuthRepository, RegisterDto } from '@/domain/auth/repository/AuthRepository'
 import type { Admin } from '@/domain/auth/entities/Admin'
 import { apiClient, ApiError } from '@/infrastructure/http/ApiClient'
 
-interface LoginResponse {
+interface AdminResponse {
   admin: Admin
 }
 
@@ -19,12 +19,18 @@ export class AuthHttpRepository implements AuthRepository {
 
   async login(email: string, password: string): Promise<Admin | null> {
     try {
-      const { admin } = await apiClient.post<LoginResponse>('/auth/login', { email, password })
+      const { admin } = await apiClient.post<AdminResponse>('/auth/login', { email, password })
       this._admin = admin
       return admin
     } catch {
       return null
     }
+  }
+
+  async register(dto: RegisterDto): Promise<Admin> {
+    const { admin } = await apiClient.post<AdminResponse>('/auth/register', dto)
+    this._admin = admin
+    return admin
   }
 
   async logout(): Promise<void> {

@@ -10,9 +10,12 @@ import type { LoginDto } from '@/application/auth/useCase/LoginUseCase'
 import { AuthHttpRepository } from '@/infrastructure/auth/repository/AuthHttpRepository'
 import LoginUseCase from '@/application/auth/useCase/LoginUseCase'
 import LogoutUseCase from '@/application/auth/useCase/LogoutUseCase'
+import RegisterUseCase from '@/application/auth/useCase/RegisterUseCase'
+import type { RegisterDto } from '@/domain/auth/repository/AuthRepository'
 
 export default new ContainerModule((bind: interfaces.Bind) => {
   bind<AuthRepository>(authTypes.authRepository).to(AuthHttpRepository)
   bind<UseCase<LoginDto, Admin>>(authTypes.loginUseCase).to(LoginUseCase)
   bind<UseCase<void, void>>(authTypes.logoutUseCase).to(LogoutUseCase)
+  bind<UseCase<RegisterDto, Admin>>(authTypes.registerUseCase).to(RegisterUseCase)
 })

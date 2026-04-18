@@ -7,10 +7,12 @@ import type { AuthRepository } from '@/domain/auth/repository/AuthRepository'
 import type { Admin } from '@/domain/auth/entities/Admin'
 import type UseCase from '@/application/common/useCase/UseCase'
 import type { LoginDto } from '@/application/auth/useCase/LoginUseCase'
+import type { RegisterDto } from '@/domain/auth/repository/AuthRepository'
 
 export const useAuthStore = defineStore('AuthStore', () => {
   const loginUseCase = container.get<UseCase<LoginDto, Admin>>(authTypes.loginUseCase)
   const logoutUseCase = container.get<UseCase<void, void>>(authTypes.logoutUseCase)
+  const registerUseCase = container.get<UseCase<RegisterDto, Admin>>(authTypes.registerUseCase)
   const authRepository = container.get<AuthRepository>(authTypes.authRepository)
 
   const state = reactive<{ _admin: Admin | null }>({
@@ -33,10 +35,15 @@ export const useAuthStore = defineStore('AuthStore', () => {
     state._admin = result
   }
 
+  async function register(dto: RegisterDto) {
+    const result = await registerUseCase.run(dto)
+    state._admin = result
+  }
+
   async function logout() {
     await logoutUseCase.run()
     state._admin = null
   }
 
-  return { admin, isAuthenticated, init, login, logout }
+  return { admin, isAuthenticated, init, login, register, logout }
 })
