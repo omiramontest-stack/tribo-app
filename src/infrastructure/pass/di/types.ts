@@ -4,4 +4,5 @@ export default {
   getPassByTokenUseCase: Symbol('GetPassByTokenUseCase'),
   getPassesByWalletUseCase: Symbol('GetPassesByWalletUseCase'),
   updatePassDataUseCase: Symbol('UpdatePassDataUseCase'),
+  deletePassUseCase: Symbol('DeletePassUseCase'),
 }

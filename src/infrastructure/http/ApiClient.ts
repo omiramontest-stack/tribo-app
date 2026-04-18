@@ -16,10 +16,11 @@ class ApiClient {
   }
 
   private async request<T>(path: string, init?: RequestInit, isRetry = false): Promise<T> {
+    const hasBody = init?.body !== undefined
     const res = await fetch(`${this.baseUrl}${path}`, {
       ...init,
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json', ...init?.headers },
+      headers: { ...(hasBody ? { 'Content-Type': 'application/json' } : {}), ...init?.headers },
     })
 
     if (res.status === 401 && !isRetry) {

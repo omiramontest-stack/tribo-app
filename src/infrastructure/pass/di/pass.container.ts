@@ -13,6 +13,7 @@ import GeneratePassUseCase from '@/application/pass/useCase/GeneratePassUseCase'
 import GetPassByTokenUseCase from '@/application/pass/useCase/GetPassByTokenUseCase'
 import GetPassesByWalletUseCase from '@/application/pass/useCase/GetPassesByWalletUseCase'
 import UpdatePassDataUseCase from '@/application/pass/useCase/UpdatePassDataUseCase'
+import DeletePassUseCase from '@/application/pass/useCase/DeletePassUseCase'
 import type { UpdatePassDataDto } from '@/application/pass/dto/UpdatePassDataDto'
 
 export default new ContainerModule((bind: interfaces.Bind) => {
@@ -21,4 +22,5 @@ export default new ContainerModule((bind: interfaces.Bind) => {
   bind<UseCase<string, PassWithWallet>>(passTypes.getPassByTokenUseCase).to(GetPassByTokenUseCase)
   bind<UseCase<string, Pass[]>>(passTypes.getPassesByWalletUseCase).to(GetPassesByWalletUseCase)
   bind<UseCase<UpdatePassDataDto, PassWithWallet>>(passTypes.updatePassDataUseCase).to(UpdatePassDataUseCase)
+  bind<UseCase<string, void>>(passTypes.deletePassUseCase).to(DeletePassUseCase)
 })

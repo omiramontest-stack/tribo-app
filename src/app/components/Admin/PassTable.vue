@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { usePassStore } from '@/app/stores/pass/PassStore'
 import type { Pass } from '@/domain/pass/entities/Pass'
 import type { Wallet } from '@/domain/wallet/entities/Wallet'
 import type { StampsData, PointsData } from '@/domain/pass/entities/PassData'
@@ -7,6 +8,12 @@ import type { StampsRules, PointsRules } from '@/domain/wallet/entities/WalletRu
 
 const props = defineProps<{ passes: Pass[]; wallet: Wallet }>()
 const router = useRouter()
+const passStore = usePassStore()
+
+async function handleDelete(pass: Pass) {
+  if (!confirm(`¿Eliminar el pass de ${pass.customerName}?`)) return
+  await passStore.deletePass(pass.token)
+}
 
 function copyLink(token: string) {
   const url = window.location.origin + router.resolve({ name: 'PassView', params: { token } }).href
@@ -132,6 +139,12 @@ function getMembershipLabel(pass: Pass): string {
               >
                 Ver →
               </a>
+              <button
+                class="text-xs text-red-400 hover:text-red-600"
+                @click="handleDelete(pass)"
+              >
+                Eliminar
+              </button>
             </div>
           </td>
         </tr>

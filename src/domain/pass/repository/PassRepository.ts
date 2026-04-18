@@ -8,4 +8,5 @@ export interface PassRepository {
   save(pass: Pass): Promise<Pass>
   update(pass: Pass): Promise<Pass>
   applyAction(token: string, action: PassAction, amount?: number): Promise<Pass>
+  delete(token: string): Promise<void>
 }

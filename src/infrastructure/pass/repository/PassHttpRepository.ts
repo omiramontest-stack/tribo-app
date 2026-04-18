@@ -45,4 +45,8 @@ export class PassHttpRepository implements PassRepository {
     })
     return result.pass
   }
+
+  async delete(token: string): Promise<void> {
+    await apiClient.delete(`/passes/${token}`)
+  }
 }

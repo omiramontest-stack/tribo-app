@@ -57,4 +57,9 @@ export class PassStorageRepository implements PassRepository {
     this._storage.setItem(this.STORAGE_KEY, passes)
     return pass
   }
+
+  async delete(token: string): Promise<void> {
+    const passes = this._storage.getItem<Pass[]>(this.STORAGE_KEY, [])
+    this._storage.setItem(this.STORAGE_KEY, passes.filter((p) => p.token !== token))
+  }
 }

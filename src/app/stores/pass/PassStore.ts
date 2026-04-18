@@ -15,6 +15,7 @@ export const usePassStore = defineStore('PassStore', () => {
   const getPassByTokenUseCase = container.get<UseCase<string, PassWithWallet>>(passTypes.getPassByTokenUseCase)
   const getPassesByWalletUseCase = container.get<UseCase<string, Pass[]>>(passTypes.getPassesByWalletUseCase)
   const updatePassDataUseCase = container.get<UseCase<UpdatePassDataDto, PassWithWallet>>(passTypes.updatePassDataUseCase)
+  const deletePassUseCase = container.get<UseCase<string, void>>(passTypes.deletePassUseCase)
 
   const state = reactive<{
     _passes: Pass[]
@@ -53,6 +54,11 @@ export const usePassStore = defineStore('PassStore', () => {
     return result
   }
 
+  async function deletePass(token: string) {
+    await deletePassUseCase.run(token)
+    state._passes = state._passes.filter((p) => p.token !== token)
+  }
+
   return {
     passes,
     currentPass,
@@ -61,5 +67,6 @@ export const usePassStore = defineStore('PassStore', () => {
     fetchPassesByWallet,
     fetchPassByToken,
     updatePassData,
+    deletePass,
   }
 })
