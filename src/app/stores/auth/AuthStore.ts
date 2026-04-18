@@ -20,6 +20,14 @@ export const useAuthStore = defineStore('AuthStore', () => {
   const isAuthenticated = computed(() => !!state._admin)
   const admin = computed(() => state._admin)
 
+  async function init() {
+    try {
+      state._admin = await authRepository.checkSession()
+    } catch {
+      state._admin = null
+    }
+  }
+
   async function login(email: string, password: string) {
     const result = await loginUseCase.run({ email, password })
     state._admin = result
@@ -30,5 +38,5 @@ export const useAuthStore = defineStore('AuthStore', () => {
     state._admin = null
   }
 
-  return { admin, isAuthenticated, login, logout }
+  return { admin, isAuthenticated, init, login, logout }
 })

@@ -37,4 +37,8 @@ export class AuthMockRepository implements AuthRepository {
   getCurrentAdmin(): Admin | null {
     return this._storage.getItem<Admin | null>(this.STORAGE_KEY, null)
   }
+
+  async checkSession(): Promise<Admin | null> {
+    return this.getCurrentAdmin()
+  }
 }

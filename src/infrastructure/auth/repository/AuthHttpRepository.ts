@@ -1,0 +1,49 @@
+import 'reflect-metadata'
+import { injectable } from 'inversify'
+
+import type { AuthRepository } from '@/domain/auth/repository/AuthRepository'
+import type { Admin } from '@/domain/auth/entities/Admin'
+import { apiClient, ApiError } from '@/infrastructure/http/ApiClient'
+
+interface LoginResponse {
+  admin: Admin
+}
+
+interface MeResponse {
+  admin: { adminId: string; email: string; businessName: string }
+}
+
+@injectable()
+export class AuthHttpRepository implements AuthRepository {
+  private _admin: Admin | null = null
+
+  async login(email: string, password: string): Promise<Admin | null> {
+    try {
+      const { admin } = await apiClient.post<LoginResponse>('/auth/login', { email, password })
+      this._admin = admin
+      return admin
+    } catch {
+      return null
+    }
+  }
+
+  async logout(): Promise<void> {
+    await apiClient.post('/auth/logout')
+    this._admin = null
+  }
+
+  getCurrentAdmin(): Admin | null {
+    return this._admin
+  }
+
+  async checkSession(): Promise<Admin | null> {
+    try {
+      const { admin: payload } = await apiClient.get<MeResponse>('/auth/me')
+      this._admin = { id: payload.adminId, email: payload.email, businessName: payload.businessName }
+      return this._admin
+    } catch {
+      this._admin = null
+      return null
+    }
+  }
+}

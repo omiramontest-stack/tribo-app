@@ -4,4 +4,5 @@ export interface AuthRepository {
   login(email: string, password: string): Promise<Admin | null>
   logout(): Promise<void>
   getCurrentAdmin(): Admin | null
+  checkSession(): Promise<Admin | null>
 }

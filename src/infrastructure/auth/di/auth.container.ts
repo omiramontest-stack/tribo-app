@@ -7,12 +7,12 @@ import type { Admin } from '@/domain/auth/entities/Admin'
 import type UseCase from '@/application/common/useCase/UseCase'
 import type { LoginDto } from '@/application/auth/useCase/LoginUseCase'
 
-import { AuthMockRepository } from '@/infrastructure/auth/repository/AuthMockRepository'
+import { AuthHttpRepository } from '@/infrastructure/auth/repository/AuthHttpRepository'
 import LoginUseCase from '@/application/auth/useCase/LoginUseCase'
 import LogoutUseCase from '@/application/auth/useCase/LogoutUseCase'
 
 export default new ContainerModule((bind: interfaces.Bind) => {
-  bind<AuthRepository>(authTypes.authRepository).to(AuthMockRepository)
+  bind<AuthRepository>(authTypes.authRepository).to(AuthHttpRepository)
   bind<UseCase<LoginDto, Admin>>(authTypes.loginUseCase).to(LoginUseCase)
   bind<UseCase<void, void>>(authTypes.logoutUseCase).to(LogoutUseCase)
 })

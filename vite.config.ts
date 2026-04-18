@@ -29,9 +29,17 @@ export default defineConfig(({ mode }) => {
         POKEMONTCG_API_KEY: env.VITE_POKEMONTCG_API_KEY,
       },
     },
+    server: {
+      host: true,
+      proxy: {
+        '/auth': { target: env.VITE_API_URL ?? 'http://localhost:3000', changeOrigin: true },
+        '/wallets': { target: env.VITE_API_URL ?? 'http://localhost:3000', changeOrigin: true },
+        '/passes': { target: env.VITE_API_URL ?? 'http://localhost:3000', changeOrigin: true },
+      },
+    },
     build: {
       outDir: 'dist',
-      sourcemap: true, // Útil para depuración
+      sourcemap: true,
     },
   }
 })
