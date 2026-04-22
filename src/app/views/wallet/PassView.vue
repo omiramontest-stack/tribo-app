@@ -56,6 +56,17 @@ onMounted(async () => {
         <p class="text-xs text-neutral-400">Muestra este QR al negocio</p>
         <WalletQR :url="$router.resolve({ name: 'PassView', params: { token: passStore.currentPass.token } }).href" />
       </div>
+
+      <a
+        :href="`/passes/${passStore.currentPass.token}/apple`"
+        class="flex justify-center"
+      >
+        <img
+          src="/add-to-wallet.png"
+          alt="Add to Apple Wallet"
+          class="h-10"
+        />
+      </a>
     </div>
   </WalletPublicLayout>
 </template>
