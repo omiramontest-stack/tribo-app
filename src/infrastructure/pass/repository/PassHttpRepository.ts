@@ -23,7 +23,9 @@ export class PassHttpRepository implements PassRepository {
 
   async save(pass: Pass): Promise<Pass> {
     return apiClient.post<Pass>(`/wallets/${pass.walletId}/passes`, {
-      customerName: pass.customerName,
+      firstName: pass.firstName,
+      lastName: pass.lastName,
+      phone: pass.phone,
     })
   }
 

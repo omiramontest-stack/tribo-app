@@ -3,7 +3,6 @@ import type { Admin } from '@/domain/auth/entities/Admin'
 export interface RegisterDto {
   email: string
   password: string
-  businessName: string
 }
 
 export interface AuthRepository {

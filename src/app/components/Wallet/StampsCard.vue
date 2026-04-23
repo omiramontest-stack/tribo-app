@@ -49,7 +49,7 @@ const data = props.pass.data as StampsData
     <div class="px-5 pb-5 flex items-center justify-between">
       <div>
         <p class="text-white/60 text-xs uppercase tracking-wide">Nombre</p>
-        <p class="text-white font-semibold text-sm">{{ pass.customerName }}</p>
+        <p class="text-white font-semibold text-sm">{{ pass.firstName }} {{ pass.lastName }}</p>
       </div>
       <div class="text-right">
         <p class="text-white/60 text-xs uppercase tracking-wide">Vencimiento</p>

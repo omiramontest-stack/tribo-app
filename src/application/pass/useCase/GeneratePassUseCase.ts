@@ -32,7 +32,10 @@ export default class GeneratePassUseCase implements UseCase<GeneratePassDto, Pas
       id: crypto.randomUUID(),
       walletId: dto.walletId,
       token: crypto.randomUUID(),
-      customerName: dto.customerName,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      phone: dto.phone,
+      customerName: `${dto.firstName} ${dto.lastName}`,
       createdAt: now,
       data: this._buildPassData(wallet.type, wallet.rules, now),
     }

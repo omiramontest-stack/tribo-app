@@ -24,7 +24,7 @@ const typeLabel: Record<string, string> = {
     <div>
       <h1 class="text-2xl font-bold text-neutral-800 dark:text-white">Dashboard</h1>
       <p class="text-sm text-neutral-500 dark:text-neutral-400">
-        Bienvenido, {{ authStore.admin?.businessName }}
+        Bienvenido, {{ authStore.admin?.organizationName ?? authStore.admin?.email }}
       </p>
     </div>
 

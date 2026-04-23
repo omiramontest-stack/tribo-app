@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import WalletPublicLayout from '@/app/layouts/WalletPublicLayout.vue'
 import { useAuthStore } from '@/app/stores/auth/AuthStore'
@@ -9,12 +9,11 @@ const authStore = useAuthStore()
 
 type Tab = 'login' | 'register'
 const tab = ref<Tab>('login')
-
-const email = ref('')
-const password = ref('')
-const businessName = ref('')
 const loading = ref(false)
 const error = ref('')
+
+const loginForm = reactive({ email: '', password: '' })
+const registerForm = reactive({ email: '', password: '' })
 
 function switchTab(t: Tab) {
   tab.value = t
@@ -25,7 +24,7 @@ async function handleLogin() {
   try {
     loading.value = true
     error.value = ''
-    await authStore.login(email.value, password.value)
+    await authStore.login(loginForm.email, loginForm.password)
     await router.push({ name: 'Dashboard' })
   } catch {
     error.value = 'Credenciales incorrectas'
@@ -38,8 +37,8 @@ async function handleRegister() {
   try {
     loading.value = true
     error.value = ''
-    await authStore.register({ email: email.value, password: password.value, businessName: businessName.value })
-    await router.push({ name: 'Dashboard' })
+    await authStore.register({ email: registerForm.email, password: registerForm.password })
+    await router.push({ name: 'Onboarding' })
   } catch (e: unknown) {
     const body = (e as { body?: { error?: string } })?.body
     error.value = body?.error === 'EMAIL_TAKEN' ? 'Este email ya está registrado' : 'Error al crear la cuenta'
@@ -85,21 +84,21 @@ function handleGoogle() {
           <div>
             <label class="block text-sm text-neutral-300 mb-1">Email</label>
             <input
-              v-model="email"
+              v-model="loginForm.email"
               type="email"
               required
-              placeholder="admin@wallet.com"
-              class="w-full bg-neutral-700 text-white rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="admin@negocio.com"
+              class="w-full bg-neutral-700 text-white rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-neutral-500"
             />
           </div>
           <div>
             <label class="block text-sm text-neutral-300 mb-1">Contraseña</label>
             <input
-              v-model="password"
+              v-model="loginForm.password"
               type="password"
               required
               placeholder="••••••••"
-              class="w-full bg-neutral-700 text-white rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full bg-neutral-700 text-white rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-neutral-500"
             />
           </div>
 
@@ -117,34 +116,24 @@ function handleGoogle() {
         <!-- Register -->
         <form v-else class="space-y-4" @submit.prevent="handleRegister">
           <div>
-            <label class="block text-sm text-neutral-300 mb-1">Nombre del negocio</label>
-            <input
-              v-model="businessName"
-              type="text"
-              required
-              placeholder="Mi Negocio"
-              class="w-full bg-neutral-700 text-white rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
             <label class="block text-sm text-neutral-300 mb-1">Email</label>
             <input
-              v-model="email"
+              v-model="registerForm.email"
               type="email"
               required
               placeholder="admin@negocio.com"
-              class="w-full bg-neutral-700 text-white rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full bg-neutral-700 text-white rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-neutral-500"
             />
           </div>
           <div>
             <label class="block text-sm text-neutral-300 mb-1">Contraseña</label>
             <input
-              v-model="password"
+              v-model="registerForm.password"
               type="password"
               required
               minlength="8"
               placeholder="Mínimo 8 caracteres"
-              class="w-full bg-neutral-700 text-white rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full bg-neutral-700 text-white rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-neutral-500"
             />
           </div>
 

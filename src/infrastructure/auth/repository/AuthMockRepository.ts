@@ -3,7 +3,7 @@ import { inject, injectable } from 'inversify'
 
 import persistenceTypes from '@/infrastructure/persistence/di/types'
 import type { PersistenceRepository } from '@/infrastructure/persistence/repository/PersistenceRepository'
-import type { AuthRepository } from '@/domain/auth/repository/AuthRepository'
+import type { AuthRepository, RegisterDto } from '@/domain/auth/repository/AuthRepository'
 import type { Admin } from '@/domain/auth/entities/Admin'
 
 @injectable()
@@ -14,7 +14,7 @@ export class AuthMockRepository implements AuthRepository {
   private readonly HARDCODED_ADMIN: Admin = {
     id: '1',
     email: 'admin@wallet.com',
-    businessName: 'Demo Business',
+    organizationName: 'Demo Business',
   }
 
   constructor(
@@ -28,6 +28,12 @@ export class AuthMockRepository implements AuthRepository {
       return this.HARDCODED_ADMIN
     }
     return null
+  }
+
+  async register(dto: RegisterDto): Promise<Admin> {
+    const admin: Admin = { id: crypto.randomUUID(), email: dto.email }
+    this._storage.setItem(this.STORAGE_KEY, admin)
+    return admin
   }
 
   async logout(): Promise<void> {

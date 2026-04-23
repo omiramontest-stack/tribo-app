@@ -57,7 +57,7 @@ const reached = data.currentPoints >= rules.rewardThreshold
     <!-- Footer -->
     <div class="px-5 pb-5">
       <p class="text-white/60 text-xs uppercase tracking-wide">Nombre</p>
-      <p class="text-white font-semibold text-sm">{{ pass.customerName }}</p>
+      <p class="text-white font-semibold text-sm">{{ pass.firstName }} {{ pass.lastName }}</p>
     </div>
   </div>
 </template>

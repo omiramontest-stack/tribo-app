@@ -16,6 +16,7 @@ const navLinks = [
   { name: 'Dashboard', to: '/admin/dashboard', icon: '▪' },
   { name: 'Wallets', to: '/admin/wallets', icon: '▫' },
   { name: 'Escanear', to: '/admin/scan', icon: '⊡' },
+  { name: 'Equipo', to: '/admin/team', icon: '◈' },
 ]
 </script>
 

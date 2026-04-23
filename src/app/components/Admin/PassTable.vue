@@ -77,8 +77,9 @@ function getMembershipLabel(pass: Pass): string {
           :key="pass.id"
           class="hover:bg-neutral-50 dark:hover:bg-neutral-700/30"
         >
-          <td class="px-5 py-3 text-neutral-800 dark:text-white font-medium">
-            {{ pass.customerName }}
+          <td class="px-5 py-3">
+            <p class="text-neutral-800 dark:text-white font-medium">{{ pass.firstName }} {{ pass.lastName }}</p>
+            <p v-if="pass.phone" class="text-xs text-neutral-400 mt-0.5">{{ pass.phone }}</p>
           </td>
 
           <!-- Progreso -->

@@ -31,10 +31,13 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       host: true,
+      allowedHosts: true,
       proxy: {
         '/auth': { target: env.VITE_API_URL ?? 'http://localhost:3000', changeOrigin: true },
         '/wallets': { target: env.VITE_API_URL ?? 'http://localhost:3000', changeOrigin: true },
         '/passes': { target: env.VITE_API_URL ?? 'http://localhost:3000', changeOrigin: true },
+        '/organizations': { target: env.VITE_API_URL ?? 'http://localhost:3000', changeOrigin: true },
+        '/invitations': { target: env.VITE_API_URL ?? 'http://localhost:3000', changeOrigin: true },
       },
     },
     build: {

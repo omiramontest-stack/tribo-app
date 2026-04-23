@@ -1,5 +1,6 @@
 export interface Admin {
   id: string
   email: string
-  businessName: string
+  organizationId?: string
+  organizationName?: string
 }

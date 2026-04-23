@@ -35,6 +35,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/app/views/admin/ScanView.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: 'team',
+    name: 'Team',
+    component: () => import('@/app/views/admin/TeamView.vue'),
+    meta: { requiresAuth: true },
+  },
 ]
 
 export default routes

@@ -8,6 +8,18 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
+    path: '/onboarding',
+    name: 'Onboarding',
+    component: () => import('@/app/views/admin/OnboardingView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/invite/:token',
+    name: 'Invite',
+    component: () => import('@/app/views/admin/InviteView.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
     path: '/w/:token',
     name: 'PassView',
     component: () => import('@/app/views/wallet/PassView.vue'),

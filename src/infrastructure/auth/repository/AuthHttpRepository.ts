@@ -3,14 +3,18 @@ import { injectable } from 'inversify'
 
 import type { AuthRepository, RegisterDto } from '@/domain/auth/repository/AuthRepository'
 import type { Admin } from '@/domain/auth/entities/Admin'
-import { apiClient, ApiError } from '@/infrastructure/http/ApiClient'
+import { apiClient } from '@/infrastructure/http/ApiClient'
 
-interface AdminResponse {
+interface RegisterResponse {
+  admin: Admin
+}
+
+interface LoginResponse {
   admin: Admin
 }
 
 interface MeResponse {
-  admin: { adminId: string; email: string; businessName: string }
+  admin: { adminId: string; email: string }
 }
 
 @injectable()
@@ -19,7 +23,7 @@ export class AuthHttpRepository implements AuthRepository {
 
   async login(email: string, password: string): Promise<Admin | null> {
     try {
-      const { admin } = await apiClient.post<AdminResponse>('/auth/login', { email, password })
+      const { admin } = await apiClient.post<LoginResponse>('/auth/login', { email, password })
       this._admin = admin
       return admin
     } catch {
@@ -28,9 +32,9 @@ export class AuthHttpRepository implements AuthRepository {
   }
 
   async register(dto: RegisterDto): Promise<Admin> {
-    const { admin } = await apiClient.post<AdminResponse>('/auth/register', dto)
+    const { admin } = await apiClient.post<RegisterResponse>('/auth/register', dto)
     this._admin = admin
-    return admin
+    return this._admin
   }
 
   async logout(): Promise<void> {
@@ -45,7 +49,7 @@ export class AuthHttpRepository implements AuthRepository {
   async checkSession(): Promise<Admin | null> {
     try {
       const { admin: payload } = await apiClient.get<MeResponse>('/auth/me')
-      this._admin = { id: payload.adminId, email: payload.email, businessName: payload.businessName }
+      this._admin = { id: payload.adminId, email: payload.email }
       return this._admin
     } catch {
       this._admin = null
