@@ -11,4 +11,5 @@ export interface AuthRepository {
   logout(): Promise<void>
   getCurrentAdmin(): Admin | null
   checkSession(): Promise<Admin | null>
+  switchOrg(organizationId: string): Promise<void>
 }

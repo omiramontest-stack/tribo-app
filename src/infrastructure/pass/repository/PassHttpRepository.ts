@@ -1,16 +1,15 @@
 import 'reflect-metadata'
 import { injectable } from 'inversify'
 
-import type { PassRepository, PassAction } from '@/domain/pass/repository/PassRepository'
+import type { PassRepository, PassAction, PassWithWalletRaw } from '@/domain/pass/repository/PassRepository'
 import type { Pass } from '@/domain/pass/entities/Pass'
 import { apiClient, ApiError } from '@/infrastructure/http/ApiClient'
 
 @injectable()
 export class PassHttpRepository implements PassRepository {
-  async findByToken(token: string): Promise<Pass | null> {
+  async findByToken(token: string): Promise<PassWithWalletRaw | null> {
     try {
-      const result = await apiClient.get<{ pass: Pass; wallet: unknown }>(`/passes/w/${token}`)
-      return result.pass
+      return await apiClient.get<PassWithWalletRaw>(`/passes/w/${token}`)
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) return null
       throw e

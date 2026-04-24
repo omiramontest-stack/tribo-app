@@ -5,6 +5,7 @@ import { container } from '@/container'
 import authTypes from '@/infrastructure/auth/di/types'
 import type { AuthRepository } from '@/domain/auth/repository/AuthRepository'
 import type { Admin } from '@/domain/auth/entities/Admin'
+import type { Organization } from '@/domain/organization/entities/Organization'
 import type UseCase from '@/application/common/useCase/UseCase'
 import type { LoginDto } from '@/application/auth/useCase/LoginUseCase'
 import type { RegisterDto } from '@/domain/auth/repository/AuthRepository'
@@ -41,11 +42,16 @@ export const useAuthStore = defineStore('AuthStore', () => {
     state._admin = result
   }
 
+  async function switchOrg(org: Organization) {
+    await authRepository.switchOrg(org.id)
+    useOrganizationStore().setActiveOrg(org)
+  }
+
   async function logout() {
     await logoutUseCase.run()
     state._admin = null
     useOrganizationStore().reset()
   }
 
-  return { admin, isAuthenticated, init, login, register, logout }
+  return { admin, isAuthenticated, init, login, register, logout, switchOrg }
 })

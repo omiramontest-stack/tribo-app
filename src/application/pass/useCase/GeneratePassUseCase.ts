@@ -23,7 +23,7 @@ export default class GeneratePassUseCase implements UseCase<GeneratePassDto, Pas
   ) {}
 
   async run(dto: GeneratePassDto): Promise<Pass> {
-    const wallet = await this._walletRepository.findById(dto.walletId)
+    const wallet = await this._walletRepository.findById(dto.orgId, dto.walletId)
     if (!wallet)
       throw new PassHandlerError(PassErrorCodes.WALLET_NOT_FOUND, 'Wallet not found')
 

@@ -10,6 +10,7 @@ export class ApiError extends Error {
 
 class ApiClient {
   private readonly baseUrl: string
+  onNoOrgContext?: () => void
 
   constructor() {
     this.baseUrl = ''
@@ -20,7 +21,7 @@ class ApiClient {
     const res = await fetch(`${this.baseUrl}${path}`, {
       ...init,
       credentials: 'include',
-      headers: { ...(hasBody ? { 'Content-Type': 'application/json' } : {}), ...init?.headers },
+      headers: { ...(hasBody ? { 'Content-Type': 'application/json' } : {}), 'ngrok-skip-browser-warning': 'true', ...init?.headers },
     })
 
     if (res.status === 401 && !isRetry) {
@@ -32,6 +33,11 @@ class ApiClient {
     if (res.status === 204) return undefined as T
 
     const data = await res.json().catch(() => null)
+
+    if (res.status === 403 && (data as { error?: string })?.error?.includes('switch-org')) {
+      this.onNoOrgContext?.()
+      throw new ApiError(403, data)
+    }
 
     if (!res.ok) throw new ApiError(res.status, data)
 

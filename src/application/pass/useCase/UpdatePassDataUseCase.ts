@@ -22,7 +22,7 @@ export default class UpdatePassDataUseCase implements UseCase<UpdatePassDataDto,
   async run(dto: UpdatePassDataDto): Promise<PassWithWallet> {
     const updatedPass = await this._passRepository.applyAction(dto.token, dto.action, dto.amount)
 
-    const wallet = await this._walletRepository.findById(updatedPass.walletId)
+    const wallet = await this._walletRepository.findById(dto.orgId, updatedPass.walletId)
     if (!wallet) throw new PassHandlerError(PassErrorCodes.WALLET_NOT_FOUND, 'Wallet not found')
 
     return { pass: updatedPass, wallet }

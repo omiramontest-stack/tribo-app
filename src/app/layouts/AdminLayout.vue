@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/app/stores/auth/AuthStore'
+import OrgSwitcher from '@/app/components/Admin/OrgSwitcher.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -26,10 +27,9 @@ const navLinks = [
     <aside
       class="hidden lg:flex flex-col w-60 bg-default-light dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 shrink-0"
     >
-      <div class="px-6 py-5 border-b border-neutral-200 dark:border-neutral-800">
-        <span class="text-lg font-bold text-brand-primary-light dark:text-brand-primary-dark">
-          Wallet SaaS
-        </span>
+      <div class="px-3 py-4 border-b border-neutral-200 dark:border-neutral-800">
+        <p class="px-3 text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Wallet SaaS</p>
+        <OrgSwitcher />
       </div>
 
       <nav class="flex-1 px-3 py-4 space-y-1">
@@ -93,8 +93,9 @@ const navLinks = [
         @click.self="mobileOpen = false"
       >
         <div class="w-60 bg-default-light dark:bg-neutral-900 shadow-xl flex flex-col">
-          <div class="px-6 py-5 border-b border-neutral-200 dark:border-neutral-800">
-            <span class="text-lg font-bold text-brand-primary-light dark:text-brand-primary-dark">Wallet SaaS</span>
+          <div class="px-3 py-4 border-b border-neutral-200 dark:border-neutral-800">
+            <p class="px-3 text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Wallet SaaS</p>
+            <OrgSwitcher />
           </div>
           <nav class="flex-1 px-3 py-4 space-y-1">
             <router-link

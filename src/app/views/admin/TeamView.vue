@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useOrganizationStore } from '@/app/stores/organization/OrganizationStore'
 import type { MemberRole } from '@/domain/organization/entities/OrganizationMember'
 
 const orgStore = useOrganizationStore()
+const { activeOrgId } = storeToRefs(orgStore)
 
 const showForm = ref(false)
 const email = ref('')
@@ -11,22 +13,31 @@ const role = ref<MemberRole>('staff')
 const loading = ref(false)
 const error = ref('')
 const successMsg = ref('')
+const fetchingMembers = ref(false)
 
-onMounted(async () => {
-  if (!orgStore.initialized) await orgStore.fetchMyOrganizations()
-  if (orgStore.currentOrg) {
-    await orgStore.fetchMembers(orgStore.currentOrg.id)
-  }
-})
+watch(
+  activeOrgId,
+  async (id) => {
+    if (!id) return
+    fetchingMembers.value = true
+    orgStore.clearMembers()
+    try {
+      await orgStore.fetchMembers(id)
+    } finally {
+      fetchingMembers.value = false
+    }
+  },
+  { immediate: true },
+)
 
 async function handleInvite() {
   if (!email.value.trim()) { error.value = 'El email es requerido'; return }
-  if (!orgStore.currentOrg) return
+  if (!orgStore.activeOrg) return
   try {
     loading.value = true
     error.value = ''
     successMsg.value = ''
-    await orgStore.inviteMember({ organizationId: orgStore.currentOrg.id, email: email.value.trim(), role: role.value })
+    await orgStore.inviteMember({ organizationId: orgStore.activeOrg.id, email: email.value.trim(), role: role.value })
     successMsg.value = `Invitación enviada a ${email.value.trim()}`
     email.value = ''
     role.value = 'staff'
@@ -67,8 +78,8 @@ const roleBadge: Record<MemberRole, string> = {
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-bold text-neutral-800 dark:text-white">Equipo</h1>
-        <p v-if="orgStore.currentOrg" class="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
-          {{ orgStore.currentOrg.name }}
+        <p v-if="orgStore.activeOrg" class="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+          {{ orgStore.activeOrg.name }}
         </p>
       </div>
       <button
@@ -118,11 +129,30 @@ const roleBadge: Record<MemberRole, string> = {
     <div class="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-100 dark:border-neutral-700 overflow-hidden">
       <div class="px-5 py-4 border-b border-neutral-100 dark:border-neutral-700">
         <h2 class="font-semibold text-neutral-800 dark:text-white text-sm">
-          Miembros ({{ orgStore.members.length }})
+          <template v-if="fetchingMembers">
+            <span class="inline-block h-4 w-24 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse" />
+          </template>
+          <template v-else>Miembros ({{ orgStore.members.length }})</template>
         </h2>
       </div>
 
-      <div v-if="orgStore.members.length" class="divide-y divide-neutral-100 dark:divide-neutral-700">
+      <!-- Skeleton rows -->
+      <div v-if="fetchingMembers" class="divide-y divide-neutral-100 dark:divide-neutral-700">
+        <div
+          v-for="i in 3"
+          :key="i"
+          class="flex items-center justify-between px-5 py-3.5"
+        >
+          <div class="space-y-2">
+            <div class="h-4 w-40 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse" />
+            <div class="h-3 w-24 bg-neutral-100 dark:bg-neutral-700/60 rounded animate-pulse" />
+          </div>
+          <div class="h-6 w-16 bg-neutral-200 dark:bg-neutral-700 rounded-full animate-pulse" />
+        </div>
+      </div>
+
+      <!-- Real rows -->
+      <div v-else-if="orgStore.members.length" class="divide-y divide-neutral-100 dark:divide-neutral-700">
         <div
           v-for="member in orgStore.members"
           :key="member.id"

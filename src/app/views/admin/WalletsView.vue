@@ -1,15 +1,31 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useWalletStore } from '@/app/stores/wallet/WalletStore'
+import { useOrganizationStore } from '@/app/stores/organization/OrganizationStore'
 import WalletCard from '@/app/components/Admin/WalletCard.vue'
 
 const walletStore = useWalletStore()
+const orgStore = useOrganizationStore()
 const router = useRouter()
+const { activeOrgId } = storeToRefs(orgStore)
+const fetching = ref(false)
 
-onMounted(async () => {
-  await walletStore.fetchWallets()
-})
+watch(
+  activeOrgId,
+  async (id) => {
+    if (!id) return
+    walletStore.clearWallets()
+    fetching.value = true
+    try {
+      await walletStore.fetchWallets()
+    } finally {
+      fetching.value = false
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -24,7 +40,30 @@ onMounted(async () => {
       </button>
     </div>
 
-    <div v-if="walletStore.wallets.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <!-- Skeleton grid -->
+    <div v-if="fetching" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div
+        v-for="i in 3"
+        :key="i"
+        class="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-100 dark:border-neutral-700 p-5 space-y-4 animate-pulse"
+      >
+        <div class="flex items-center justify-between">
+          <div class="h-4 w-32 bg-neutral-200 dark:bg-neutral-700 rounded" />
+          <div class="h-5 w-16 bg-neutral-200 dark:bg-neutral-700 rounded-full" />
+        </div>
+        <div class="space-y-2">
+          <div class="h-3 w-full bg-neutral-100 dark:bg-neutral-700/60 rounded" />
+          <div class="h-3 w-3/4 bg-neutral-100 dark:bg-neutral-700/60 rounded" />
+        </div>
+        <div class="flex gap-2 pt-1">
+          <div class="h-7 w-7 rounded-full bg-neutral-200 dark:bg-neutral-700" />
+          <div class="h-7 w-7 rounded-full bg-neutral-200 dark:bg-neutral-700" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Real grid -->
+    <div v-else-if="walletStore.wallets.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <WalletCard
         v-for="wallet in walletStore.wallets"
         :key="wallet.id"

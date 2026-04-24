@@ -56,4 +56,8 @@ export class AuthHttpRepository implements AuthRepository {
       return null
     }
   }
+
+  async switchOrg(organizationId: string): Promise<void> {
+    await apiClient.post('/auth/switch-org', { organizationId })
+  }
 }

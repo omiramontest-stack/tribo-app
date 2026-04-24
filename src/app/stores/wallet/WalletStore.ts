@@ -5,13 +5,19 @@ import { container } from '@/container'
 import walletTypes from '@/infrastructure/wallet/di/types'
 import type { Wallet } from '@/domain/wallet/entities/Wallet'
 import type { CreateWalletDto } from '@/application/wallet/dto/CreateWalletDto'
+import type { CreateWalletInput } from '@/application/wallet/useCase/CreateWalletUseCase'
+import type { GetWalletByIdInput } from '@/application/wallet/useCase/GetWalletByIdUseCase'
+import type { DeleteWalletInput } from '@/application/wallet/useCase/DeleteWalletUseCase'
 import type UseCase from '@/application/common/useCase/UseCase'
+import { useOrganizationStore } from '@/app/stores/organization/OrganizationStore'
 
 export const useWalletStore = defineStore('WalletStore', () => {
-  const createWalletUseCase = container.get<UseCase<CreateWalletDto, Wallet>>(walletTypes.createWalletUseCase)
-  const getWalletsUseCase = container.get<UseCase<void, Wallet[]>>(walletTypes.getWalletsUseCase)
-  const getWalletByIdUseCase = container.get<UseCase<string, Wallet>>(walletTypes.getWalletByIdUseCase)
-  const deleteWalletUseCase = container.get<UseCase<string, void>>(walletTypes.deleteWalletUseCase)
+  const orgStore = useOrganizationStore()
+
+  const createWalletUseCase = container.get<UseCase<CreateWalletInput, Wallet>>(walletTypes.createWalletUseCase)
+  const getWalletsUseCase = container.get<UseCase<string, Wallet[]>>(walletTypes.getWalletsUseCase)
+  const getWalletByIdUseCase = container.get<UseCase<GetWalletByIdInput, Wallet>>(walletTypes.getWalletByIdUseCase)
+  const deleteWalletUseCase = container.get<UseCase<DeleteWalletInput, void>>(walletTypes.deleteWalletUseCase)
 
   const state = reactive<{ _wallets: Wallet[]; _currentWallet: Wallet | null }>({
     _wallets: [],
@@ -21,25 +27,35 @@ export const useWalletStore = defineStore('WalletStore', () => {
   const wallets = computed(() => state._wallets)
   const currentWallet = computed(() => state._currentWallet)
 
+  function requireOrgId(): string {
+    const id = orgStore.activeOrgId
+    if (!id) throw new Error('No active organization')
+    return id
+  }
+
   async function fetchWallets() {
-    state._wallets = await getWalletsUseCase.run()
+    state._wallets = (await getWalletsUseCase.run(requireOrgId())) ?? []
   }
 
   async function fetchWalletById(id: string) {
-    state._currentWallet = await getWalletByIdUseCase.run(id)
+    state._currentWallet = await getWalletByIdUseCase.run({ orgId: requireOrgId(), id })
   }
 
   async function createWallet(dto: CreateWalletDto): Promise<Wallet> {
-    const wallet = await createWalletUseCase.run(dto)
+    const wallet = await createWalletUseCase.run({ ...dto, orgId: requireOrgId() })
     state._wallets.push(wallet)
     return wallet
   }
 
   async function deleteWallet(id: string) {
-    await deleteWalletUseCase.run(id)
+    await deleteWalletUseCase.run({ orgId: requireOrgId(), id })
     state._wallets = state._wallets.filter((w) => w.id !== id)
     if (state._currentWallet?.id === id) state._currentWallet = null
   }
 
-  return { wallets, currentWallet, fetchWallets, fetchWalletById, createWallet, deleteWallet }
+  function clearWallets() {
+    state._wallets = []
+  }
+
+  return { wallets, currentWallet, fetchWallets, fetchWalletById, createWallet, deleteWallet, clearWallets }
 })

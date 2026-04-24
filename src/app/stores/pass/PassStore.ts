@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 
 import { container } from '@/container'
 import passTypes from '@/infrastructure/pass/di/types'
+import { useOrganizationStore } from '@/app/stores/organization/OrganizationStore'
 import type { Pass } from '@/domain/pass/entities/Pass'
 import type { Wallet } from '@/domain/wallet/entities/Wallet'
 import type { GeneratePassDto } from '@/application/pass/dto/GeneratePassDto'
@@ -11,6 +12,7 @@ import type { PassWithWallet } from '@/application/pass/useCase/GetPassByTokenUs
 import type UseCase from '@/application/common/useCase/UseCase'
 
 export const usePassStore = defineStore('PassStore', () => {
+  const orgStore = useOrganizationStore()
   const generatePassUseCase = container.get<UseCase<GeneratePassDto, Pass>>(passTypes.generatePassUseCase)
   const getPassByTokenUseCase = container.get<UseCase<string, PassWithWallet>>(passTypes.getPassByTokenUseCase)
   const getPassesByWalletUseCase = container.get<UseCase<string, Pass[]>>(passTypes.getPassesByWalletUseCase)
@@ -31,8 +33,10 @@ export const usePassStore = defineStore('PassStore', () => {
   const currentPass = computed(() => state._currentPass)
   const currentPassWallet = computed(() => state._currentPassWallet)
 
-  async function generatePass(dto: GeneratePassDto): Promise<Pass> {
-    const pass = await generatePassUseCase.run(dto)
+  async function generatePass(dto: Omit<GeneratePassDto, 'orgId'>): Promise<Pass> {
+    const orgId = orgStore.activeOrgId
+    if (!orgId) throw new Error('No active organization')
+    const pass = await generatePassUseCase.run({ ...dto, orgId })
     state._passes.push(pass)
     return pass
   }
@@ -47,8 +51,10 @@ export const usePassStore = defineStore('PassStore', () => {
     state._currentPassWallet = result.wallet
   }
 
-  async function updatePassData(dto: UpdatePassDataDto): Promise<PassWithWallet> {
-    const result = await updatePassDataUseCase.run(dto)
+  async function updatePassData(dto: Omit<UpdatePassDataDto, 'orgId'>): Promise<PassWithWallet> {
+    const orgId = orgStore.activeOrgId
+    if (!orgId) throw new Error('No active organization')
+    const result = await updatePassDataUseCase.run({ ...dto, orgId })
     state._currentPass = result.pass
     state._currentPassWallet = result.wallet
     return result

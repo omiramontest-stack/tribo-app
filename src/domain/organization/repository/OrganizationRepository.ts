@@ -7,6 +7,7 @@ export interface OnboardingDto {
   industry?: string
   country?: string
   phone?: string
+  logoUrl?: string
 }
 
 export interface OrganizationRepository {

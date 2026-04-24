@@ -14,6 +14,8 @@ export function useAuthGuard(router: Router) {
     if (authStore.isAuthenticated) {
       if (!orgStore.initialized) {
         await orgStore.fetchMyOrganizations()
+        const activeOrg = orgStore.activeOrg
+        if (activeOrg) await authStore.switchOrg(activeOrg)
       }
 
       const hasOrg = orgStore.organizations.length > 0

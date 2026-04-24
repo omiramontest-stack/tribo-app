@@ -15,17 +15,17 @@ export class WalletStorageRepository implements WalletRepository {
     private readonly _storage: PersistenceRepository,
   ) {}
 
-  async findAll(): Promise<Wallet[]> {
+  async findAll(_orgId: string): Promise<Wallet[]> {
     return this._storage.getItem<Wallet[]>(this.STORAGE_KEY, [])
   }
 
-  async findById(id: string): Promise<Wallet | null> {
-    const wallets = await this.findAll()
+  async findById(_orgId: string, id: string): Promise<Wallet | null> {
+    const wallets = await this.findAll(_orgId)
     return wallets.find((w) => w.id === id) ?? null
   }
 
-  async save(wallet: Wallet): Promise<Wallet> {
-    const wallets = await this.findAll()
+  async save(_orgId: string, wallet: Wallet): Promise<Wallet> {
+    const wallets = await this.findAll(_orgId)
     const index = wallets.findIndex((w) => w.id === wallet.id)
     if (index >= 0) {
       wallets[index] = wallet
@@ -36,8 +36,8 @@ export class WalletStorageRepository implements WalletRepository {
     return wallet
   }
 
-  async delete(id: string): Promise<void> {
-    const wallets = await this.findAll()
+  async delete(_orgId: string, id: string): Promise<void> {
+    const wallets = await this.findAll(_orgId)
     this._storage.setItem(
       this.STORAGE_KEY,
       wallets.filter((w) => w.id !== id),

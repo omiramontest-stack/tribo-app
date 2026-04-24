@@ -3,7 +3,7 @@ import { inject, injectable } from 'inversify'
 
 import persistenceTypes from '@/infrastructure/persistence/di/types'
 import type { PersistenceRepository } from '@/infrastructure/persistence/repository/PersistenceRepository'
-import type { PassRepository, PassAction } from '@/domain/pass/repository/PassRepository'
+import type { PassRepository, PassAction, PassWithWalletRaw } from '@/domain/pass/repository/PassRepository'
 import type { Pass } from '@/domain/pass/entities/Pass'
 import type { StampsData, PointsData, MembershipData } from '@/domain/pass/entities/PassData'
 
@@ -16,9 +16,9 @@ export class PassStorageRepository implements PassRepository {
     private readonly _storage: PersistenceRepository,
   ) {}
 
-  async findByToken(token: string): Promise<Pass | null> {
-    const passes = this._storage.getItem<Pass[]>(this.STORAGE_KEY, [])
-    return passes.find((p) => p.token === token) ?? null
+  async findByToken(token: string): Promise<PassWithWalletRaw | null> {
+    // Storage mock doesn't have wallet data — not used in production
+    return null
   }
 
   async findByWalletId(walletId: string): Promise<Pass[]> {
