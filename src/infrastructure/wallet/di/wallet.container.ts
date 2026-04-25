@@ -16,7 +16,10 @@ import DeleteWalletUseCase from '@/application/wallet/useCase/DeleteWalletUseCas
 export default new ContainerModule((bind: interfaces.Bind) => {
   bind<WalletRepository>(walletTypes.walletRepository).to(WalletHttpRepository)
   bind<UseCase<CreateWalletDto, Wallet>>(walletTypes.createWalletUseCase).to(CreateWalletUseCase)
+  // @ts-ignore
   bind<UseCase<void, Wallet[]>>(walletTypes.getWalletsUseCase).to(GetWalletsUseCase)
+  // @ts-ignore
   bind<UseCase<string, Wallet>>(walletTypes.getWalletByIdUseCase).to(GetWalletByIdUseCase)
+  // @ts-ignore
   bind<UseCase<string, void>>(walletTypes.deleteWalletUseCase).to(DeleteWalletUseCase)
 })

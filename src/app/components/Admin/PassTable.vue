@@ -3,8 +3,8 @@ import { useRouter } from 'vue-router'
 import { usePassStore } from '@/app/stores/pass/PassStore'
 import type { Pass } from '@/domain/pass/entities/Pass'
 import type { Wallet } from '@/domain/wallet/entities/Wallet'
-import type { StampsData, PointsData } from '@/domain/pass/entities/PassData'
-import type { StampsRules, PointsRules } from '@/domain/wallet/entities/WalletRules'
+import type { StampsData, PointsData, CashbackData, DaypassData } from '@/domain/pass/entities/PassData'
+import type { StampsRules, PointsRules, CashbackRules } from '@/domain/wallet/entities/WalletRules'
 
 const props = defineProps<{ passes: Pass[]; wallet: Wallet }>()
 const router = useRouter()
@@ -24,27 +24,24 @@ function getProgress(pass: Pass): { label: string; value: number; max: number; t
   if (pass.data.type === 'stamps') {
     const data = pass.data as StampsData
     const rules = props.wallet.rules as StampsRules
-    return {
-      label: 'sellos',
-      value: data.currentStamps,
-      max: rules.totalStamps,
-      text: `${data.currentStamps}/${rules.totalStamps} sellos`,
-    }
+    return { label: 'sellos', value: data.currentStamps, max: rules.totalStamps, text: `${data.currentStamps}/${rules.totalStamps} sellos` }
   }
   if (pass.data.type === 'points') {
     const data = pass.data as PointsData
     const rules = props.wallet.rules as PointsRules
-    return {
-      label: rules.pointsLabel,
-      value: data.currentPoints,
-      max: rules.rewardThreshold,
-      text: `${data.currentPoints}/${rules.rewardThreshold} ${rules.pointsLabel}`,
-    }
+    return { label: rules.pointsLabel, value: data.currentPoints, max: rules.rewardThreshold, text: `${data.currentPoints}/${rules.rewardThreshold} ${rules.pointsLabel}` }
   }
-  if (pass.data.type === 'membership') {
-    return null
+  if (pass.data.type === 'cashback') {
+    const data = pass.data as CashbackData
+    const rules = props.wallet.rules as CashbackRules
+    return { label: 'cashback', value: data.balance, max: data.balance, text: `${rules.currency} ${data.balance.toFixed(2)}` }
   }
   return null
+}
+
+function getDaypassBadge(pass: Pass): string | null {
+  if (pass.data.type !== 'daypass') return null
+  return (pass.data as DaypassData).used ? 'Usado' : 'Válido'
 }
 
 function getMembershipLabel(pass: Pass): string {
@@ -107,7 +104,7 @@ function getMembershipLabel(pass: Pass): string {
             </template>
 
             <!-- Membership: badge de vencimiento -->
-            <template v-else>
+            <template v-else-if="pass.data.type === 'membership'">
               <span
                 class="text-xs px-2 py-0.5 rounded-full font-medium"
                 :class="
@@ -117,6 +114,18 @@ function getMembershipLabel(pass: Pass): string {
                 "
               >
                 {{ getMembershipLabel(pass) }}
+              </span>
+            </template>
+
+            <!-- Daypass: badge válido/usado -->
+            <template v-else-if="pass.data.type === 'daypass'">
+              <span
+                class="text-xs px-2 py-0.5 rounded-full font-medium"
+                :class="getDaypassBadge(pass) === 'Usado'
+                  ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                  : 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'"
+              >
+                {{ getDaypassBadge(pass) }}
               </span>
             </template>
           </td>

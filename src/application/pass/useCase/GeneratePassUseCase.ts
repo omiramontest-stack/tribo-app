@@ -55,6 +55,10 @@ export default class GeneratePassUseCase implements UseCase<GeneratePassDto, Pas
       }
       case 'points':
         return { type: 'points', currentPoints: 0 }
+      case 'cashback':
+        return { type: 'cashback', balance: 0 }
+      case 'daypass':
+        return { type: 'daypass', used: false }
     }
   }
 }

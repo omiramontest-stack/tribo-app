@@ -4,10 +4,12 @@ import { useRouter } from 'vue-router'
 import { useWalletStore } from '@/app/stores/wallet/WalletStore'
 import type { CreateWalletDto } from '@/application/wallet/dto/CreateWalletDto'
 import type { WalletType } from '@/domain/wallet/entities/Wallet'
-import type { StampsRules, MembershipRules, PointsRules } from '@/domain/wallet/entities/WalletRules'
+import type { StampsRules, MembershipRules, PointsRules, CashbackRules, DaypassRules } from '@/domain/wallet/entities/WalletRules'
 import StampsCard from '@/app/components/Wallet/StampsCard.vue'
 import MembershipCard from '@/app/components/Wallet/MembershipCard.vue'
 import PointsCard from '@/app/components/Wallet/PointsCard.vue'
+import CashbackCard from '@/app/components/Wallet/CashbackCard.vue'
+import DaypassCard from '@/app/components/Wallet/DaypassCard.vue'
 import type { Pass } from '@/domain/pass/entities/Pass'
 
 const router = useRouter()
@@ -33,6 +35,10 @@ watch(
       form.rules = { type: 'stamps', totalStamps: 10, reward: 'Un producto gratis' }
     } else if (type === 'membership') {
       form.rules = { type: 'membership', level: 'Gold Member', expiresInDays: null }
+    } else if (type === 'cashback') {
+      form.rules = { type: 'cashback', cashbackPercent: 5, currency: 'MXN' }
+    } else if (type === 'daypass') {
+      form.rules = { type: 'daypass', eventName: '', eventDate: '', venue: '', imageUrl: null }
     } else {
       form.rules = { type: 'points', pointsLabel: 'puntos', reward: 'Descuento 10%', rewardThreshold: 100 }
     }
@@ -43,8 +49,11 @@ const walletTypes: { value: WalletType; label: string; emoji: string; desc: stri
   { value: 'stamps', label: 'Sellos', emoji: '☕', desc: 'Tarjeta de lealtad con sellos' },
   { value: 'membership', label: 'Membresía', emoji: '🎖️', desc: 'Tarjeta de miembro con nivel' },
   { value: 'points', label: 'Puntos', emoji: '⭐', desc: 'Acumulación de puntos canjeables' },
+  { value: 'cashback', label: 'Cashback', emoji: '💵', desc: 'Saldo acumulable por compras' },
+  { value: 'daypass', label: 'Day Pass', emoji: '🎟️', desc: 'Pase de acceso a evento' },
 ]
 
+// @ts-ignore
 const previewPass: Pass = {
   id: 'preview',
   walletId: 'preview',
@@ -57,6 +66,8 @@ const previewPass: Pass = {
 function getPreviewPass(): Pass {
   if (form.type === 'stamps') return { ...previewPass, data: { type: 'stamps', currentStamps: 3 } }
   if (form.type === 'membership') return { ...previewPass, data: { type: 'membership', memberSince: new Date().toISOString(), expiresAt: null } }
+  if (form.type === 'cashback') return { ...previewPass, data: { type: 'cashback', balance: 42.5 } }
+  if (form.type === 'daypass') return { ...previewPass, data: { type: 'daypass', used: false } }
   return { ...previewPass, data: { type: 'points', currentPoints: 45 } }
 }
 
@@ -181,7 +192,7 @@ async function handleSubmit() {
           </div>
         </template>
         <!-- Points -->
-        <template v-else>
+        <template v-else-if="form.type === 'points'">
           <div>
             <label class="block text-sm text-neutral-600 dark:text-neutral-300 mb-1">Nombre de los puntos</label>
             <input v-model="(form.rules as PointsRules).pointsLabel" type="text" placeholder="Ej. puntos" class="w-full border border-neutral-200 dark:border-neutral-600 bg-transparent dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
@@ -193,6 +204,37 @@ async function handleSubmit() {
           <div>
             <label class="block text-sm text-neutral-600 dark:text-neutral-300 mb-1">Recompensa</label>
             <input v-model="(form.rules as PointsRules).reward" type="text" placeholder="Ej. Descuento 10%" class="w-full border border-neutral-200 dark:border-neutral-600 bg-transparent dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </template>
+        <!-- Cashback -->
+        <template v-else-if="form.type === 'cashback'">
+          <div>
+            <label class="block text-sm text-neutral-600 dark:text-neutral-300 mb-1">Porcentaje de cashback (%)</label>
+            <input v-model.number="(form.rules as CashbackRules).cashbackPercent" type="number" min="1" max="100" placeholder="5" class="w-full border border-neutral-200 dark:border-neutral-600 bg-transparent dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm text-neutral-600 dark:text-neutral-300 mb-1">Moneda</label>
+            <input v-model="(form.rules as CashbackRules).currency" type="text" placeholder="MXN" class="w-full border border-neutral-200 dark:border-neutral-600 bg-transparent dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </template>
+        <!-- Daypass -->
+        <template v-else-if="form.type === 'daypass'">
+          <div>
+            <label class="block text-sm text-neutral-600 dark:text-neutral-300 mb-1">Nombre del evento *</label>
+            <input v-model="(form.rules as DaypassRules).eventName" type="text" placeholder="Ej. Festival de Verano 2026" class="w-full border border-neutral-200 dark:border-neutral-600 bg-transparent dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm text-neutral-600 dark:text-neutral-300 mb-1">Fecha del evento *</label>
+            <input v-model="(form.rules as DaypassRules).eventDate" type="datetime-local" class="w-full border border-neutral-200 dark:border-neutral-600 bg-transparent dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm text-neutral-600 dark:text-neutral-300 mb-1">Lugar / Venue *</label>
+            <input v-model="(form.rules as DaypassRules).venue" type="text" placeholder="Ej. Parque Fundidora, Monterrey" class="w-full border border-neutral-200 dark:border-neutral-600 bg-transparent dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm text-neutral-600 dark:text-neutral-300 mb-1">URL imagen de fondo (opcional)</label>
+            <input v-model="(form.rules as DaypassRules).imageUrl" type="url" placeholder="https://..." class="w-full border border-neutral-200 dark:border-neutral-600 bg-transparent dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+            <p class="text-xs text-neutral-400 mt-1">Se recomienda imagen horizontal (landscape) para mejor resultado en el pase.</p>
           </div>
         </template>
       </div>
@@ -208,7 +250,9 @@ async function handleSubmit() {
       <div class="flex justify-center">
         <StampsCard v-if="form.type === 'stamps'" :pass="getPreviewPass()" :wallet="(form as any)" />
         <MembershipCard v-else-if="form.type === 'membership'" :pass="getPreviewPass()" :wallet="(form as any)" />
-        <PointsCard v-else :pass="getPreviewPass()" :wallet="(form as any)" />
+        <PointsCard v-else-if="form.type === 'points'" :pass="getPreviewPass()" :wallet="(form as any)" />
+        <CashbackCard v-else-if="form.type === 'cashback'" :pass="getPreviewPass()" :wallet="(form as any)" />
+        <DaypassCard v-else-if="form.type === 'daypass'" :pass="getPreviewPass()" :wallet="(form as any)" />
       </div>
       <div class="flex gap-3">
         <button class="flex-1 border border-neutral-200 dark:border-neutral-600 text-neutral-600 dark:text-neutral-300 py-2.5 rounded-lg text-sm" @click="step = 3">← Atrás</button>

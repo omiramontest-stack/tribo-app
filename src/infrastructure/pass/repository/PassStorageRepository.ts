@@ -3,9 +3,9 @@ import { inject, injectable } from 'inversify'
 
 import persistenceTypes from '@/infrastructure/persistence/di/types'
 import type { PersistenceRepository } from '@/infrastructure/persistence/repository/PersistenceRepository'
-import type { PassRepository, PassAction, PassWithWalletRaw } from '@/domain/pass/repository/PassRepository'
+import type { PassRepository, PassAction, PassWithWalletRaw, CashbackTransaction } from '@/domain/pass/repository/PassRepository'
 import type { Pass } from '@/domain/pass/entities/Pass'
-import type { StampsData, PointsData, MembershipData } from '@/domain/pass/entities/PassData'
+import type { StampsData, PointsData, MembershipData, CashbackData } from '@/domain/pass/entities/PassData'
 
 @injectable()
 export class PassStorageRepository implements PassRepository {
@@ -16,7 +16,7 @@ export class PassStorageRepository implements PassRepository {
     private readonly _storage: PersistenceRepository,
   ) {}
 
-  async findByToken(token: string): Promise<PassWithWalletRaw | null> {
+  async findByToken(_token: string): Promise<PassWithWalletRaw | null> {
     // Storage mock doesn't have wallet data — not used in production
     return null
   }
@@ -24,6 +24,10 @@ export class PassStorageRepository implements PassRepository {
   async findByWalletId(walletId: string): Promise<Pass[]> {
     const passes = this._storage.getItem<Pass[]>(this.STORAGE_KEY, [])
     return passes.filter((p) => p.walletId === walletId)
+  }
+
+  async findScanned(_walletId: string): Promise<Pass[]> {
+    return []
   }
 
   async save(pass: Pass): Promise<Pass> {
@@ -41,7 +45,7 @@ export class PassStorageRepository implements PassRepository {
     return pass
   }
 
-  async applyAction(token: string, action: PassAction, amount?: number): Promise<Pass> {
+  async applyAction(token: string, action: PassAction, options?: { amount?: number; purchaseAmount?: number; cashbackPercent?: number; description?: string }): Promise<Pass> {
     const passes = this._storage.getItem<Pass[]>(this.STORAGE_KEY, [])
     const pass = passes.find((p) => p.token === token)
     if (!pass) throw new Error('Pass not found')
@@ -49,13 +53,25 @@ export class PassStorageRepository implements PassRepository {
     if (action === 'add_stamp' && pass.data.type === 'stamps') {
       (pass.data as StampsData).currentStamps += 1
     } else if (action === 'add_points' && pass.data.type === 'points') {
-      (pass.data as PointsData).currentPoints += amount ?? 1
+      (pass.data as PointsData).currentPoints += options?.amount ?? 1
     } else if (action === 'renew_membership' && pass.data.type === 'membership') {
       (pass.data as MembershipData).expiresAt = new Date(Date.now() + 30 * 86400000).toISOString()
+    } else if ((action === 'add_cashback' || action === 'subtract_cashback') && pass.data.type === 'cashback') {
+      const pct = options?.cashbackPercent ?? 0
+      const amt = ((options?.purchaseAmount ?? 0) * pct) / 100
+      if (action === 'add_cashback') {
+        (pass.data as CashbackData).balance += amt
+      } else {
+        (pass.data as CashbackData).balance = Math.max(0, (pass.data as CashbackData).balance - amt)
+      }
     }
 
     this._storage.setItem(this.STORAGE_KEY, passes)
     return pass
+  }
+
+  async getTransactions(_token: string): Promise<CashbackTransaction[]> {
+    return []
   }
 
   async delete(token: string): Promise<void> {

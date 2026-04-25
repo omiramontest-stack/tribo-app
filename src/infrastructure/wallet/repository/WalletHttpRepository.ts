@@ -21,7 +21,8 @@ export class WalletHttpRepository implements WalletRepository {
   }
 
   async save(orgId: string, wallet: Wallet): Promise<Wallet> {
-    return apiClient.post<Wallet>(`/organizations/${orgId}/wallets`, wallet)
+    const { id: _id, createdAt: _createdAt, ...body } = wallet
+    return apiClient.post<Wallet>(`/organizations/${orgId}/wallets`, body)
   }
 
   async delete(orgId: string, id: string): Promise<void> {

@@ -10,6 +10,7 @@ import type { GeneratePassDto } from '@/application/pass/dto/GeneratePassDto'
 import type { UpdatePassDataDto } from '@/application/pass/dto/UpdatePassDataDto'
 import type { PassWithWallet } from '@/application/pass/useCase/GetPassByTokenUseCase'
 import type UseCase from '@/application/common/useCase/UseCase'
+import type { PassRepository, CashbackTransaction } from '@/domain/pass/repository/PassRepository'
 
 export const usePassStore = defineStore('PassStore', () => {
   const orgStore = useOrganizationStore()
@@ -18,6 +19,7 @@ export const usePassStore = defineStore('PassStore', () => {
   const getPassesByWalletUseCase = container.get<UseCase<string, Pass[]>>(passTypes.getPassesByWalletUseCase)
   const updatePassDataUseCase = container.get<UseCase<UpdatePassDataDto, PassWithWallet>>(passTypes.updatePassDataUseCase)
   const deletePassUseCase = container.get<UseCase<string, void>>(passTypes.deletePassUseCase)
+  const passRepository = container.get<PassRepository>(passTypes.passRepository)
 
   const state = reactive<{
     _passes: Pass[]
@@ -65,6 +67,14 @@ export const usePassStore = defineStore('PassStore', () => {
     state._passes = state._passes.filter((p) => p.token !== token)
   }
 
+  async function fetchTransactions(token: string): Promise<CashbackTransaction[]> {
+    return passRepository.getTransactions(token)
+  }
+
+  async function fetchScannedPasses(walletId: string): Promise<Pass[]> {
+    return passRepository.findScanned(walletId)
+  }
+
   return {
     passes,
     currentPass,
@@ -74,5 +84,7 @@ export const usePassStore = defineStore('PassStore', () => {
     fetchPassByToken,
     updatePassData,
     deletePass,
+    fetchTransactions,
+    fetchScannedPasses,
   }
 })

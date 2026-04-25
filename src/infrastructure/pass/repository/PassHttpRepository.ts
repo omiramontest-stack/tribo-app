@@ -1,7 +1,7 @@
 import 'reflect-metadata'
 import { injectable } from 'inversify'
 
-import type { PassRepository, PassAction, PassWithWalletRaw } from '@/domain/pass/repository/PassRepository'
+import type { PassRepository, PassAction, PassWithWalletRaw, CashbackTransaction, ApplyActionOptions } from '@/domain/pass/repository/PassRepository'
 import type { Pass } from '@/domain/pass/entities/Pass'
 import { apiClient, ApiError } from '@/infrastructure/http/ApiClient'
 
@@ -18,6 +18,10 @@ export class PassHttpRepository implements PassRepository {
 
   async findByWalletId(walletId: string): Promise<Pass[]> {
     return apiClient.get<Pass[]>(`/wallets/${walletId}/passes`)
+  }
+
+  async findScanned(walletId: string): Promise<Pass[]> {
+    return apiClient.get<Pass[]>(`/wallets/${walletId}/passes/scanned`)
   }
 
   async save(pass: Pass): Promise<Pass> {
@@ -39,12 +43,19 @@ export class PassHttpRepository implements PassRepository {
     return result.pass
   }
 
-  async applyAction(token: string, action: PassAction, amount?: number): Promise<Pass> {
+  async applyAction(token: string, action: PassAction, options?: ApplyActionOptions): Promise<Pass> {
     const result = await apiClient.patch<{ pass: Pass; wallet: unknown }>(`/passes/${token}`, {
       action,
-      ...(amount !== undefined ? { amount } : {}),
+      ...(options?.amount !== undefined ? { amount: options.amount } : {}),
+      ...(options?.purchaseAmount !== undefined ? { purchaseAmount: options.purchaseAmount } : {}),
+      ...(options?.cashbackPercent !== undefined ? { cashbackPercent: options.cashbackPercent } : {}),
+      ...(options?.description !== undefined ? { description: options.description } : {}),
     })
     return result.pass
+  }
+
+  async getTransactions(token: string): Promise<CashbackTransaction[]> {
+    return apiClient.get<CashbackTransaction[]>(`/passes/${token}/transactions`)
   }
 
   async delete(token: string): Promise<void> {
