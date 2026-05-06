@@ -1,11 +1,11 @@
 {
-  "name": "Wallet SaaS",
-  "short_name": "Wallet",
+  "name": "tribo",
+  "short_name": "tribo",
   "description": "Tu tarjeta de lealtad digital",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2563EB",
+  "background_color": "#FAFAF7",
+  "theme_color": "#1A3D2B",
   "orientation": "portrait",
   "icons": [
     {

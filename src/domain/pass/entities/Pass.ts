@@ -10,4 +10,5 @@ export interface Pass {
   customerName: string
   createdAt: string
   data: PassData
+  dlExpiresAt?: string
 }

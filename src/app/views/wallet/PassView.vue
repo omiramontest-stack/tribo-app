@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import WalletPublicLayout from '@/app/layouts/WalletPublicLayout.vue'
 import StampsCard from '@/app/components/Wallet/StampsCard.vue'
 import MembershipCard from '@/app/components/Wallet/MembershipCard.vue'
@@ -9,16 +9,40 @@ import CashbackCard from '@/app/components/Wallet/CashbackCard.vue'
 import DaypassCard from '@/app/components/Wallet/DaypassCard.vue'
 import WalletQR from '@/app/components/Wallet/WalletQR.vue'
 import { usePassStore } from '@/app/stores/pass/PassStore'
+import { ApiError } from '@/infrastructure/http/ApiClient'
+import { registerWebPush } from '@/app/composables/useWebPush'
 import type { CashbackRules } from '@/domain/wallet/entities/WalletRules'
 import type { CashbackTransaction } from '@/domain/pass/repository/PassRepository'
 
 const route = useRoute()
+const router = useRouter()
 const passStore = usePassStore()
 
 const loading = ref(true)
 const error = ref(false)
 const transactions = ref<CashbackTransaction[]>([])
 const loadingTx = ref(false)
+const secondsLeft = ref<number | null>(null)
+let countdownTimer: ReturnType<typeof setInterval> | null = null
+
+function startCountdown(dlExpiresAt: string) {
+  const tick = () => {
+    const s = Math.floor((new Date(dlExpiresAt).getTime() - Date.now()) / 1000)
+    if (s <= 0) {
+      secondsLeft.value = 0
+      if (countdownTimer) clearInterval(countdownTimer)
+      router.replace({ name: 'LinkExpired' })
+    } else {
+      secondsLeft.value = s
+    }
+  }
+  tick()
+  countdownTimer = setInterval(tick, 1000)
+}
+
+onUnmounted(() => { if (countdownTimer) clearInterval(countdownTimer) })
+
+const dl = computed(() => route.query.dl as string | undefined)
 
 const isCashback = computed(() => passStore.currentPassWallet?.type === 'cashback')
 const isDaypass = computed(() => passStore.currentPassWallet?.type === 'daypass')
@@ -26,6 +50,10 @@ const isDaypass = computed(() => passStore.currentPassWallet?.type === 'daypass'
 const cashbackRules = computed(() =>
   isCashback.value ? (passStore.currentPassWallet!.rules as CashbackRules) : null,
 )
+
+function dlParam(sep: '?' | '&' = '?') {
+  return dl.value ? `${sep}dl=${encodeURIComponent(dl.value)}` : ''
+}
 
 async function loadTransactions() {
   if (!isCashback.value || !passStore.currentPass) return
@@ -38,10 +66,18 @@ async function loadTransactions() {
 }
 
 onMounted(async () => {
+  const token = route.params.token as string
+
   try {
-    await passStore.fetchPassByToken(route.params.token as string)
+    await passStore.fetchPassByToken(token, dl.value)
+    if (passStore.currentPass?.dlExpiresAt) startCountdown(passStore.currentPass.dlExpiresAt)
     if (isCashback.value) await loadTransactions()
-  } catch {
+    registerWebPush(token)
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 401) {
+      router.replace({ name: 'LinkExpired' })
+      return
+    }
     error.value = true
   } finally {
     loading.value = false
@@ -60,6 +96,19 @@ onMounted(async () => {
     </div>
 
     <div v-else-if="passStore.currentPass && passStore.currentPassWallet" class="w-full max-w-sm space-y-4">
+      <!-- Download-link countdown -->
+      <div
+        v-if="secondsLeft !== null"
+        style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); font-size: 12px; color: #9DB7A8;"
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink: 0;">
+          <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+        </svg>
+        <span style="flex: 1;">Este enlace expira en</span>
+        <span style="font-variant-numeric: tabular-nums; font-weight: 700; color: #fff;">
+          {{ Math.floor(secondsLeft / 60).toString().padStart(2, '0') }}:{{ (secondsLeft % 60).toString().padStart(2, '0') }}
+        </span>
+      </div>
       <StampsCard
         v-if="passStore.currentPassWallet.type === 'stamps'"
         :pass="passStore.currentPass"
@@ -93,11 +142,12 @@ onMounted(async () => {
       </div>
 
       <a
-        :href="`/passes/${passStore.currentPass.token}/apple`"
+        :href="`/passes/${passStore.currentPass.token}/apple${dlParam()}`"
         class="flex justify-center"
       >
         <img src="/add-to-wallet.png" alt="Add to Apple Wallet" class="h-10" />
       </a>
+
 
       <!-- Cashback: historial de transacciones (solo lectura) -->
       <div v-if="isCashback" class="bg-neutral-900 rounded-2xl border border-neutral-800 overflow-hidden">

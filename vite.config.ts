@@ -38,6 +38,8 @@ export default defineConfig(({ mode }) => {
         '/passes': { target: env.VITE_API_URL ?? 'http://localhost:3000', changeOrigin: true },
         '/organizations': { target: env.VITE_API_URL ?? 'http://localhost:3000', changeOrigin: true },
         '/invitations': { target: env.VITE_API_URL ?? 'http://localhost:3000', changeOrigin: true },
+        '/campaigns': { target: env.VITE_API_URL ?? 'http://localhost:3000', changeOrigin: true },
+        '/billing':   { target: env.VITE_API_URL ?? 'http://localhost:3000', changeOrigin: true },
       },
     },
     build: {

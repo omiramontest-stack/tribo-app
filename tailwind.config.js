@@ -1,176 +1,100 @@
 /** @type {import('tailwindcss').Config} */
 import flyonui from 'flyonui'
 import flyonuiJs from 'flyonui/plugin'
-
 import defaultTheme from 'tailwindcss/defaultTheme'
-const sans = defaultTheme.fontFamily.sans.filter((font) => font !== 'Roboto')
 
 export default {
   darkMode: ['class'],
   content: ['./src/**/*.{vue,js,ts,jsx,tsx}', './node_modules/flyonui/dist/js/*.js'],
   theme: {
     fontFamily: {
-      sans: ['Lato', ...sans],
-      serif: ['"Gowun Batang"', ...defaultTheme.fontFamily.serif],
+      sans: ['"Plus Jakarta Sans"', ...defaultTheme.fontFamily.sans],
+      display: ['Syne', '"Plus Jakarta Sans"', ...defaultTheme.fontFamily.sans],
     },
     extend: {
       fontSize: {
-        '3.5xl': [
-          '2rem',
-          {
-            lineHeight: '38px',
-          },
-        ],
-      },
-      backgroundImage: {
-        'gradient-radial-light':
-          'radial-gradient(circle 300px at 30% -180%, var(--tw-gradient-from) 0%, var(--tw-gradient-to) 100%)',
-        'gradient-radial-dark':
-          'radial-gradient(circle 300px at 30% -180%, var(--tw-gradient-from) 0%, var(--tw-gradient-to) 100%)',
+        '3.5xl': ['2rem', { lineHeight: '38px' }],
       },
       colors: {
+        // Tribo design tokens (matching tribo-tokens.jsx)
+        tribo: {
+          verde:        '#1B4332',
+          'verde-deep': '#13301F',
+          'verde-mid':  '#2D6A4F',
+          'verde-soft': '#3D8B65',
+          'verde-tint': '#E6EFE9',
+          amber:        '#E8920A',
+          'amber-light':'#F5B942',
+          'amber-soft': '#FCEBC4',
+          crema:        '#F7F4EF',
+          'crema-deep': '#EFEAE0',
+          ink:          '#0F1B14',
+          'ink-70':     '#3A4A41',
+          'ink-50':     '#6B7A72',
+          'ink-30':     '#A8B3AC',
+          'ink-15':     '#D8DDD7',
+          'ink-08':     '#ECEFEB',
+        },
+
         brand: {
           primary: {
-            light: {
-              DEFAULT: '#2563EB', // blue fintech fuerte
-              lighter: '#3B82F6',
-              dark: '#1D4ED8',
-            },
-            dark: {
-              DEFAULT: '#3B82F6',
-              lighter: '#60A5FA',
-              dark: '#2563EB',
-            },
+            light: { DEFAULT: '#1B4332', lighter: '#2D6A4F', dark: '#13301F' },
+            dark:  { DEFAULT: '#2D6A4F', lighter: '#3D8B65', dark: '#1B4332' },
           },
           secondary: {
-            light: {
-              DEFAULT: '#0EA5E9', // cyan moderno (tech/wallet)
-              lighter: '#38BDF8',
-              dark: '#0284C7',
-            },
-            dark: {
-              DEFAULT: '#38BDF8',
-              lighter: '#7DD3FC',
-              dark: '#0EA5E9',
-            },
-          },
-        },
-
-        default: {
-          light: {
-            DEFAULT: '#FFFFFF',
-            lighter: '#F8FAFC',
-            dark: '#E2E8F0',
-          },
-          dark: {
-            DEFAULT: '#0B1220', // más premium que zinc
-            lighter: '#111827',
-            dark: '#020617',
-          },
-        },
-
-        accent: {
-          light: {
-            DEFAULT: '#A855F7', // purple fintech (acciones)
-            lighter: '#C084FC',
-            dark: '#9333EA',
-          },
-          dark: {
-            DEFAULT: '#C084FC',
-            lighter: '#E9D5FF',
-            dark: '#A855F7',
-          },
-        },
-
-        success: {
-          light: {
-            DEFAULT: '#16A34A', // verde dinero más serio
-            lighter: '#22C55E',
-            dark: '#15803D',
-          },
-          dark: {
-            DEFAULT: '#22C55E',
-            lighter: '#4ADE80',
-            dark: '#16A34A',
-          },
-        },
-
-        warning: {
-          light: {
-            DEFAULT: '#F59E0B', // amber más usable
-            lighter: '#FBBF24',
-            dark: '#D97706',
-          },
-          dark: {
-            DEFAULT: '#FBBF24',
-            lighter: '#FDE68A',
-            dark: '#F59E0B',
-          },
-        },
-
-        error: {
-          light: {
-            DEFAULT: '#E11D48', // rojo más moderno (rose)
-            lighter: '#FB7185',
-            dark: '#BE123C',
-          },
-          dark: {
-            DEFAULT: '#FB7185',
-            lighter: '#FDA4AF',
-            dark: '#E11D48',
-          },
-        },
-
-        neutral: {
-          light: {
-            DEFAULT: '#64748B', // slate mejor que gray
-            lighter: '#94A3B8',
-            dark: '#475569',
-          },
-          dark: {
-            DEFAULT: '#475569',
-            lighter: '#64748B',
-            dark: '#334155',
+            light: { DEFAULT: '#E8920A', lighter: '#F5B942', dark: '#C97208' },
+            dark:  { DEFAULT: '#F5B942', lighter: '#FCEBC4', dark: '#E8920A' },
           },
         },
 
         background: {
-          light: {
-            DEFAULT: '#F1F5F9', // más limpio tipo dashboard
-            lighter: '#FFFFFF',
-            dark: '#E2E8F0',
-          },
-          dark: {
-            DEFAULT: '#020617', // deep dark fintech
-            lighter: '#0B1220',
-            dark: '#010409',
-          },
+          light: { DEFAULT: '#F7F4EF', lighter: '#FFFFFF', dark: '#EFEAE0' },
+          dark:  { DEFAULT: '#0F1B14', lighter: '#13301F', dark: '#0A1510' },
+        },
+
+        default: {
+          light: { DEFAULT: '#FFFFFF', lighter: '#F7F4EF', dark: '#EFEAE0' },
+          dark:  { DEFAULT: '#13301F', lighter: '#1B4332', dark: '#0A1510' },
+        },
+
+        success: {
+          light: { DEFAULT: '#16A34A', lighter: '#22C55E', dark: '#15803D' },
+          dark:  { DEFAULT: '#22C55E', lighter: '#4ADE80', dark: '#16A34A' },
+        },
+
+        warning: {
+          light: { DEFAULT: '#E8920A', lighter: '#F5B942', dark: '#C97208' },
+          dark:  { DEFAULT: '#F5B942', lighter: '#FCEBC4', dark: '#E8920A' },
+        },
+
+        error: {
+          light: { DEFAULT: '#DC2626', lighter: '#F87171', dark: '#B91C1C' },
+          dark:  { DEFAULT: '#F87171', lighter: '#FCA5A5', dark: '#DC2626' },
+        },
+
+        neutral: {
+          light: { DEFAULT: '#6B7A72', lighter: '#A8B3AC', dark: '#3A4A41' },
+          dark:  { DEFAULT: '#3A4A41', lighter: '#6B7A72', dark: '#0F1B14' },
+        },
+
+        accent: {
+          light: { DEFAULT: '#8B5CF6', lighter: '#A78BFA', dark: '#7C3AED' },
+          dark:  { DEFAULT: '#A78BFA', lighter: '#C4B5FD', dark: '#8B5CF6' },
         },
 
         gradient: {
-          light: {
-            from: '#3B82F6',
-            to: '#0EA5E9',
-          },
-          dark: {
-            from: '#1D4ED8',
-            to: '#38BDF8',
-          },
+          light: { from: '#1B4332', to: '#E8920A' },
+          dark:  { from: '#13301F', to: '#C97208' },
         },
       },
       container: {
-        padding: {
-          DEFAULT: '1rem',
-          sm: '2rem',
-          '2xl': '3rem',
-        },
+        padding: { DEFAULT: '1rem', sm: '2rem', '2xl': '3rem' },
+      },
+      borderRadius: {
+        card: '14px',
       },
       keyframes: {
-        shimmer: {
-          '100%': {
-            transform: 'translateX(100%)',
-          },
-        },
+        shimmer: { '100%': { transform: 'translateX(100%)' } },
       },
     },
   },
@@ -183,7 +107,6 @@ export default {
           'background-clip': 'text',
           '-webkit-background-clip': 'text',
           '-webkit-text-fill-color': 'transparent',
-          'text-shadow': '0 0 4px rgba(255, 255, 255, .1), 0 0 14px rgba(130, 168, 236, .2)',
         },
       })
     },
@@ -192,23 +115,23 @@ export default {
     themes: [
       {
         light: {
-          primary: '#60A5FA',
-          'primary-content': '#FFFFFF',
-          secondary: '#EF4444',
-          'secondary-content': '#FFFFFF',
-          accent: '#FACC15',
-          'accent-content': '#18181B',
-          neutral: '#6B7280',
+          primary: '#1B4332',
+          'primary-content': '#F7F4EF',
+          secondary: '#E8920A',
+          'secondary-content': '#13301F',
+          accent: '#E8920A',
+          'accent-content': '#13301F',
+          neutral: '#6B7A72',
           'neutral-content': '#FFFFFF',
-          'base-100': '#FFFFFF',
-          'base-200': '#F4F4F5',
-          'base-300': '#E5E7EB',
-          'base-content': '#18181B',
-          info: '#3B82F6',
+          'base-100': '#F7F4EF',
+          'base-200': '#EFEAE0',
+          'base-300': '#D8DDD7',
+          'base-content': '#0F1B14',
+          info: '#2D6A4F',
           'info-content': '#FFFFFF',
-          success: '#22C55E',
+          success: '#16A34A',
           'success-content': '#FFFFFF',
-          warning: '#F97316',
+          warning: '#E8920A',
           'warning-content': '#FFFFFF',
           error: '#DC2626',
           'error-content': '#FFFFFF',
@@ -216,24 +139,24 @@ export default {
       },
       {
         dark: {
-          primary: '#60A5FA',
-          'primary-content': '#010811',
-          secondary: '#F87171',
-          'secondary-content': '#130201',
-          accent: '#FDE047',
-          'accent-content': '#1F2937',
-          neutral: '#4B5563',
+          primary: '#2D6A4F',
+          'primary-content': '#F7F4EF',
+          secondary: '#F5B942',
+          'secondary-content': '#13301F',
+          accent: '#F5B942',
+          'accent-content': '#13301F',
+          neutral: '#3A4A41',
           'neutral-content': '#FFFFFF',
-          'base-100': '#111827',
-          'base-200': '#27272A',
-          'base-300': '#18181B',
-          'base-content': '#F9FAFB',
-          info: '#60A5FA',
+          'base-100': '#0F1B14',
+          'base-200': '#13301F',
+          'base-300': '#1B4332',
+          'base-content': '#F7F4EF',
+          info: '#3D8B65',
           'info-content': '#FFFFFF',
-          success: '#4ADE80',
+          success: '#22C55E',
           'success-content': '#FFFFFF',
-          warning: '#FB923C',
-          'warning-content': '#FFFFFF',
+          warning: '#F5B942',
+          'warning-content': '#13301F',
           error: '#EF4444',
           'error-content': '#FFFFFF',
         },

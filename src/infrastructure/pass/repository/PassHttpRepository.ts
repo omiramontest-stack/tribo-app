@@ -7,9 +7,10 @@ import { apiClient, ApiError } from '@/infrastructure/http/ApiClient'
 
 @injectable()
 export class PassHttpRepository implements PassRepository {
-  async findByToken(token: string): Promise<PassWithWalletRaw | null> {
+  async findByToken(token: string, dl?: string): Promise<PassWithWalletRaw | null> {
+    const url = dl ? `/passes/w/${token}?dl=${encodeURIComponent(dl)}` : `/passes/w/${token}`
     try {
-      return await apiClient.get<PassWithWalletRaw>(`/passes/w/${token}`)
+      return await apiClient.get<PassWithWalletRaw>(url)
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) return null
       throw e

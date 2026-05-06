@@ -26,7 +26,7 @@ export interface PassWithWalletRaw {
 }
 
 export interface PassRepository {
-  findByToken(token: string): Promise<PassWithWalletRaw | null>
+  findByToken(token: string, dl?: string): Promise<PassWithWalletRaw | null>
   findByWalletId(walletId: string): Promise<Pass[]>
   findScanned(walletId: string): Promise<Pass[]>
   save(pass: Pass): Promise<Pass>

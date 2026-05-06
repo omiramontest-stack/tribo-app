@@ -31,6 +31,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/app/views/wallet/EventScanView.vue'),
     meta: { requiresAuth: false },
   },
+  {
+    path: '/link-expirado',
+    name: 'LinkExpired',
+    component: () => import('@/app/views/wallet/LinkExpiredView.vue'),
+    meta: { requiresAuth: false },
+  },
 ]
 
 export default routes

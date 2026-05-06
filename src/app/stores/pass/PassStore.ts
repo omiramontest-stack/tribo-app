@@ -47,10 +47,17 @@ export const usePassStore = defineStore('PassStore', () => {
     state._passes = await getPassesByWalletUseCase.run(walletId)
   }
 
-  async function fetchPassByToken(token: string) {
-    const result = await getPassByTokenUseCase.run(token)
-    state._currentPass = result.pass
-    state._currentPassWallet = result.wallet
+  async function fetchPassByToken(token: string, dl?: string) {
+    if (dl) {
+      const result = await passRepository.findByToken(token, dl)
+      if (!result) throw new Error('NOT_FOUND')
+      state._currentPass = result.pass
+      state._currentPassWallet = result.wallet
+    } else {
+      const result = await getPassByTokenUseCase.run(token)
+      state._currentPass = result.pass
+      state._currentPassWallet = result.wallet
+    }
   }
 
   async function updatePassData(dto: Omit<UpdatePassDataDto, 'orgId'>): Promise<PassWithWallet> {
@@ -75,6 +82,11 @@ export const usePassStore = defineStore('PassStore', () => {
     return passRepository.findScanned(walletId)
   }
 
+  async function sendLink(token: string): Promise<void> {
+    const { apiClient } = await import('@/infrastructure/http/ApiClient')
+    await apiClient.post(`/passes/${token}/send-link`)
+  }
+
   return {
     passes,
     currentPass,
@@ -86,5 +98,6 @@ export const usePassStore = defineStore('PassStore', () => {
     deletePass,
     fetchTransactions,
     fetchScannedPasses,
+    sendLink,
   }
 })

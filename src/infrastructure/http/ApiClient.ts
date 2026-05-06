@@ -8,9 +8,14 @@ export class ApiError extends Error {
   }
 }
 
+export type PlanGateCode = 'SUBSCRIPTION_REQUIRED' | 'PLAN_UPGRADE_REQUIRED' | 'WALLET_LIMIT_REACHED' | 'PASS_LIMIT_REACHED'
+
+const PLAN_GATE_CODES = new Set<string>(['SUBSCRIPTION_REQUIRED', 'PLAN_UPGRADE_REQUIRED', 'WALLET_LIMIT_REACHED', 'PASS_LIMIT_REACHED'])
+
 class ApiClient {
   private readonly baseUrl: string
   onNoOrgContext?: () => void
+  onPlanError?: (code: PlanGateCode, message: string) => void
 
   constructor() {
     this.baseUrl = ''
@@ -18,10 +23,11 @@ class ApiClient {
 
   private async request<T>(path: string, init?: RequestInit, isRetry = false): Promise<T> {
     const hasBody = init?.body !== undefined
+    const isFormData = init?.body instanceof FormData
     const res = await fetch(`${this.baseUrl}${path}`, {
       ...init,
       credentials: 'include',
-      headers: { ...(hasBody ? { 'Content-Type': 'application/json' } : {}), 'ngrok-skip-browser-warning': 'true', ...init?.headers },
+      headers: { ...(hasBody && !isFormData ? { 'Content-Type': 'application/json' } : {}), 'ngrok-skip-browser-warning': 'true', ...init?.headers },
     })
 
     if (res.status === 401 && !isRetry) {
@@ -34,9 +40,16 @@ class ApiClient {
 
     const data = await res.json().catch(() => null)
 
-    if (res.status === 403 && (data as { error?: string })?.error?.includes('switch-org')) {
-      this.onNoOrgContext?.()
-      throw new ApiError(403, data)
+    if (res.status === 403) {
+      const errorCode = (data as { error?: string })?.error ?? ''
+      if (errorCode.includes('switch-org')) {
+        this.onNoOrgContext?.()
+        throw new ApiError(403, data)
+      }
+      if (PLAN_GATE_CODES.has(errorCode)) {
+        this.onPlanError?.(errorCode as PlanGateCode, (data as { message?: string })?.message ?? '')
+        throw new ApiError(403, data)
+      }
     }
 
     if (!res.ok) throw new ApiError(res.status, data)
@@ -76,6 +89,10 @@ class ApiClient {
 
   delete(path: string) {
     return this.request<void>(path, { method: 'DELETE' })
+  }
+
+  postFile<T>(path: string, formData: FormData) {
+    return this.request<T>(path, { method: 'POST', body: formData })
   }
 }
 

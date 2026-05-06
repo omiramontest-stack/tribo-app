@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import WalletPublicLayout from '@/app/layouts/WalletPublicLayout.vue'
 import { useAuthStore } from '@/app/stores/auth/AuthStore'
 
 const router = useRouter()
@@ -50,118 +49,192 @@ async function handleRegister() {
 function handleGoogle() {
   window.location.href = '/auth/google'
 }
+
+const features = [
+  { label: 'Sellos & Membresía',        icon: 'M3 11a4 4 0 014-4h2a4 4 0 014 4M7 11V7m10 4V7M3 11h18v10a2 2 0 01-2 2H5a2 2 0 01-2-2z' },
+  { label: 'Wallets sin código',         icon: 'M12 1v6m0 6v4M4.22 4.22l4.24 4.24m3.08 3.08l4.24 4.24M1 12h6m6 0h4M4.22 19.78l4.24-4.24m3.08-3.08l4.24-4.24' },
+  { label: 'Análisis en tiempo real',    icon: 'M3 3v18h18M9 17V9m4 8v-5m4 5V5' },
+  { label: 'QR instantáneo',             icon: 'M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zM15 15h2v2h-2zM19 15v2M17 19h4M19 19v2' },
+]
 </script>
 
 <template>
-  <WalletPublicLayout>
-    <div class="w-full max-w-sm">
-      <div class="text-center mb-8">
-        <h1 class="text-2xl font-bold text-white">Wallet SaaS</h1>
-        <p class="text-neutral-400 text-sm mt-1">Panel de administración</p>
+  <div class="login-root">
+
+    <!-- ── Hero ────────────────────────────────────────────── -->
+    <div class="login-hero">
+      <!-- dot pattern -->
+      <div class="hero-dots" />
+
+      <div style="position: relative; z-index: 1; display: flex; flex-direction: column; height: 100%;">
+
+        <!-- Logo -->
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 52px;">
+          <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
+            <line x1="10" y1="28" x2="30" y2="28" stroke="#E8920A" stroke-width="2"/>
+            <line x1="10" y1="28" x2="20" y2="10" stroke="#E8920A" stroke-width="2"/>
+            <line x1="20" y1="10" x2="30" y2="28" stroke="#E8920A" stroke-width="2"/>
+            <circle cx="20" cy="10" r="3.5" fill="#E8920A"/>
+            <circle cx="10" cy="28" r="3.5" fill="#E8920A"/>
+            <circle cx="30" cy="28" r="3.5" fill="#E8920A"/>
+          </svg>
+          <span style="font-size: 18px; font-weight: 800; letter-spacing: -0.02em; color: #fff;">
+            trib<span style="color: #E8920A;">o</span>
+          </span>
+        </div>
+
+        <!-- Copy -->
+        <div style="flex: 1;">
+          <h1 style="font-size: 34px; font-weight: 800; line-height: 1.2; margin-bottom: 14px; letter-spacing: -0.01em; color: #fff;">
+            Conecta con<br>tu negocio
+          </h1>
+          <p style="font-size: 14px; line-height: 1.65; color: rgba(255,255,255,0.85); max-width: 340px; margin-bottom: 36px;">
+            Gestiona wallets, campañas y notificaciones push. Convierte escaneos en ventas reales.
+          </p>
+
+          <!-- Features -->
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div
+              v-for="f in features"
+              :key="f.label"
+              style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 600; color: rgba(255,255,255,0.9);"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path :d="f.icon"/>
+              </svg>
+              {{ f.label }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Testimonial -->
+        <div style="font-size: 12px; color: rgba(255,255,255,0.8);">
+          <div style="font-weight: 700; margin-bottom: 7px;">☕ Café Luna</div>
+          <blockquote style="font-style: italic; border-left: 3px solid #E8920A; padding-left: 12px; line-height: 1.55; margin: 0;">
+            "Pasamos de 100 a 312 clientes activos en 2 meses. El equipo Tribo es increíble."
+          </blockquote>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Form side ──────────────────────────────────────── -->
+    <div class="login-form-side">
+
+      <!-- Mobile-only logo -->
+      <div class="mobile-logo">
+        <svg width="24" height="24" viewBox="0 0 40 40" fill="none">
+          <line x1="10" y1="28" x2="30" y2="28" stroke="#E8920A" stroke-width="2"/>
+          <line x1="10" y1="28" x2="20" y2="10" stroke="#E8920A" stroke-width="2"/>
+          <line x1="20" y1="10" x2="30" y2="28" stroke="#E8920A" stroke-width="2"/>
+          <circle cx="20" cy="10" r="3.5" fill="#E8920A"/>
+          <circle cx="10" cy="28" r="3.5" fill="#E8920A"/>
+          <circle cx="30" cy="28" r="3.5" fill="#E8920A"/>
+        </svg>
+        <span style="font-size: 17px; font-weight: 800; letter-spacing: -0.02em; color: #0F1B14;">
+          trib<span style="color: #E8920A;">o</span>
+        </span>
       </div>
 
-      <div class="bg-neutral-800 rounded-2xl p-6 shadow-xl space-y-5">
+      <div style="width: 100%; max-width: 420px;">
+
         <!-- Tabs -->
-        <div class="flex bg-neutral-700 rounded-lg p-1">
+        <div style="display: flex; gap: 2px; padding: 4px; background: #fff; border-radius: 10px; margin-bottom: 28px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
           <button
-            class="flex-1 text-sm py-1.5 rounded-md font-medium transition-colors"
-            :class="tab === 'login' ? 'bg-neutral-900 text-white' : 'text-neutral-400 hover:text-neutral-200'"
-            @click="switchTab('login')"
+            v-for="t in [{ id: 'login', label: 'Iniciar sesión' }, { id: 'register', label: 'Crear cuenta' }]"
+            :key="t.id"
+            class="tab-btn"
+            :style="tab === t.id
+              ? 'background: #1B4332; color: #fff;'
+              : 'background: transparent; color: #6B7A72;'"
+            @click="switchTab(t.id as Tab)"
           >
-            Iniciar sesión
-          </button>
-          <button
-            class="flex-1 text-sm py-1.5 rounded-md font-medium transition-colors"
-            :class="tab === 'register' ? 'bg-neutral-900 text-white' : 'text-neutral-400 hover:text-neutral-200'"
-            @click="switchTab('register')"
-          >
-            Registrarse
+            {{ t.label }}
           </button>
         </div>
 
-        <!-- Login -->
-        <form v-if="tab === 'login'" class="space-y-4" @submit.prevent="handleLogin">
+        <!-- Login form -->
+        <form v-if="tab === 'login'" class="auth-form" @submit.prevent="handleLogin">
           <div>
-            <label class="block text-sm text-neutral-300 mb-1">Email</label>
+            <label class="field-label">Email</label>
             <input
               v-model="loginForm.email"
               type="email"
               required
               placeholder="admin@negocio.com"
-              class="w-full bg-neutral-700 text-white rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-neutral-500"
+              class="field-input"
+              @focus="(e) => { (e.target as HTMLInputElement).style.borderColor = '#E8920A'; (e.target as HTMLInputElement).style.boxShadow = '0 0 0 3px #FCEBC4'; }"
+              @blur="(e) => { (e.target as HTMLInputElement).style.borderColor = '#ECEFEB'; (e.target as HTMLInputElement).style.boxShadow = 'none'; }"
             />
           </div>
           <div>
-            <label class="block text-sm text-neutral-300 mb-1">Contraseña</label>
+            <label class="field-label">Contraseña</label>
             <input
               v-model="loginForm.password"
               type="password"
               required
               placeholder="••••••••"
-              class="w-full bg-neutral-700 text-white rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-neutral-500"
+              class="field-input"
+              @focus="(e) => { (e.target as HTMLInputElement).style.borderColor = '#E8920A'; (e.target as HTMLInputElement).style.boxShadow = '0 0 0 3px #FCEBC4'; }"
+              @blur="(e) => { (e.target as HTMLInputElement).style.borderColor = '#ECEFEB'; (e.target as HTMLInputElement).style.boxShadow = 'none'; }"
             />
           </div>
 
-          <p v-if="error" class="text-red-400 text-sm">{{ error }}</p>
+          <div v-if="error" style="font-size: 12px; color: #DC2626; padding: 8px 12px; background: #FEE2E2; border-radius: 8px;">
+            {{ error }}
+          </div>
 
-          <button
-            type="submit"
-            :disabled="loading"
-            class="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium rounded-lg py-2.5 text-sm transition-colors"
-          >
+          <button type="submit" :disabled="loading" class="btn-primary" :class="{ 'btn-loading': loading }">
             {{ loading ? 'Entrando...' : 'Iniciar sesión' }}
           </button>
         </form>
 
-        <!-- Register -->
-        <form v-else class="space-y-4" @submit.prevent="handleRegister">
+        <!-- Register form -->
+        <form v-else class="auth-form" @submit.prevent="handleRegister">
           <div>
-            <label class="block text-sm text-neutral-300 mb-1">Email</label>
+            <label class="field-label">Email</label>
             <input
               v-model="registerForm.email"
               type="email"
               required
               placeholder="admin@negocio.com"
-              class="w-full bg-neutral-700 text-white rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-neutral-500"
+              class="field-input"
+              @focus="(e) => { (e.target as HTMLInputElement).style.borderColor = '#E8920A'; (e.target as HTMLInputElement).style.boxShadow = '0 0 0 3px #FCEBC4'; }"
+              @blur="(e) => { (e.target as HTMLInputElement).style.borderColor = '#ECEFEB'; (e.target as HTMLInputElement).style.boxShadow = 'none'; }"
             />
           </div>
           <div>
-            <label class="block text-sm text-neutral-300 mb-1">Contraseña</label>
+            <label class="field-label">Contraseña</label>
             <input
               v-model="registerForm.password"
               type="password"
               required
               minlength="8"
               placeholder="Mínimo 8 caracteres"
-              class="w-full bg-neutral-700 text-white rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-neutral-500"
+              class="field-input"
+              @focus="(e) => { (e.target as HTMLInputElement).style.borderColor = '#E8920A'; (e.target as HTMLInputElement).style.boxShadow = '0 0 0 3px #FCEBC4'; }"
+              @blur="(e) => { (e.target as HTMLInputElement).style.borderColor = '#ECEFEB'; (e.target as HTMLInputElement).style.boxShadow = 'none'; }"
             />
           </div>
 
-          <p v-if="error" class="text-red-400 text-sm">{{ error }}</p>
+          <div v-if="error" style="font-size: 12px; color: #DC2626; padding: 8px 12px; background: #FEE2E2; border-radius: 8px;">
+            {{ error }}
+          </div>
 
-          <button
-            type="submit"
-            :disabled="loading"
-            class="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium rounded-lg py-2.5 text-sm transition-colors"
-          >
+          <button type="submit" :disabled="loading" class="btn-primary" :class="{ 'btn-loading': loading }">
             {{ loading ? 'Creando cuenta...' : 'Crear cuenta' }}
           </button>
         </form>
 
         <!-- Divider -->
-        <div class="flex items-center gap-3">
-          <div class="flex-1 h-px bg-neutral-700" />
-          <span class="text-xs text-neutral-500">o continúa con</span>
-          <div class="flex-1 h-px bg-neutral-700" />
+        <div style="display: flex; align-items: center; gap: 12px; margin: 24px 0; opacity: 0.5;">
+          <div style="flex: 1; height: 1px; background: #ECEFEB;" />
+          <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #6B7A72;">o continúa con</span>
+          <div style="flex: 1; height: 1px; background: #ECEFEB;" />
         </div>
 
         <!-- Google -->
-        <button
-          type="button"
-          class="w-full flex items-center justify-center gap-3 bg-white hover:bg-neutral-100 text-neutral-800 font-medium rounded-lg py-2.5 text-sm transition-colors"
-          @click="handleGoogle"
-        >
-          <svg class="w-4 h-4" viewBox="0 0 24 24">
+        <button type="button" class="btn-google" @click="handleGoogle">
+          <svg width="16" height="16" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
@@ -169,7 +242,174 @@ function handleGoogle() {
           </svg>
           Continuar con Google
         </button>
+
+        <!-- Terms -->
+        <p style="margin-top: 24px; font-size: 11px; color: #A8B3AC; text-align: center; line-height: 1.5;">
+          Al continuar aceptas nuestros
+          <a href="#" style="color: #1B4332; font-weight: 600; text-decoration: none;">Términos</a>
+          y
+          <a href="#" style="color: #1B4332; font-weight: 600; text-decoration: none;">Privacidad</a>
+        </p>
       </div>
     </div>
-  </WalletPublicLayout>
+  </div>
 </template>
+
+<style scoped>
+.login-root {
+  display: flex;
+  min-height: 100vh;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  background: #fff;
+}
+
+/* ── Hero ── */
+.login-hero {
+  flex: 1;
+  background: linear-gradient(135deg, #1B4332 0%, #2D6A4F 100%);
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+.hero-dots {
+  position: absolute;
+  inset: 0;
+  opacity: 0.07;
+  background-image: radial-gradient(circle, #fff 1px, transparent 1px);
+  background-size: 64px 64px;
+  pointer-events: none;
+}
+
+/* ── Form side ── */
+.login-form-side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  background: #F7F4EF;
+}
+.mobile-logo {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 32px;
+}
+
+/* ── Tabs ── */
+.tab-btn {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+/* ── Form ── */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 0;
+}
+.field-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6B7A72;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 7px;
+}
+.field-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1.5px solid #ECEFEB;
+  background: #fff;
+  font-size: 13px;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  color: #0F1B14;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+.field-input::placeholder {
+  color: #A8B3AC;
+}
+
+/* ── Buttons ── */
+.btn-primary {
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 10px;
+  background: #1B4332;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+}
+.btn-primary:hover:not(:disabled) {
+  background: #2D6A4F;
+}
+.btn-primary:disabled,
+.btn-loading {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.btn-google {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1.5px solid #ECEFEB;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  color: #0F1B14;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn-google:hover {
+  background: #F7F4EF;
+  border-color: #E8920A;
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .login-hero {
+    display: none;
+  }
+  .login-form-side {
+    justify-content: flex-start;
+    padding: 0;
+    background: #fff;
+  }
+  .mobile-logo {
+    display: flex;
+  }
+  .login-form-side > div {
+    width: 100%;
+    max-width: 100%;
+    padding: 28px 20px 40px;
+    background: #F7F4EF;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+}
+</style>
