@@ -47,7 +47,7 @@ async function handleRegister() {
 }
 
 function handleGoogle() {
-  window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`
+  window.location.href = `https://tribo-api-production.up.railway.app/auth/google`
 }
 
 const features = [
@@ -387,6 +387,12 @@ const features = [
 .btn-google:hover {
   background: #F7F4EF;
   border-color: #E8920A;
+}
+
+/* ── Form card ── */
+.login-form-card {
+  width: 100%;
+  max-width: 420px;
 }
 
 /* ── Mobile ── */
