@@ -25,10 +25,17 @@ export interface PassWithWalletRaw {
   wallet: Wallet
 }
 
+export interface PaginationMeta {
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
 export interface PassRepository {
   findByToken(token: string, dl?: string): Promise<PassWithWalletRaw | null>
-  findByWalletId(walletId: string): Promise<Pass[]>
-  findScanned(walletId: string): Promise<Pass[]>
+  findByWalletId(walletId: string, page?: number): Promise<{ data: Pass[]; meta: PaginationMeta }>
+  findScanned(walletId: string, page?: number): Promise<{ data: Pass[]; meta: PaginationMeta }>
   save(pass: Pass): Promise<Pass>
   update(pass: Pass): Promise<Pass>
   applyAction(token: string, action: PassAction, options?: ApplyActionOptions): Promise<Pass>

@@ -12,10 +12,22 @@ const props = defineProps<{ passes: Pass[]; wallet: Wallet }>()
 const router = useRouter()
 const passStore = usePassStore()
 const sendingToken = ref<string | null>(null)
+const passToDelete = ref<Pass | null>(null)
+const deleting = ref(false)
 
-async function handleDelete(pass: Pass) {
-  if (!confirm(`¿Eliminar el pass de ${pass.customerName}?`)) return
-  await passStore.deletePass(pass.token)
+function handleDelete(pass: Pass) {
+  passToDelete.value = pass
+}
+
+async function confirmDelete() {
+  if (!passToDelete.value) return
+  deleting.value = true
+  try {
+    await passStore.deletePass(passToDelete.value.token)
+    passToDelete.value = null
+  } finally {
+    deleting.value = false
+  }
 }
 
 function copyLink(token: string) {
@@ -191,6 +203,52 @@ function getMembershipLabel(pass: Pass): string {
   <div v-else style="padding: 48px 20px; text-align: center; color: #6B7A72; font-size: 13px;">
     No hay passes generados aún.
   </div>
+
+  <!-- Delete confirmation modal -->
+  <Teleport to="body">
+  <div
+    v-if="passToDelete"
+    style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(15,27,20,0.45);"
+    @click.self="passToDelete = null"
+  >
+    <div style="background: #fff; border-radius: 16px; box-shadow: 0 20px 60px rgba(15,27,20,0.18); width: 100%; max-width: 380px; padding: 28px 28px 24px; display: flex; flex-direction: column; gap: 16px;">
+      <!-- Icon -->
+      <div style="width: 44px; height: 44px; border-radius: 12px; background: #FEE2E2; display: flex; align-items: center; justify-content: center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+        </svg>
+      </div>
+      <!-- Text -->
+      <div>
+        <p style="font-size: 15px; font-weight: 700; color: #0F1B14; margin: 0 0 6px;">Eliminar pass</p>
+        <p style="font-size: 13px; color: #6B7A72; margin: 0; line-height: 1.5;">
+          ¿Estás seguro de que quieres eliminar el pass de
+          <strong style="color: #0F1B14;">{{ passToDelete.firstName }} {{ passToDelete.lastName }}</strong>?
+          Esta acción no se puede deshacer.
+        </p>
+      </div>
+      <!-- Actions -->
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button
+          :disabled="deleting"
+          style="padding: 8px 18px; border-radius: 9px; border: 1px solid #ECEFEB; background: #fff; font-size: 13px; font-weight: 600; color: #3A4A41; cursor: pointer; font-family: inherit;"
+          @click="passToDelete = null"
+        >Cancelar</button>
+        <button
+          :disabled="deleting"
+          style="padding: 8px 18px; border-radius: 9px; border: none; background: #DC2626; font-size: 13px; font-weight: 600; color: #fff; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 6px;"
+          :style="deleting ? 'opacity: 0.6; cursor: not-allowed;' : ''"
+          @click="confirmDelete"
+        >
+          <svg v-if="deleting" viewBox="0 0 24 24" style="width: 13px; height: 13px; animation: spin 0.8s linear infinite;" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
+          </svg>
+          {{ deleting ? 'Eliminando…' : 'Eliminar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+  </Teleport>
 </template>
 
 <style scoped>

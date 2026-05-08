@@ -18,6 +18,8 @@ const deleting = ref(false)
 const activeTab = ref<'pases' | 'canjeados'>('pases')
 const scannedPasses = ref<Pass[]>([])
 const loadingScanned = ref(false)
+const passesPage = ref(1)
+const scannedPage = ref(1)
 
 const isDaypass = computed(() => walletStore.currentWallet?.type === 'daypass')
 
@@ -32,18 +34,34 @@ const typeConfig: Record<string, { label: string; accent: string; bg: string }> 
 const wt = computed(() => typeConfig[walletStore.currentWallet?.type ?? ''] ?? { label: '—', accent: '#6B7A72', bg: '#F7F4EF' })
 
 onMounted(async () => {
-  await Promise.all([walletStore.fetchWalletById(id), passStore.fetchPassesByWallet(id)])
+  await Promise.all([walletStore.fetchWalletById(id), passStore.fetchPassesByWallet(id, 1)])
 })
+
+async function goToPassesPage(page: number) {
+  passesPage.value = page
+  await passStore.fetchPassesByWallet(id, page)
+}
 
 async function switchTab(tab: 'pases' | 'canjeados') {
   activeTab.value = tab
   if (tab === 'canjeados' && scannedPasses.value.length === 0) {
     loadingScanned.value = true
     try {
-      scannedPasses.value = await passStore.fetchScannedPasses(id)
+      scannedPasses.value = await passStore.fetchScannedPasses(id, 1)
+      scannedPage.value = 1
     } finally {
       loadingScanned.value = false
     }
+  }
+}
+
+async function goToScannedPage(page: number) {
+  scannedPage.value = page
+  loadingScanned.value = true
+  try {
+    scannedPasses.value = await passStore.fetchScannedPasses(id, page)
+  } finally {
+    loadingScanned.value = false
   }
 }
 
@@ -78,6 +96,15 @@ function formatDate(iso: string): string {
         ← Volver
       </button>
       <div style="flex: 1;" />
+      <button
+        style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #1B4332; border: 1px solid #ECEFEB; padding: 6px 12px; border-radius: 8px; background: #fff; cursor: pointer; font-weight: 600;"
+        @click="router.push({ name: 'WalletAnalytics', params: { id } })"
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 21V5M3 21h18"/><path d="M7 17v-5M11 17V9M15 17v-3M19 17V7"/>
+        </svg>
+        Ver Analytics
+      </button>
       <button
         :disabled="deleting"
         style="font-size: 12px; color: #DC2626; border: 1px solid #FCA5A5; padding: 6px 12px; border-radius: 8px; background: #fff; cursor: pointer;"
@@ -180,11 +207,32 @@ function formatDate(iso: string): string {
       </div>
 
       <!-- Passes table (activos) -->
-      <PassTable
-        v-if="activeTab === 'pases'"
-        :passes="passStore.passes"
-        :wallet="walletStore.currentWallet!"
-      />
+      <template v-if="activeTab === 'pases'">
+        <PassTable
+          :passes="passStore.passes"
+          :wallet="walletStore.currentWallet!"
+        />
+        <div
+          v-if="passStore.passesMeta.totalPages > 1"
+          style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 20px; border-top: 1px solid #ECEFEB;"
+        >
+          <button
+            :disabled="passesPage <= 1"
+            style="padding: 5px 12px; border-radius: 7px; border: 1px solid #ECEFEB; background: #fff; font-size: 12px; cursor: pointer; color: #3A4A41; disabled:opacity-50;"
+            :style="passesPage <= 1 ? 'opacity:0.4;cursor:default;' : ''"
+            @click="goToPassesPage(passesPage - 1)"
+          >← Anterior</button>
+          <span style="font-size: 12px; color: #6B7A72;">
+            Página {{ passesPage }} de {{ passStore.passesMeta.totalPages }}
+          </span>
+          <button
+            :disabled="passesPage >= passStore.passesMeta.totalPages"
+            style="padding: 5px 12px; border-radius: 7px; border: 1px solid #ECEFEB; background: #fff; font-size: 12px; cursor: pointer; color: #3A4A41;"
+            :style="passesPage >= passStore.passesMeta.totalPages ? 'opacity:0.4;cursor:default;' : ''"
+            @click="goToPassesPage(passesPage + 1)"
+          >Siguiente →</button>
+        </div>
+      </template>
 
       <!-- Canjeados (daypass only) -->
       <div v-else-if="activeTab === 'canjeados'">
@@ -210,6 +258,26 @@ function formatDate(iso: string): string {
             <span style="font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #EFEAE0; color: #6B7A72;">
               Canjeado
             </span>
+          </div>
+          <div
+            v-if="passStore.scannedMeta.totalPages > 1"
+            style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 20px; border-top: 1px solid #ECEFEB;"
+          >
+            <button
+              :disabled="scannedPage <= 1"
+              style="padding: 5px 12px; border-radius: 7px; border: 1px solid #ECEFEB; background: #fff; font-size: 12px; cursor: pointer; color: #3A4A41;"
+              :style="scannedPage <= 1 ? 'opacity:0.4;cursor:default;' : ''"
+              @click="goToScannedPage(scannedPage - 1)"
+            >← Anterior</button>
+            <span style="font-size: 12px; color: #6B7A72;">
+              Página {{ scannedPage }} de {{ passStore.scannedMeta.totalPages }}
+            </span>
+            <button
+              :disabled="scannedPage >= passStore.scannedMeta.totalPages"
+              style="padding: 5px 12px; border-radius: 7px; border: 1px solid #ECEFEB; background: #fff; font-size: 12px; cursor: pointer; color: #3A4A41;"
+              :style="scannedPage >= passStore.scannedMeta.totalPages ? 'opacity:0.4;cursor:default;' : ''"
+              @click="goToScannedPage(scannedPage + 1)"
+            >Siguiente →</button>
           </div>
         </div>
       </div>

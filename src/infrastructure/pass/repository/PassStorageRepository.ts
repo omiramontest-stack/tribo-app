@@ -3,7 +3,7 @@ import { inject, injectable } from 'inversify'
 
 import persistenceTypes from '@/infrastructure/persistence/di/types'
 import type { PersistenceRepository } from '@/infrastructure/persistence/repository/PersistenceRepository'
-import type { PassRepository, PassAction, PassWithWalletRaw, CashbackTransaction } from '@/domain/pass/repository/PassRepository'
+import type { PassRepository, PassAction, PassWithWalletRaw, CashbackTransaction, PaginationMeta } from '@/domain/pass/repository/PassRepository'
 import type { Pass } from '@/domain/pass/entities/Pass'
 import type { StampsData, PointsData, MembershipData, CashbackData } from '@/domain/pass/entities/PassData'
 
@@ -21,13 +21,14 @@ export class PassStorageRepository implements PassRepository {
     return null
   }
 
-  async findByWalletId(walletId: string): Promise<Pass[]> {
+  async findByWalletId(walletId: string, _page = 1): Promise<{ data: Pass[]; meta: PaginationMeta }> {
     const passes = this._storage.getItem<Pass[]>(this.STORAGE_KEY, [])
-    return passes.filter((p) => p.walletId === walletId)
+    const data = passes.filter((p) => p.walletId === walletId)
+    return { data, meta: { total: data.length, page: 1, limit: 20, totalPages: 1 } }
   }
 
-  async findScanned(_walletId: string): Promise<Pass[]> {
-    return []
+  async findScanned(_walletId: string, _page = 1): Promise<{ data: Pass[]; meta: PaginationMeta }> {
+    return { data: [], meta: { total: 0, page: 1, limit: 20, totalPages: 1 } }
   }
 
   async save(pass: Pass): Promise<Pass> {

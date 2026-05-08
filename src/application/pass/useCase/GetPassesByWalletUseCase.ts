@@ -13,6 +13,7 @@ export default class GetPassesByWalletUseCase implements UseCase<string, Pass[]>
   ) {}
 
   async run(walletId: string): Promise<Pass[]> {
-    return this._passRepository.findByWalletId(walletId)
+    const { data } = await this._passRepository.findByWalletId(walletId)
+    return data
   }
 }

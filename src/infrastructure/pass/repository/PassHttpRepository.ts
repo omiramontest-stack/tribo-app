@@ -1,7 +1,7 @@
 import 'reflect-metadata'
 import { injectable } from 'inversify'
 
-import type { PassRepository, PassAction, PassWithWalletRaw, CashbackTransaction, ApplyActionOptions } from '@/domain/pass/repository/PassRepository'
+import type { PassRepository, PassAction, PassWithWalletRaw, CashbackTransaction, ApplyActionOptions, PaginationMeta } from '@/domain/pass/repository/PassRepository'
 import type { Pass } from '@/domain/pass/entities/Pass'
 import { apiClient, ApiError } from '@/infrastructure/http/ApiClient'
 
@@ -17,12 +17,12 @@ export class PassHttpRepository implements PassRepository {
     }
   }
 
-  async findByWalletId(walletId: string): Promise<Pass[]> {
-    return apiClient.get<Pass[]>(`/wallets/${walletId}/passes`)
+  async findByWalletId(walletId: string, page = 1): Promise<{ data: Pass[]; meta: PaginationMeta }> {
+    return apiClient.get<{ data: Pass[]; meta: PaginationMeta }>(`/wallets/${walletId}/passes?page=${page}&limit=20`)
   }
 
-  async findScanned(walletId: string): Promise<Pass[]> {
-    return apiClient.get<Pass[]>(`/wallets/${walletId}/passes/scanned`)
+  async findScanned(walletId: string, page = 1): Promise<{ data: Pass[]; meta: PaginationMeta }> {
+    return apiClient.get<{ data: Pass[]; meta: PaginationMeta }>(`/wallets/${walletId}/passes/scanned?page=${page}&limit=20`)
   }
 
   async save(pass: Pass): Promise<Pass> {

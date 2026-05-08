@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { apiClient, ApiError } from '@/infrastructure/http/ApiClient'
 import { useWalletStore } from '@/app/stores/wallet/WalletStore'
 
+const router = useRouter()
 const walletStore = useWalletStore()
 
 type CampaignStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'cancelled'
@@ -47,6 +49,8 @@ interface AudiencePreview { count: number; sample: { firstName: string; lastName
 const loading = ref(false)
 const campaigns = ref<Campaign[]>([])
 const activeFilter = ref<string>('all')
+const campaignsPage = ref(1)
+const campaignsMeta = ref({ total: 0, page: 1, limit: 20, totalPages: 1 })
 
 const filters = [
   { key: 'all',       label: 'Todas' },
@@ -62,15 +66,22 @@ const filtered = computed(() =>
     : campaigns.value.filter((c) => c.status === activeFilter.value)
 )
 
-async function load() {
+async function load(page = 1) {
   loading.value = true
   try {
-    campaigns.value = await apiClient.get<Campaign[]>('/campaigns') ?? []
+    const res = await apiClient.get<{ data: Campaign[]; meta: typeof campaignsMeta.value }>(`/campaigns?page=${page}&limit=20`)
+    campaigns.value = res?.data ?? []
+    if (res?.meta) campaignsMeta.value = res.meta
   } catch {
     campaigns.value = []
   } finally {
     loading.value = false
   }
+}
+
+async function goToCampaignsPage(page: number) {
+  campaignsPage.value = page
+  await load(page)
 }
 
 onMounted(async () => {
@@ -468,8 +479,40 @@ function closeDetail() { detailCampaign.value = null }
               {{ c.smsCost.hasEnough ? c.smsCost.creditsAvailable + ' disponibles' : 'Créditos insuficientes' }}
             </span>
           </div>
+          <button
+            v-if="c.status === 'sent' || c.status === 'sending'"
+            style="display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 7px; background: #F0F5F2; border: 1px solid #D1E8DA; color: #1B4332; font-size: 11.5px; font-weight: 600; cursor: pointer; font-family: inherit; align-self: flex-start;"
+            @click.stop="router.push({ name: 'CampaignAnalytics', params: { id: c.id } })"
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 21V5M3 21h18"/><path d="M7 17v-5M11 17V9M15 17v-3M19 17V7"/>
+            </svg>
+            Ver analytics
+          </button>
         </div>
       </div>
+    </div>
+
+    <!-- Paginator -->
+    <div
+      v-if="campaignsMeta.totalPages > 1"
+      style="display: flex; align-items: center; justify-content: center; gap: 8px;"
+    >
+      <button
+        :disabled="campaignsPage <= 1"
+        style="padding: 5px 12px; border-radius: 7px; border: 1px solid #ECEFEB; background: #fff; font-size: 12px; cursor: pointer; color: #3A4A41; font-family: inherit;"
+        :style="campaignsPage <= 1 ? 'opacity:0.4;cursor:default;' : ''"
+        @click="goToCampaignsPage(campaignsPage - 1)"
+      >← Anterior</button>
+      <span style="font-size: 12px; color: #6B7A72;">
+        Página {{ campaignsPage }} de {{ campaignsMeta.totalPages }}
+      </span>
+      <button
+        :disabled="campaignsPage >= campaignsMeta.totalPages"
+        style="padding: 5px 12px; border-radius: 7px; border: 1px solid #ECEFEB; background: #fff; font-size: 12px; cursor: pointer; color: #3A4A41; font-family: inherit;"
+        :style="campaignsPage >= campaignsMeta.totalPages ? 'opacity:0.4;cursor:default;' : ''"
+        @click="goToCampaignsPage(campaignsPage + 1)"
+      >Siguiente →</button>
     </div>
 
   </div>

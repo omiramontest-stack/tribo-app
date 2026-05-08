@@ -30,6 +30,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: 'wallets/:id/analytics',
+    name: 'WalletAnalytics',
+    component: () => import('@/app/views/admin/WalletAnalyticsView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: 'scan',
     name: 'Scan',
     component: () => import('@/app/views/admin/ScanView.vue'),
@@ -51,6 +57,12 @@ const routes: RouteRecordRaw[] = [
     path: 'campaigns',
     name: 'Campaigns',
     component: () => import('@/app/views/admin/CampaignsView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: 'campaigns/:id/analytics',
+    name: 'CampaignAnalytics',
+    component: () => import('@/app/views/admin/CampaignAnalyticsView.vue'),
     meta: { requiresAuth: true },
   },
   {
