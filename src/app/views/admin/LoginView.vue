@@ -47,7 +47,7 @@ async function handleRegister() {
 }
 
 function handleGoogle() {
-  window.location.href = '/auth/google'
+  window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`
 }
 
 const features = [
