@@ -14,6 +14,7 @@ import walletContainer from '@/infrastructure/wallet/di/wallet.container'
 import passContainer from '@/infrastructure/pass/di/pass.container'
 import authContainer from '@/infrastructure/auth/di/auth.container'
 import organizationContainer from '@/infrastructure/organization/di/organization.container'
+import billingContainer from '@/infrastructure/billing/di/billing.container'
 
 container.load(
   ...[
@@ -24,6 +25,7 @@ container.load(
     passContainer,
     authContainer,
     organizationContainer,
+    billingContainer,
   ],
 )
 

@@ -69,26 +69,28 @@ class ApiClient {
     }
   }
 
-  get<T>(path: string) {
-    return this.request<T>(path)
+  get<T>(path: string, headers?: Record<string, string>) {
+    return this.request<T>(path, { headers })
   }
 
-  post<T>(path: string, body?: unknown) {
+  post<T>(path: string, body?: unknown, headers?: Record<string, string>) {
     return this.request<T>(path, {
       method: 'POST',
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      headers,
     })
   }
 
-  patch<T>(path: string, body?: unknown) {
+  patch<T>(path: string, body?: unknown, headers?: Record<string, string>) {
     return this.request<T>(path, {
       method: 'PATCH',
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      headers,
     })
   }
 
-  delete(path: string) {
-    return this.request<void>(path, { method: 'DELETE' })
+  delete(path: string, headers?: Record<string, string>) {
+    return this.request<void>(path, { method: 'DELETE', headers })
   }
 
   postFile<T>(path: string, formData: FormData) {

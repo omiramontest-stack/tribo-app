@@ -1,6 +1,14 @@
 import { reactive, computed } from 'vue'
 import { defineStore } from 'pinia'
+import { container } from '@/container'
 import { useOrganizationStore } from '@/app/stores/organization/OrganizationStore'
+import billingTypes from '@/infrastructure/billing/di/types'
+import type GetBillingStatusUseCase from '@/application/billing/useCase/GetBillingStatusUseCase'
+import type GetBillingPlansUseCase from '@/application/billing/useCase/GetBillingPlansUseCase'
+import type GetSmsPacksUseCase from '@/application/billing/useCase/GetSmsPacksUseCase'
+import type CheckoutUseCase from '@/application/billing/useCase/CheckoutUseCase'
+import type BuyCreditsUseCase from '@/application/billing/useCase/BuyCreditsUseCase'
+import type OpenPortalUseCase from '@/application/billing/useCase/OpenPortalUseCase'
 
 export interface BillingPlan {
   id: string
@@ -45,6 +53,13 @@ export interface SmsPack {
 export const useBillingStore = defineStore('BillingStore', () => {
   const orgStore = useOrganizationStore()
 
+  const getStatusUseCase = container.get<GetBillingStatusUseCase>(billingTypes.getStatusUseCase)
+  const getPlansUseCase = container.get<GetBillingPlansUseCase>(billingTypes.getPlansUseCase)
+  const getSmsPacksUseCase = container.get<GetSmsPacksUseCase>(billingTypes.getSmsPacksUseCase)
+  const checkoutUseCase = container.get<CheckoutUseCase>(billingTypes.checkoutUseCase)
+  const buyCreditsUseCase = container.get<BuyCreditsUseCase>(billingTypes.buyCreditsUseCase)
+  const openPortalUseCase = container.get<OpenPortalUseCase>(billingTypes.openPortalUseCase)
+
   const state = reactive<{
     _status: BillingStatus | null
     _plans: BillingPlan[]
@@ -65,81 +80,41 @@ export const useBillingStore = defineStore('BillingStore', () => {
     return id
   }
 
-  async function billingFetch<T>(path: string, options?: { method?: string; body?: unknown }): Promise<T> {
-    const orgId = requireOrgId()
-    const res = await fetch(path, {
-      method: options?.method ?? 'GET',
-      credentials: 'include',
-      headers: {
-        ...(options?.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-        'x-organization-id': orgId,
-        'ngrok-skip-browser-warning': 'true',
-      },
-      body: options?.body !== undefined ? JSON.stringify(options.body) : undefined,
-    })
-
-    if (res.status === 204) return undefined as T
-    const data = await res.json().catch(() => null)
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    return data as T
-  }
-
   async function fetchStatus() {
-    state._status = await billingFetch<BillingStatus>('/billing/status')
+    state._status = await getStatusUseCase.run(requireOrgId())
   }
 
   async function fetchPlans() {
-    state._plans = await billingFetch<BillingPlan[]>('/billing/plans')
+    state._plans = await getPlansUseCase.run(requireOrgId())
   }
 
   async function fetchSmsPacks() {
-    state._smsPacks = await billingFetch<SmsPack[]>('/billing/sms-packs')
+    state._smsPacks = await getSmsPacksUseCase.run(requireOrgId())
   }
 
   async function checkout(planSlug: string): Promise<string> {
     const origin = window.location.origin
-    const { url } = await billingFetch<{ url: string }>('/billing/checkout', {
-      method: 'POST',
-      body: {
-        planSlug,
-        successUrl: `${origin}/admin/billing?success=true`,
-        cancelUrl: `${origin}/admin/billing?canceled=true`,
-      },
-    })
-    return url
+    return checkoutUseCase.run(
+      requireOrgId(),
+      planSlug,
+      `${origin}/admin/billing?success=true`,
+      `${origin}/admin/billing?canceled=true`,
+    )
   }
 
   async function buyCredits(packId: string): Promise<string> {
     const origin = window.location.origin
-    const { url } = await billingFetch<{ url: string }>('/billing/buy-credits', {
-      method: 'POST',
-      body: {
-        packId,
-        successUrl: `${origin}/admin/billing?success=true`,
-        cancelUrl: `${origin}/admin/billing?canceled=true`,
-      },
-    })
-    return url
+    return buyCreditsUseCase.run(
+      requireOrgId(),
+      packId,
+      `${origin}/admin/billing?success=true`,
+      `${origin}/admin/billing?canceled=true`,
+    )
   }
 
   async function openPortal(): Promise<string> {
-    const origin = window.location.origin
-    const { url } = await billingFetch<{ url: string }>('/billing/portal', {
-      method: 'POST',
-      body: { returnUrl: `${origin}/admin/billing` },
-    })
-    return url
+    return openPortalUseCase.run(requireOrgId(), `${window.location.origin}/admin/billing`)
   }
 
-  return {
-    status,
-    plans,
-    smsPacks,
-    fetchStatus,
-    fetchPlans,
-    fetchSmsPacks,
-    checkout,
-    buyCredits,
-    openPortal,
-  }
+  return { status, plans, smsPacks, fetchStatus, fetchPlans, fetchSmsPacks, checkout, buyCredits, openPortal }
 })
