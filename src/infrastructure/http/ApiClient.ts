@@ -18,7 +18,7 @@ class ApiClient {
   onPlanError?: (code: PlanGateCode, message: string) => void
 
   constructor() {
-    this.baseUrl = ''
+    this.baseUrl = import.meta.env.VITE_API_URL ?? ''
   }
 
   private async request<T>(path: string, init?: RequestInit, isRetry = false): Promise<T> {
