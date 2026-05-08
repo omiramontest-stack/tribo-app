@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useBillingStore } from '@/app/stores/billing/BillingStore'
@@ -79,8 +79,33 @@ function isPopularPack(index: number, total: number): boolean {
   return total > 1 && index === Math.floor(total / 2)
 }
 
+const displayedPlans = computed(() => billingStore.plans)
+
+const currentPlanPrice = computed(() => billingStore.status?.plan?.price ?? -1)
+
+function isPlanDisabled(plan: BillingPlan): boolean {
+  if (redirecting.value === plan.slug) return true
+  if (billingStore.status?.plan?.slug === plan.slug) return true
+  if (plan.price < currentPlanPrice.value) return true
+  return false
+}
+
+function planButtonLabel(plan: BillingPlan): string {
+  if (redirecting.value === plan.slug) return 'Redirigiendo…'
+  if (billingStore.status?.plan?.slug === plan.slug) return 'Plan actual'
+  if (plan.price < currentPlanPrice.value) return 'Plan inferior'
+  return 'Suscribirse'
+}
+
+function planButtonStyle(plan: BillingPlan): Record<string, string> {
+  if (billingStore.status?.plan?.slug === plan.slug || plan.price < currentPlanPrice.value) {
+    return { background: '#F0F0F0', color: '#A8B3AC', cursor: 'not-allowed' }
+  }
+  return { background: '#E8920A', color: '#13301F' }
+}
+
 async function handleCheckout(plan: BillingPlan) {
-  if (billingStore.status?.plan?.slug === plan.slug) return
+  if (isPlanDisabled(plan)) return
   redirecting.value = plan.slug
   try {
     const url = await billingStore.checkout(plan.slug)
@@ -251,11 +276,11 @@ async function handlePortal() {
 
       <!-- Real plans -->
       <div
-        v-else-if="billingStore.plans.length"
+        v-else-if="displayedPlans.length"
         style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;"
       >
         <div
-          v-for="plan in billingStore.plans"
+          v-for="plan in displayedPlans"
           :key="plan.id"
           style="background: #fff; border-radius: 14px; padding: 22px; display: flex; flex-direction: column; position: relative; box-shadow: 0 1px 0 rgba(15,27,20,0.02);"
           :style="plan.slug === 'base'
@@ -310,16 +335,13 @@ async function handlePortal() {
 
           <!-- CTA -->
           <button
-            :disabled="billingStore.status?.plan?.slug === plan.slug || redirecting === plan.slug"
+            v-if="plan.slug !== 'trial'"
+            :disabled="isPlanDisabled(plan)"
             style="width: 100%; padding: 11px 16px; border-radius: 9px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; transition: opacity 0.15s; font-family: inherit;"
-            :style="billingStore.status?.plan?.slug === plan.slug
-              ? { background: '#F0F0F0', color: '#A8B3AC', cursor: 'default' }
-              : { background: '#E8920A', color: '#13301F' }"
+            :style="planButtonStyle(plan)"
             @click="handleCheckout(plan)"
           >
-            <span v-if="billingStore.status?.plan?.slug === plan.slug">Plan actual</span>
-            <span v-else-if="redirecting === plan.slug">Redirigiendo…</span>
-            <span v-else>Suscribirse</span>
+            {{ planButtonLabel(plan) }}
           </button>
         </div>
       </div>

@@ -21,6 +21,8 @@ function getInitials(name: string = ''): string {
 }
 
 const trialDaysLeft = computed(() => {
+  const info = billingStore.status?.trialInfo
+  if (info) return info.daysRemaining
   const endsAt = billingStore.status?.trialEndsAt
   if (!endsAt) return null
   const days = Math.ceil((new Date(endsAt).getTime() - Date.now()) / 86_400_000)
@@ -31,8 +33,10 @@ const isTrial = computed(() => trialDaysLeft.value !== null)
 const trialUrgent = computed(() => isTrial.value && trialDaysLeft.value! <= 3)
 
 const planLabel = computed(() => {
-  if (isTrial.value) return `Trial · ${trialDaysLeft.value}d`
-  return billingStore.status?.plan?.name ?? '—'
+  if (isTrial.value) return 'Trial'
+  const planName = billingStore.status?.plan?.name
+  if (planName?.toLowerCase().includes('prueba') || planName?.toLowerCase().includes('trial')) return 'Trial'
+  return planName ?? '—'
 })
 
 const planColor = computed(() => {

@@ -1,6 +1,6 @@
 {
-  "name": "tribo",
-  "short_name": "tribo",
+  "name": "Tribo",
+  "short_name": "Tribo",
   "description": "Tu tarjeta de lealtad digital",
   "start_url": "/",
   "display": "standalone",

@@ -34,6 +34,11 @@ export interface GracePeriod {
   expiresAt: string
 }
 
+export interface TrialInfo {
+  daysRemaining: number
+  endsAt: string
+}
+
 export interface BillingStatus {
   plan: BillingPlan | null
   subscription: BillingSubscription | null
@@ -41,6 +46,7 @@ export interface BillingStatus {
   isActive: boolean
   gracePeriod: GracePeriod | null
   trialEndsAt: string | null
+  trialInfo: TrialInfo | null
 }
 
 export interface SmsPack {

@@ -20,6 +20,18 @@ const toast = useToast()
 const layoutReady = ref(false)
 const bannerDismissed = ref(false)
 
+const trialDaysLeft = computed(() => {
+  const info = billingStore.status?.trialInfo
+  if (info) return info.daysRemaining
+  const endsAt = billingStore.status?.trialEndsAt
+  if (!endsAt) return null
+  const days = Math.ceil((new Date(endsAt).getTime() - Date.now()) / 86_400_000)
+  return days > 0 ? days : 0
+})
+const isTrial = computed(() => trialDaysLeft.value !== null)
+const trialActive = computed(() => isTrial.value && (trialDaysLeft.value ?? 0) > 0)
+const trialExpired = computed(() => isTrial.value && trialDaysLeft.value === 0)
+
 onMounted(async () => {
   await new Promise((r) => setTimeout(r, 1000))
   layoutReady.value = true
@@ -342,9 +354,34 @@ const iconPaths: Record<string, string> = {
         </aside>
       </div>
 
-      <!-- Grace period / cancelled banner -->
+      <!-- Trial active banner (soft info) -->
       <div
-        v-if="!bannerDismissed && billingStore.status && !billingStore.status.isActive"
+        v-if="!bannerDismissed && trialActive"
+        style="flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 11px 24px; font-size: 13px; font-weight: 500; background: #EFF6FF; border-bottom: 1px solid #BFDBFE; color: #1E40AF;"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink: 0;">
+          <circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/>
+        </svg>
+        <span style="flex: 1;">
+          Estás en tu período de prueba gratuita. Te quedan <strong>{{ trialDaysLeft }} día{{ trialDaysLeft === 1 ? '' : 's' }}</strong>.
+        </span>
+        <button
+          style="padding: 5px 14px; border-radius: 7px; font-size: 12px; font-weight: 700; border: none; cursor: pointer; font-family: inherit; flex-shrink: 0; background: #1D4ED8; color: #fff;"
+          @click="router.push({ name: 'Billing' })"
+        >
+          Activar plan
+        </button>
+        <button
+          style="background: none; border: none; cursor: pointer; padding: 2px; opacity: 0.6; flex-shrink: 0; color: #1E40AF;"
+          @click="bannerDismissed = true"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Grace period / cancelled banner (non-trial subscriptions only) -->
+      <div
+        v-if="!bannerDismissed && billingStore.status && !billingStore.status.isActive && !isTrial && !trialExpired"
         style="flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 11px 24px; font-size: 13px; font-weight: 500;"
         :style="billingStore.status.gracePeriod
           ? 'background: #FEF3C7; border-bottom: 1px solid #FDE68A; color: #854D0E;'
@@ -400,6 +437,35 @@ const iconPaths: Record<string, string> = {
             <path v-else d="M18 6L6 18M6 6l12 12" />
           </svg>
           {{ toast.message.value }}
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- ── Trial expired blocking modal ── -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div
+          v-if="trialExpired"
+          style="position: fixed; inset: 0; background: rgba(0,0,0,0.65); display: grid; place-items: center; z-index: 9500; backdrop-filter: blur(4px); padding: 20px;"
+        >
+          <div style="background: #fff; border-radius: 20px; padding: 40px; max-width: 460px; width: 100%; box-shadow: 0 24px 64px rgba(0,0,0,0.22); text-align: center;">
+            <div style="width: 64px; height: 64px; border-radius: 16px; background: #FEF3C7; display: grid; place-items: center; margin: 0 auto 20px;">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+              </svg>
+            </div>
+            <div style="font-size: 20px; font-weight: 800; color: #0F1B14; margin-bottom: 10px;">Tu período de prueba ha terminado</div>
+            <div style="font-size: 13px; color: #6B7A72; line-height: 1.7; margin-bottom: 28px;">
+              Activa un plan para seguir usando Tribo y acceder a todas las funciones.
+            </div>
+            <button
+              style="width: 100%; padding: 14px 16px; border-radius: 10px; background: #E8920A; border: none; font-size: 14px; font-weight: 700; color: #13301F; cursor: pointer; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 6px;"
+              @click="router.push({ name: 'Billing' })"
+            >
+              Ver planes
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+          </div>
         </div>
       </Transition>
     </Teleport>

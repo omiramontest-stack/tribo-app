@@ -47,7 +47,7 @@ async function handleRegister() {
 }
 
 function handleGoogle() {
-  window.location.href = `https://tribo-api-production.up.railway.app/auth/google`
+  window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`
 }
 
 const features = [
