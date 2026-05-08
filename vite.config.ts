@@ -7,13 +7,15 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 
 import tailwindcss from 'tailwindcss'
 
+import { cloudflare } from "@cloudflare/vite-plugin";
+
 // https://vite.dev/config/
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
   return {
-    plugins: [vue(), vueDevTools()],
+    plugins: [vue(), vueDevTools(), cloudflare()],
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -47,5 +49,5 @@ export default defineConfig(({ mode }) => {
       sourcemap: true,
       target: 'esnext',
     },
-  }
+  };
 })
