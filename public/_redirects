@@ -1,8 +1,1 @@
-/auth/*           https://tribo-api-production.up.railway.app/auth/:splat           200
-/wallets/*        https://tribo-api-production.up.railway.app/wallets/:splat        200
-/passes/*         https://tribo-api-production.up.railway.app/passes/:splat         200
-/organizations/*  https://tribo-api-production.up.railway.app/organizations/:splat  200
-/invitations/*    https://tribo-api-production.up.railway.app/invitations/:splat    200
-/campaigns/*      https://tribo-api-production.up.railway.app/campaigns/:splat      200
-/billing/*        https://tribo-api-production.up.railway.app/billing/:splat        200
-/*                /index.html                                                        200
+/* /index.html 200
