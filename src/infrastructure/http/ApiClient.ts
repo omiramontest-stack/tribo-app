@@ -27,7 +27,7 @@ class ApiClient {
     const res = await fetch(`${this.baseUrl}${path}`, {
       ...init,
       credentials: 'include',
-      headers: { ...(hasBody && !isFormData ? { 'Content-Type': 'application/json' } : {}), 'ngrok-skip-browser-warning': 'true', ...init?.headers },
+      headers: { ...(hasBody && !isFormData ? { 'Content-Type': 'application/json' } : {}), ...init?.headers },
     })
 
     if (res.status === 401 && !isRetry) {
