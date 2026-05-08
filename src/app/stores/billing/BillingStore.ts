@@ -40,6 +40,7 @@ export interface BillingStatus {
   smsCredits: number
   isActive: boolean
   gracePeriod: GracePeriod | null
+  trialEndsAt: string | null
 }
 
 export interface SmsPack {

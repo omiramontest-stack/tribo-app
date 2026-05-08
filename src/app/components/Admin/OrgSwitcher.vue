@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useOrganizationStore } from '@/app/stores/organization/OrganizationStore'
 import { useAuthStore } from '@/app/stores/auth/AuthStore'
@@ -19,6 +19,27 @@ const switching = ref(false)
 function getInitials(name: string = ''): string {
   return name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('')
 }
+
+const trialDaysLeft = computed(() => {
+  const endsAt = billingStore.status?.trialEndsAt
+  if (!endsAt) return null
+  const days = Math.ceil((new Date(endsAt).getTime() - Date.now()) / 86_400_000)
+  return days > 0 ? days : 0
+})
+
+const isTrial = computed(() => trialDaysLeft.value !== null)
+const trialUrgent = computed(() => isTrial.value && trialDaysLeft.value! <= 3)
+
+const planLabel = computed(() => {
+  if (isTrial.value) return `Trial · ${trialDaysLeft.value}d`
+  return billingStore.status?.plan?.name ?? '—'
+})
+
+const planColor = computed(() => {
+  if (trialUrgent.value) return '#EF4444'
+  if (isTrial.value) return '#9DB7A8'
+  return '#F5B942'
+})
 
 async function select(org: Organization) {
   if (org.id === orgStore.activeOrg?.id) { open.value = false; return }
@@ -89,8 +110,8 @@ onUnmounted(() => document.removeEventListener('mousedown', handleOutsideClick))
           v-if="dark && orgStore.activeOrg"
           style="display: flex; align-items: center; gap: 5px; margin-top: 3px;"
         >
-          <span style="font-size: 11px; font-weight: 600; color: #F5B942; line-height: 1.2;">
-            {{ billingStore.status?.plan?.name ?? '—' }}
+          <span :style="`font-size: 11px; font-weight: 600; color: ${planColor}; line-height: 1.2;`">
+            {{ planLabel }}
           </span>
           <template v-if="billingStore.status?.smsCredits != null">
             <span style="width: 2px; height: 2px; border-radius: 50%; background: #4A7A5E; flex-shrink: 0;" />
