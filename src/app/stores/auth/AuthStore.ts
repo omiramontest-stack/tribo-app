@@ -48,7 +48,7 @@ export const useAuthStore = defineStore('AuthStore', () => {
   }
 
   async function logout() {
-    await logoutUseCase.run()
+    try { await logoutUseCase.run() } catch { /* clear local state regardless */ }
     state._admin = null
     useOrganizationStore().reset()
   }

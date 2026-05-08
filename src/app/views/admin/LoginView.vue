@@ -135,7 +135,7 @@ const features = [
         </span>
       </div>
 
-      <div style="width: 100%; max-width: 420px;">
+      <div class="login-form-card">
 
         <!-- Tabs -->
         <div style="display: flex; gap: 2px; padding: 4px; background: #fff; border-radius: 10px; margin-bottom: 28px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
@@ -397,12 +397,12 @@ const features = [
   .login-form-side {
     justify-content: flex-start;
     padding: 0;
-    background: #fff;
+    background: #F7F4EF;
   }
   .mobile-logo {
     display: flex;
   }
-  .login-form-side > div {
+  .login-form-card {
     width: 100%;
     max-width: 100%;
     padding: 28px 20px 40px;
