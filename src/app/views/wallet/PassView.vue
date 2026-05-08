@@ -10,7 +10,6 @@ import DaypassCard from '@/app/components/Wallet/DaypassCard.vue'
 import WalletQR from '@/app/components/Wallet/WalletQR.vue'
 import { usePassStore } from '@/app/stores/pass/PassStore'
 import { ApiError } from '@/infrastructure/http/ApiClient'
-import { registerWebPush } from '@/app/composables/useWebPush'
 import type { CashbackRules } from '@/domain/wallet/entities/WalletRules'
 import type { CashbackTransaction } from '@/domain/pass/repository/PassRepository'
 
@@ -72,7 +71,6 @@ onMounted(async () => {
     await passStore.fetchPassByToken(token, dl.value)
     if (passStore.currentPass?.dlExpiresAt) startCountdown(passStore.currentPass.dlExpiresAt)
     if (isCashback.value) await loadTransactions()
-    registerWebPush(token)
   } catch (e) {
     if (e instanceof ApiError && e.status === 401) {
       router.replace({ name: 'LinkExpired' })
