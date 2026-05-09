@@ -21,7 +21,7 @@ const router = useRouter()
 const passStore = usePassStore()
 
 const loading = ref(true)
-const error = ref(false)
+const error = ref<{ status?: number; body?: unknown; message?: string } | null>(null)
 const transactions = ref<CashbackTransaction[]>([])
 const loadingTx = ref(false)
 const secondsLeft = ref<number | null>(null)
@@ -84,7 +84,9 @@ onMounted(async () => {
       router.replace({ name: 'LinkExpired' })
       return
     }
-    error.value = true
+    error.value = e instanceof ApiError
+      ? { status: e.status, body: e.body }
+      : { message: e instanceof Error ? e.message : String(e) }
   } finally {
     loading.value = false
   }
@@ -95,10 +97,15 @@ onMounted(async () => {
   <WalletPublicLayout>
     <div v-if="loading" class="text-neutral-400 text-sm">Cargando wallet...</div>
 
-    <div v-else-if="error" class="text-center text-neutral-400">
+    <div v-else-if="error" class="text-center text-neutral-400 w-full max-w-sm">
       <p class="text-4xl mb-3">😕</p>
       <p class="font-medium text-white">Wallet no encontrada</p>
       <p class="text-sm mt-1">El enlace puede ser incorrecto o haber expirado.</p>
+      <div class="mt-4 text-left bg-neutral-800 rounded-xl p-4 text-xs font-mono break-all space-y-1">
+        <p v-if="error.status" class="text-red-400">status: {{ error.status }}</p>
+        <p v-if="error.message" class="text-yellow-400">{{ error.message }}</p>
+        <pre v-if="error.body" class="text-neutral-300 whitespace-pre-wrap">{{ JSON.stringify(error.body, null, 2) }}</pre>
+      </div>
     </div>
 
     <div v-else-if="passStore.currentPass && passStore.currentPassWallet" class="w-full max-w-sm space-y-4">
