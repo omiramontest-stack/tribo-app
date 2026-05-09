@@ -1,6 +1,8 @@
+import type { PassAction } from '@/domain/pass/repository/PassRepository'
+
 export interface UpdatePassDataDto {
   token: string
-  action: 'add_stamp' | 'add_points' | 'renew_membership' | 'add_cashback' | 'subtract_cashback'
+  action: PassAction
   amount?: number
   purchaseAmount?: number
   cashbackPercent?: number

@@ -31,19 +31,12 @@ const dialCodes = [
   { flag: '🇪🇸', code: 'ES', dial: '+34' },
 ]
 
-const form = reactive({
-  firstName: '',
-  lastName: '',
-  email: '',
-  phone: '',
-  dialCode: dialCodes[0],
-})
+const INITIAL_FORM = { firstName: '', lastName: '', email: '', phone: '' }
+
+const form = reactive({ ...INITIAL_FORM, dialCode: dialCodes[0] })
 
 function close() {
-  form.firstName = ''
-  form.lastName = ''
-  form.email = ''
-  form.phone = ''
+  Object.assign(form, INITIAL_FORM)
   form.dialCode = dialCodes[0]
   error.value = ''
   emit('update:modelValue', false)
@@ -114,9 +107,7 @@ async function handleGenerate() {
                 v-model="form.firstName"
                 type="text"
                 placeholder="Oscar"
-                style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #ECEFEB; background: #F7F4EF; color: #0F1B14; font-size: 13px; outline: none; box-sizing: border-box; font-family: inherit;"
-                @focus="(e) => { (e.target as HTMLInputElement).style.borderColor='#E8920A'; (e.target as HTMLInputElement).style.boxShadow='0 0 0 3px #FCEBC4'; }"
-                @blur="(e) => { (e.target as HTMLInputElement).style.borderColor='#ECEFEB'; (e.target as HTMLInputElement).style.boxShadow='none'; }"
+                class="form-input"
                 @keyup.enter="handleGenerate"
               />
             </div>
@@ -128,9 +119,7 @@ async function handleGenerate() {
                 v-model="form.lastName"
                 type="text"
                 placeholder="Raygoza"
-                style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #ECEFEB; background: #F7F4EF; color: #0F1B14; font-size: 13px; outline: none; box-sizing: border-box; font-family: inherit;"
-                @focus="(e) => { (e.target as HTMLInputElement).style.borderColor='#E8920A'; (e.target as HTMLInputElement).style.boxShadow='0 0 0 3px #FCEBC4'; }"
-                @blur="(e) => { (e.target as HTMLInputElement).style.borderColor='#ECEFEB'; (e.target as HTMLInputElement).style.boxShadow='none'; }"
+                class="form-input"
                 @keyup.enter="handleGenerate"
               />
             </div>
@@ -161,9 +150,7 @@ async function handleGenerate() {
               <!-- Country dial selector -->
               <select
                 v-model="form.dialCode"
-                style="padding: 10px 8px; border-radius: 8px; border: 1.5px solid #ECEFEB; background: #F7F4EF; color: #0F1B14; font-size: 12px; font-weight: 600; outline: none; cursor: pointer; font-family: inherit; flex-shrink: 0;"
-                @focus="(e) => { (e.target as HTMLSelectElement).style.borderColor='#E8920A'; }"
-                @blur="(e) => { (e.target as HTMLSelectElement).style.borderColor='#ECEFEB'; }"
+                class="form-input form-select"
               >
                 <option v-for="d in dialCodes" :key="d.code" :value="d">
                   {{ d.flag }} {{ d.dial }}
@@ -190,20 +177,11 @@ async function handleGenerate() {
 
         <!-- Footer -->
         <div style="padding: 0 20px 20px; display: flex; gap: 10px;">
+          <button class="btn-cancel" @click="close">Cancelar</button>
           <button
-            style="flex: 1; padding: 11px 16px; border-radius: 9px; background: #fff; color: #6B7A72; font-size: 13px; font-weight: 600; border: 1.5px solid #ECEFEB; cursor: pointer; font-family: inherit; transition: background 0.12s;"
-            @mouseenter="(e) => (e.currentTarget as HTMLButtonElement).style.background='#F7F4EF'"
-            @mouseleave="(e) => (e.currentTarget as HTMLButtonElement).style.background='#fff'"
-            @click="close"
-          >
-            Cancelar
-          </button>
-          <button
+            class="btn-submit"
+            :class="{ 'btn-submit--loading': loading }"
             :disabled="loading"
-            style="flex: 1; padding: 11px 16px; border-radius: 9px; background: #1B4332; color: #fff; font-size: 13px; font-weight: 700; border: none; cursor: pointer; font-family: inherit; transition: background 0.15s, opacity 0.15s;"
-            :style="loading ? 'opacity: 0.6; cursor: not-allowed;' : ''"
-            @mouseenter="(e) => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background='#2D6A4F' }"
-            @mouseleave="(e) => (e.currentTarget as HTMLButtonElement).style.background='#1B4332'"
             @click="handleGenerate"
           >
             {{ loading ? 'Generando...' : 'Generar pase' }}
@@ -213,3 +191,61 @@ async function handleGenerate() {
     </div>
   </Teleport>
 </template>
+
+<style scoped>
+.form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1.5px solid #ECEFEB;
+  background: #F7F4EF;
+  color: #0F1B14;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.form-input:focus {
+  border-color: #E8920A;
+  box-shadow: 0 0 0 3px #FCEBC4;
+}
+.form-input::placeholder { color: #A8B3AC; }
+
+.form-select {
+  width: auto;
+  min-width: 96px;
+  cursor: pointer;
+}
+
+.btn-cancel {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1.5px solid #ECEFEB;
+  background: #F7F4EF;
+  color: #3A4A41;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.btn-cancel:hover { background: #EFEAE0; }
+
+.btn-submit {
+  flex: 2;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #E8920A;
+  color: #13301F;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s, opacity 0.12s;
+}
+.btn-submit:hover:not(:disabled) { background: #D4820A; }
+.btn-submit:disabled { opacity: 0.6; cursor: default; }
+</style>

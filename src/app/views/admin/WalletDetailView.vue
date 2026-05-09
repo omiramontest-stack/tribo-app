@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useWalletStore } from '@/app/stores/wallet/WalletStore'
 import { usePassStore } from '@/app/stores/pass/PassStore'
+import { walletTypeConfig } from '@/app/config/walletTypeConfig'
 import PassTable from '@/app/components/Admin/PassTable.vue'
 import GeneratePassModal from '@/app/components/Admin/GeneratePassModal.vue'
 import type { Pass } from '@/domain/pass/entities/Pass'
@@ -23,15 +24,14 @@ const scannedPage = ref(1)
 
 const isDaypass = computed(() => walletStore.currentWallet?.type === 'daypass')
 
-const typeConfig: Record<string, { label: string; accent: string; bg: string }> = {
-  stamps:     { label: 'Sellos',    accent: '#7C5E3C', bg: '#F1E6D4' },
-  membership: { label: 'Membresía', accent: '#1B4332', bg: '#D9E5DD' },
-  points:     { label: 'Puntos',    accent: '#8B5CF6', bg: '#EBE3FB' },
-  cashback:   { label: 'Cashback',  accent: '#E8920A', bg: '#FCEBC4' },
-  daypass:    { label: 'Day Pass',  accent: '#0EA5E9', bg: '#D6EEFB' },
-}
+import { walletTypeConfig } from '@/app/config/walletTypeConfig'
 
-const wt = computed(() => typeConfig[walletStore.currentWallet?.type ?? ''] ?? { label: '—', accent: '#6B7A72', bg: '#F7F4EF' })
+const wt = computed(() => {
+  const found = walletTypeConfig.find(c => c.value === walletStore.currentWallet?.type)
+  return found
+    ? { label: found.label, accent: found.iconColor, bg: found.iconBg }
+    : { label: '—', accent: '#6B7A72', bg: '#F7F4EF' }
+})
 
 onMounted(async () => {
   await Promise.all([walletStore.fetchWalletById(id), passStore.fetchPassesByWallet(id, 1)])
@@ -252,7 +252,7 @@ function formatDate(iso: string): string {
               <p style="font-size: 13px; font-weight: 600; color: #0F1B14;">{{ pass.firstName }} {{ pass.lastName }}</p>
               <p v-if="pass.phone" style="font-size: 11px; color: #6B7A72; margin-top: 1px;">{{ pass.phone }}</p>
               <p style="font-size: 11px; color: #6B7A72; margin-top: 1px;">
-                Escaneado: {{ formatDate((pass as any).deletedAt) }}
+                Escaneado: {{ pass.scannedAt ? formatDate(pass.scannedAt) : '—' }}
               </p>
             </div>
             <span style="font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #EFEAE0; color: #6B7A72;">

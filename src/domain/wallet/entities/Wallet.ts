@@ -1,6 +1,6 @@
 import type { WalletRules } from './WalletRules'
 
-export type WalletType = 'stamps' | 'membership' | 'points' | 'cashback' | 'daypass'
+export type WalletType = 'stamps' | 'membership' | 'points' | 'cashback' | 'daypass' | 'bundle' | 'giftcard' | 'coupon'
 
 export interface Wallet {
   id: string

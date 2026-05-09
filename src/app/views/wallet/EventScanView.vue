@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { BrowserQRCodeReader } from '@zxing/browser'
-import { apiClient } from '@/infrastructure/http/ApiClient'
+import { apiClient, ApiError } from '@/infrastructure/http/ApiClient'
 
 type ScanStep = 'scanning' | 'success' | 'already_used' | 'not_found' | 'error'
 
@@ -45,19 +45,22 @@ async function scanPass(token: string) {
     const data = await apiClient.post<ScanResult>(`/passes/scan/${token}`)
     result.value = data
     step.value = 'success'
-  } catch (e: any) {
-    const body = e?.body as { error?: string } | null
-    if (e?.status === 409 && body?.error === 'PASS_ALREADY_USED') {
-      step.value = 'already_used'
-    } else if (e?.status === 404) {
-      step.value = 'not_found'
+  } catch (e) {
+    if (e instanceof ApiError) {
+      const body = e.body as { error?: string } | null
+      if (e.status === 409 && body?.error === 'PASS_ALREADY_USED') {
+        step.value = 'already_used'
+      } else if (e.status === 404) {
+        step.value = 'not_found'
+      } else {
+        step.value = 'error'
+      }
     } else {
       step.value = 'error'
     }
   }
 }
 
-import { onUnmounted } from 'vue'
 onUnmounted(() => stopScanning?.())
 startScanner()
 </script>

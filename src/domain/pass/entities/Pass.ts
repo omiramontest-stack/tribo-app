@@ -11,4 +11,5 @@ export interface Pass {
   createdAt: string
   data: PassData
   dlExpiresAt?: string
+  scannedAt?: string
 }

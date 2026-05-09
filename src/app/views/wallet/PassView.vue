@@ -7,9 +7,12 @@ import MembershipCard from '@/app/components/Wallet/MembershipCard.vue'
 import PointsCard from '@/app/components/Wallet/PointsCard.vue'
 import CashbackCard from '@/app/components/Wallet/CashbackCard.vue'
 import DaypassCard from '@/app/components/Wallet/DaypassCard.vue'
+import BundleCard from '@/app/components/Wallet/BundleCard.vue'
+import GiftcardCard from '@/app/components/Wallet/GiftcardCard.vue'
+import CouponCard from '@/app/components/Wallet/CouponCard.vue'
 import WalletQR from '@/app/components/Wallet/WalletQR.vue'
 import { usePassStore } from '@/app/stores/pass/PassStore'
-import { ApiError } from '@/infrastructure/http/ApiClient'
+import { ApiError, apiClient } from '@/infrastructure/http/ApiClient'
 import type { CashbackRules } from '@/domain/wallet/entities/WalletRules'
 import type { CashbackTransaction } from '@/domain/pass/repository/PassRepository'
 
@@ -45,6 +48,9 @@ const dl = computed(() => route.query.dl as string | undefined)
 
 const isCashback = computed(() => passStore.currentPassWallet?.type === 'cashback')
 const isDaypass = computed(() => passStore.currentPassWallet?.type === 'daypass')
+const isBundle = computed(() => passStore.currentPassWallet?.type === 'bundle')
+const isGiftcard = computed(() => passStore.currentPassWallet?.type === 'giftcard')
+const isCoupon = computed(() => passStore.currentPassWallet?.type === 'coupon')
 
 const cashbackRules = computed(() =>
   isCashback.value ? (passStore.currentPassWallet!.rules as CashbackRules) : null,
@@ -132,15 +138,30 @@ onMounted(async () => {
         :pass="passStore.currentPass"
         :wallet="passStore.currentPassWallet"
       />
+      <BundleCard
+        v-else-if="isBundle"
+        :pass="passStore.currentPass"
+        :wallet="passStore.currentPassWallet"
+      />
+      <GiftcardCard
+        v-else-if="isGiftcard"
+        :pass="passStore.currentPass"
+        :wallet="passStore.currentPassWallet"
+      />
+      <CouponCard
+        v-else-if="isCoupon"
+        :pass="passStore.currentPass"
+        :wallet="passStore.currentPassWallet"
+      />
 
       <!-- QR -->
-      <div v-if="!isDaypass || !(passStore.currentPass.data as any).used" class="bg-neutral-800 rounded-2xl p-5 flex flex-col items-center gap-3">
+      <div v-if="(!isDaypass && !isCoupon) || !(passStore.currentPass.data as any).used" class="bg-neutral-800 rounded-2xl p-5 flex flex-col items-center gap-3">
         <p class="text-xs text-neutral-400">Muestra este QR al negocio</p>
         <WalletQR :url="$router.resolve({ name: 'PassView', params: { token: passStore.currentPass.token } }).href" />
       </div>
 
       <a
-        :href="`/passes/${passStore.currentPass.token}/apple${dlParam()}`"
+        :href="apiClient.urlFor(`/passes/${passStore.currentPass.token}/apple${dlParam()}`)"
         class="flex justify-center"
       >
         <img src="/add-to-wallet.png" alt="Add to Apple Wallet" class="h-10" />

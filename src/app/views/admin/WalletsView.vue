@@ -1,31 +1,12 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useWalletStore } from '@/app/stores/wallet/WalletStore'
-import { useOrganizationStore } from '@/app/stores/organization/OrganizationStore'
+import { useOrgWallets } from '@/app/composables/useOrgWallets'
 import WalletCard from '@/app/components/Admin/WalletCard.vue'
 
 const walletStore = useWalletStore()
-const orgStore = useOrganizationStore()
 const router = useRouter()
-const { activeOrgId } = storeToRefs(orgStore)
-const fetching = ref(false)
-
-watch(
-  activeOrgId,
-  async (id) => {
-    if (!id) return
-    walletStore.clearWallets()
-    fetching.value = true
-    try {
-      await walletStore.fetchWallets()
-    } finally {
-      fetching.value = false
-    }
-  },
-  { immediate: true },
-)
+const { fetching } = useOrgWallets()
 </script>
 
 <template>

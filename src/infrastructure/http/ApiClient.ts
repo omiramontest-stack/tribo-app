@@ -18,7 +18,11 @@ class ApiClient {
   onPlanError?: (code: PlanGateCode, message: string) => void
 
   constructor() {
-    this.baseUrl = 'https://tribo-api-production.up.railway.app'
+    this.baseUrl = import.meta.env.VITE_API_URL ?? 'https://tribo-api-production.up.railway.app'
+  }
+
+  urlFor(path: string): string {
+    return `${this.baseUrl}${path}`
   }
 
   private async request<T>(path: string, init?: RequestInit, isRetry = false): Promise<T> {

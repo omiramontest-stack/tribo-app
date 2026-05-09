@@ -7,7 +7,7 @@ import type { PassRepository } from '@/domain/pass/repository/PassRepository'
 import type { Pass } from '@/domain/pass/entities/Pass'
 import type { PassData } from '@/domain/pass/entities/PassData'
 import type { WalletType } from '@/domain/wallet/entities/Wallet'
-import type { WalletRules, MembershipRules } from '@/domain/wallet/entities/WalletRules'
+import type { WalletRules, MembershipRules, BundleRules, GiftcardRules, CouponRules } from '@/domain/wallet/entities/WalletRules'
 import type UseCase from '@/application/common/useCase/UseCase'
 import type { GeneratePassDto } from '@/application/pass/dto/GeneratePassDto'
 import { PassHandlerError } from '@/application/pass/error/PassHandlerError'
@@ -59,6 +59,21 @@ export default class GeneratePassUseCase implements UseCase<GeneratePassDto, Pas
         return { type: 'cashback', balance: 0 }
       case 'daypass':
         return { type: 'daypass', used: false }
+      case 'bundle': {
+        const r = rules as BundleRules
+        return { type: 'bundle', remainingUses: r.totalUses }
+      }
+      case 'giftcard': {
+        const r = rules as GiftcardRules
+        return { type: 'giftcard', initialBalance: r.initialBalance, currentBalance: r.initialBalance }
+      }
+      case 'coupon': {
+        const r = rules as CouponRules
+        const expiresAt = r.expiresInDays
+          ? new Date(Date.now() + r.expiresInDays * 86400000).toISOString()
+          : null
+        return { type: 'coupon', used: false, expiresAt }
+      }
     }
   }
 }

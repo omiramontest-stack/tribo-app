@@ -4,10 +4,24 @@ import { BrowserQRCodeReader } from '@zxing/browser'
 import { usePassStore } from '@/app/stores/pass/PassStore'
 import { apiClient } from '@/infrastructure/http/ApiClient'
 import type { PassWithWallet } from '@/application/pass/useCase/GetPassByTokenUseCase'
-import type { StampsRules, PointsRules, MembershipRules, CashbackRules } from '@/domain/wallet/entities/WalletRules'
+import type { StampsRules, PointsRules, MembershipRules, CashbackRules, BundleRules, GiftcardRules, CouponRules } from '@/domain/wallet/entities/WalletRules'
 import type { CashbackTransaction } from '@/domain/pass/repository/PassRepository'
+import { PassErrorCodes } from '@/application/pass/error/enum/PassErrorCodes'
 
 type ScanStep = 'scanning' | 'confirm' | 'success' | 'error'
+
+const PASS_ERROR_MESSAGES: Record<string, string> = {
+  [PassErrorCodes.NO_USES_LEFT]:         'No quedan usos disponibles en este paquete.',
+  [PassErrorCodes.INSUFFICIENT_BALANCE]: 'Saldo insuficiente.',
+  [PassErrorCodes.COUPON_ALREADY_USED]:  'Este cupón ya fue canjeado.',
+  [PassErrorCodes.COUPON_EXPIRED]:       'Este cupón ha expirado.',
+  [PassErrorCodes.ALREADY_USED]:         'Este pase ya fue utilizado.',
+}
+
+function resolvePassError(e: unknown, fallback: string): string {
+  const code = (e as any)?.body?.error as string | undefined
+  return PASS_ERROR_MESSAGES[code ?? ''] ?? fallback
+}
 
 const passStore = usePassStore()
 
@@ -27,6 +41,12 @@ const cashbackForm = ref({ purchaseAmount: '', cashbackPercent: '', amount: '', 
 const cashbackModalError = ref('')
 const transactions = ref<CashbackTransaction[]>([])
 const loadingTx = ref(false)
+
+// Giftcard modal
+const showGiftcardModal = ref(false)
+const giftcardAction = ref<'add_giftcard' | 'subtract_giftcard'>('add_giftcard')
+const giftcardAmount = ref('')
+const giftcardModalError = ref('')
 
 function cashbackPreview() {
   const purchase = parseFloat(cashbackForm.value.purchaseAmount)
@@ -83,6 +103,66 @@ async function submitCashback() {
   }
 }
 
+async function useBundle() {
+  if (!scannedToken.value) return
+  loading.value = true
+  try {
+    const result = await passStore.updatePassData({ token: scannedToken.value, action: 'use_bundle' })
+    passResult.value = result
+    successMsg.value = '¡Uso registrado correctamente!'
+    step.value = 'success'
+  } catch (e) {
+    errorMsg.value = resolvePassError(e, 'No se pudo registrar el uso.')
+    step.value = 'error'
+  } finally {
+    loading.value = false
+  }
+}
+
+function openGiftcardModal(action: 'add_giftcard' | 'subtract_giftcard') {
+  giftcardAction.value = action
+  giftcardAmount.value = ''
+  giftcardModalError.value = ''
+  showGiftcardModal.value = true
+}
+
+async function submitGiftcard() {
+  const amount = parseFloat(giftcardAmount.value)
+  if (!amount || amount <= 0) { giftcardModalError.value = 'Ingresa un monto válido'; return }
+  const rules = passResult.value?.wallet.rules as GiftcardRules
+  loading.value = true
+  giftcardModalError.value = ''
+  try {
+    const result = await passStore.updatePassData({ token: scannedToken.value!, action: giftcardAction.value, amount })
+    passResult.value = result
+    showGiftcardModal.value = false
+    successMsg.value = giftcardAction.value === 'add_giftcard'
+      ? `¡${rules.currency} ${amount.toFixed(2)} agregados!`
+      : `¡${rules.currency} ${amount.toFixed(2)} canjeados!`
+    step.value = 'success'
+  } catch (e) {
+    giftcardModalError.value = resolvePassError(e, 'Ocurrió un error, intenta de nuevo.')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function redeemCoupon() {
+  if (!scannedToken.value) return
+  loading.value = true
+  try {
+    const result = await passStore.updatePassData({ token: scannedToken.value, action: 'redeem_coupon' })
+    passResult.value = result
+    successMsg.value = '¡Cupón canjeado correctamente!'
+    step.value = 'success'
+  } catch (e) {
+    errorMsg.value = resolvePassError(e, 'No se pudo canjear el cupón.')
+    step.value = 'error'
+  } finally {
+    loading.value = false
+  }
+}
+
 async function markDaypassUsed() {
   if (!scannedToken.value) return
   loading.value = true
@@ -90,13 +170,8 @@ async function markDaypassUsed() {
     await apiClient.post(`/passes/scan/${scannedToken.value}`)
     successMsg.value = '¡Pase validado correctamente!'
     step.value = 'success'
-  } catch (e: any) {
-    const body = e?.body as { error?: string } | null
-    if (e?.status === 409 && body?.error === 'PASS_ALREADY_USED') {
-      errorMsg.value = 'Este pase ya fue utilizado.'
-    } else {
-      errorMsg.value = 'No se pudo validar el pase.'
-    }
+  } catch (e) {
+    errorMsg.value = resolvePassError(e, 'No se pudo validar el pase.')
     step.value = 'error'
   } finally {
     loading.value = false
@@ -248,6 +323,33 @@ startScanner()
             {{ (passResult.wallet.rules as MembershipRules).level }}
           </p>
         </template>
+
+        <!-- bundle -->
+        <template v-else-if="passResult.pass.data.type === 'bundle'">
+          <p class="text-sm opacity-90">
+            {{ passResult.pass.data.remainingUses }} /
+            {{ (passResult.wallet.rules as BundleRules).totalUses }}
+            {{ (passResult.wallet.rules as BundleRules).label }} restantes
+          </p>
+        </template>
+
+        <!-- giftcard -->
+        <template v-else-if="passResult.pass.data.type === 'giftcard'">
+          <p class="text-sm opacity-90">
+            {{ (passResult.wallet.rules as GiftcardRules).currency }}
+            {{ passResult.pass.data.currentBalance.toFixed(2) }} disponibles
+          </p>
+        </template>
+
+        <!-- coupon -->
+        <template v-else-if="passResult.pass.data.type === 'coupon'">
+          <p class="text-sm opacity-90">
+            {{ (passResult.wallet.rules as CouponRules).discountType === 'percent'
+              ? `${(passResult.wallet.rules as CouponRules).discount}% OFF`
+              : `${(passResult.wallet.rules as CouponRules).currency ?? ''} ${(passResult.wallet.rules as CouponRules).discount} OFF` }}
+            · {{ passResult.pass.data.used ? 'Ya canjeado' : 'Válido' }}
+          </p>
+        </template>
       </div>
 
       <!-- Action buttons -->
@@ -300,6 +402,46 @@ startScanner()
           @click="markDaypassUsed"
         >
           {{ passResult.pass.data.used ? 'Pase ya utilizado' : 'Marcar como usado ✓' }}
+        </button>
+
+        <!-- Bundle -->
+        <button
+          v-else-if="passResult.pass.data.type === 'bundle'"
+          class="w-full py-3 rounded-xl text-white font-semibold text-sm transition-colors disabled:opacity-50"
+          :class="passResult.pass.data.remainingUses <= 0 ? 'bg-neutral-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'"
+          :disabled="loading || passResult.pass.data.remainingUses <= 0"
+          @click="useBundle"
+        >
+          {{ passResult.pass.data.remainingUses <= 0 ? 'Sin usos disponibles' : `Registrar uso (${passResult.pass.data.remainingUses} restantes)` }}
+        </button>
+
+        <!-- Giftcard -->
+        <template v-else-if="passResult.pass.data.type === 'giftcard'">
+          <button
+            class="w-full py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold text-sm transition-colors"
+            :disabled="loading"
+            @click="openGiftcardModal('add_giftcard')"
+          >
+            + Recargar saldo
+          </button>
+          <button
+            class="w-full py-3 rounded-xl bg-neutral-600 hover:bg-neutral-500 text-white font-semibold text-sm transition-colors"
+            :disabled="loading || passResult.pass.data.currentBalance <= 0"
+            @click="openGiftcardModal('subtract_giftcard')"
+          >
+            Canjear saldo
+          </button>
+        </template>
+
+        <!-- Coupon -->
+        <button
+          v-else-if="passResult.pass.data.type === 'coupon'"
+          class="w-full py-3 rounded-xl text-white font-semibold text-sm transition-colors disabled:opacity-50"
+          :class="passResult.pass.data.used ? 'bg-neutral-500 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'"
+          :disabled="loading || passResult.pass.data.used"
+          @click="redeemCoupon"
+        >
+          {{ passResult.pass.data.used ? 'Cupón ya canjeado' : 'Canjear cupón ✓' }}
         </button>
 
         <template v-else-if="passResult.pass.data.type === 'cashback'">
@@ -381,6 +523,18 @@ startScanner()
         <template v-else-if="passResult.pass.data.type === 'cashback'">
           {{ (passResult.wallet.rules as CashbackRules).currency }} {{ passResult.pass.data.balance.toFixed(2) }} de saldo
         </template>
+        <template v-else-if="passResult.pass.data.type === 'bundle'">
+          {{ passResult.pass.data.remainingUses }} /
+          {{ (passResult.wallet.rules as BundleRules).totalUses }}
+          {{ (passResult.wallet.rules as BundleRules).label }} restantes
+        </template>
+        <template v-else-if="passResult.pass.data.type === 'giftcard'">
+          {{ (passResult.wallet.rules as GiftcardRules).currency }}
+          {{ passResult.pass.data.currentBalance.toFixed(2) }} de saldo
+        </template>
+        <template v-else-if="passResult.pass.data.type === 'coupon'">
+          {{ passResult.pass.data.used ? 'Cupón canjeado' : 'Cupón válido' }}
+        </template>
       </div>
 
       <button
@@ -406,6 +560,47 @@ startScanner()
         Intentar de nuevo
       </button>
     </div>
+
+    <!-- Giftcard modal -->
+    <Teleport to="body">
+      <div
+        v-if="showGiftcardModal"
+        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 px-4 pb-4 sm:pb-0"
+        @click.self="showGiftcardModal = false"
+      >
+        <div class="w-full max-w-sm bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 space-y-4">
+          <h3 class="font-semibold text-neutral-800 dark:text-white">
+            {{ giftcardAction === 'add_giftcard' ? 'Recargar saldo' : 'Canjear saldo' }}
+          </h3>
+          <div>
+            <label class="block text-xs text-neutral-500 mb-1">
+              {{ giftcardAction === 'add_giftcard' ? 'Monto a recargar *' : 'Monto a canjear *' }}
+              <span v-if="giftcardAction === 'subtract_giftcard'" class="text-neutral-400">
+                (máx. {{ (passResult?.wallet.rules as GiftcardRules)?.currency }}
+                {{ (passResult?.pass.data as any)?.currentBalance?.toFixed(2) }})
+              </span>
+            </label>
+            <input
+              v-model="giftcardAmount"
+              type="number" min="0" step="0.01" placeholder="0.00"
+              class="w-full border border-neutral-200 dark:border-neutral-700 bg-transparent dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <p v-if="giftcardModalError" class="text-red-500 text-xs">{{ giftcardModalError }}</p>
+          <div class="flex gap-2">
+            <button class="flex-1 border border-neutral-200 dark:border-neutral-600 text-neutral-600 dark:text-neutral-300 py-2.5 rounded-lg text-sm" @click="showGiftcardModal = false">Cancelar</button>
+            <button
+              :disabled="loading"
+              class="flex-1 text-white font-medium py-2.5 rounded-lg text-sm disabled:opacity-50"
+              :class="giftcardAction === 'add_giftcard' ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'"
+              @click="submitGiftcard"
+            >
+              {{ loading ? 'Procesando...' : 'Confirmar' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- Cashback modal -->
     <Teleport to="body">

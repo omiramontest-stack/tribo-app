@@ -1,7 +1,7 @@
 import type { Pass } from '@/domain/pass/entities/Pass'
 import type { Wallet } from '@/domain/wallet/entities/Wallet'
 
-export type PassAction = 'add_stamp' | 'add_points' | 'renew_membership' | 'add_cashback' | 'subtract_cashback'
+export type PassAction = 'add_stamp' | 'add_points' | 'renew_membership' | 'add_cashback' | 'subtract_cashback' | 'use_bundle' | 'add_giftcard' | 'subtract_giftcard' | 'redeem_coupon'
 
 export interface CashbackTransaction {
   id: string
