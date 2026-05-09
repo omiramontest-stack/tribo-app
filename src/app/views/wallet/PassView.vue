@@ -65,6 +65,8 @@ async function loadTransactions() {
   loadingTx.value = true
   try {
     transactions.value = await passStore.fetchTransactions(passStore.currentPass.token)
+  } catch {
+    transactions.value = []
   } finally {
     loadingTx.value = false
   }
