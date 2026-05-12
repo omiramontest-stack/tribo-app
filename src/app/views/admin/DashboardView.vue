@@ -334,8 +334,12 @@ function relativeDate(iso: string): string {
 .hero {
   position: relative;
   overflow: hidden;
-  background: #1B4332;
-  border-radius: 16px;
+  background:
+    radial-gradient(ellipse 60% 120% at 100% 50%, rgba(232, 146, 10, 0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 80% at 0% 100%, rgba(45, 106, 79, 0.3) 0%, transparent 50%),
+    linear-gradient(140deg, #0D1A12 0%, #162B1D 100%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 18px;
   padding: 24px 28px;
   display: flex;
   align-items: center;
@@ -349,7 +353,7 @@ function relativeDate(iso: string): string {
   right: -16px;
   width: 120px;
   height: 120px;
-  opacity: 0.06;
+  opacity: 0.09;
   pointer-events: none;
 }
 
