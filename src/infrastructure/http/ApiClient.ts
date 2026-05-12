@@ -35,9 +35,12 @@ class ApiClient {
     })
 
     if (res.status === 401 && !isRetry) {
+      const raw401 = await res.clone().json().catch(() => '(no body)')
+      console.warn(`[ApiClient] 401 on ${path} — server said:`, JSON.stringify(raw401))
       const refreshed = await this._tryRefresh()
+      console.warn(`[ApiClient] refresh attempt result:`, refreshed)
       if (refreshed) return this.request<T>(path, init, true)
-      throw new ApiError(401, { error: 'UNAUTHORIZED' })
+      throw new ApiError(401, { error: 'UNAUTHORIZED', _serverBody: raw401 })
     }
 
     if (res.status === 204) return undefined as T

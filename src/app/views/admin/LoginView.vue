@@ -30,7 +30,7 @@ async function handleLogin() {
     await router.push({ name: 'Dashboard' })
   } catch (e) {
     if (e instanceof ApiError) {
-      error.value = `[${e.status}] ${JSON.stringify(e.body)}`
+      error.value = `[${e.status}] server=${JSON.stringify((e.body as Record<string,unknown>)?._serverBody ?? e.body)}`
     } else {
       error.value = `[network] ${String(e)}`
     }
@@ -49,7 +49,7 @@ async function handleRegister() {
     await router.push({ name: 'Onboarding' })
   } catch (e: unknown) {
     if (e instanceof ApiError) {
-      error.value = `[${e.status}] ${JSON.stringify(e.body)}`
+      error.value = `[${e.status}] server=${JSON.stringify((e.body as Record<string,unknown>)?._serverBody ?? e.body)}`
     } else {
       error.value = `[network] ${String(e)}`
     }
