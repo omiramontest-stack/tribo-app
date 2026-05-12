@@ -24,13 +24,15 @@ async function handleLogin() {
   try {
     loading.value = true
     error.value = ''
+    error.value = `[debug] email="${loginForm.email}" len=${loginForm.email.length} passLen=${loginForm.password.length} api=${import.meta.env.VITE_API_URL}`
+    await new Promise(r => setTimeout(r, 1500))
     await authStore.login(loginForm.email, loginForm.password)
     await router.push({ name: 'Dashboard' })
   } catch (e) {
     if (e instanceof ApiError) {
-      error.value = `Credenciales incorrectas [${e.status}: ${JSON.stringify(e.body)}]`
+      error.value = `[${e.status}] ${JSON.stringify(e.body)}`
     } else {
-      error.value = `No se pudo conectar: ${String(e)}`
+      error.value = `[network] ${String(e)}`
     }
   } finally {
     loading.value = false
@@ -41,11 +43,16 @@ async function handleRegister() {
   try {
     loading.value = true
     error.value = ''
+    error.value = `[debug] email="${registerForm.email}" len=${registerForm.email.length} passLen=${registerForm.password.length} api=${import.meta.env.VITE_API_URL}`
+    await new Promise(r => setTimeout(r, 1500))
     await authStore.register({ email: registerForm.email, password: registerForm.password })
     await router.push({ name: 'Onboarding' })
   } catch (e: unknown) {
-    const body = (e as { body?: { error?: string } })?.body
-    error.value = body?.error === 'EMAIL_TAKEN' ? 'Este email ya está registrado' : 'Error al crear la cuenta'
+    if (e instanceof ApiError) {
+      error.value = `[${e.status}] ${JSON.stringify(e.body)}`
+    } else {
+      error.value = `[network] ${String(e)}`
+    }
   } finally {
     loading.value = false
   }
