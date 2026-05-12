@@ -5,16 +5,23 @@ import type { AuthRepository, RegisterDto, ChangeEmailDto, ChangePasswordDto } f
 import type { Admin } from '@/domain/auth/entities/Admin'
 import { apiClient } from '@/infrastructure/http/ApiClient'
 
-interface RegisterResponse {
-  admin: Admin
-}
-
 interface LoginResponse {
   admin: Admin
+  accessToken: string
+}
+
+interface RegisterResponse {
+  admin: Admin
+  accessToken: string
 }
 
 interface MeResponse {
   admin: { adminId: string; email: string; emailVerified?: boolean }
+}
+
+interface TokenResponse {
+  ok: boolean
+  accessToken: string
 }
 
 @injectable()
@@ -23,7 +30,8 @@ export class AuthHttpRepository implements AuthRepository {
 
   async login(email: string, password: string): Promise<Admin | null> {
     try {
-      const { admin } = await apiClient.post<LoginResponse>('/auth/login', { email, password })
+      const { admin, accessToken } = await apiClient.post<LoginResponse>('/auth/login', { email, password })
+      apiClient.setToken(accessToken)
       this._admin = admin
       return admin
     } catch {
@@ -32,13 +40,15 @@ export class AuthHttpRepository implements AuthRepository {
   }
 
   async register(dto: RegisterDto): Promise<Admin> {
-    const { admin } = await apiClient.post<RegisterResponse>('/auth/register', dto)
+    const { admin, accessToken } = await apiClient.post<RegisterResponse>('/auth/register', dto)
+    apiClient.setToken(accessToken)
     this._admin = admin
-    return this._admin
+    return admin
   }
 
   async logout(): Promise<void> {
     await apiClient.post('/auth/logout')
+    apiClient.clearToken()
     this._admin = null
   }
 
@@ -58,11 +68,13 @@ export class AuthHttpRepository implements AuthRepository {
   }
 
   async switchOrg(organizationId: string): Promise<void> {
-    await apiClient.post('/auth/switch-org', { organizationId })
+    const { accessToken } = await apiClient.post<TokenResponse>('/auth/switch-org', { organizationId })
+    apiClient.setToken(accessToken)
   }
 
   async verifyEmail(token: string): Promise<void> {
-    await apiClient.post(`/auth/verify-email/${token}`)
+    const { accessToken } = await apiClient.post<TokenResponse>(`/auth/verify-email/${token}`)
+    apiClient.setToken(accessToken)
   }
 
   async resendVerification(): Promise<void> {
@@ -74,7 +86,8 @@ export class AuthHttpRepository implements AuthRepository {
   }
 
   async confirmEmailChange(token: string): Promise<void> {
-    await apiClient.post(`/auth/confirm-email-change/${token}`)
+    const { accessToken } = await apiClient.post<TokenResponse>(`/auth/confirm-email-change/${token}`)
+    apiClient.setToken(accessToken)
   }
 
   async changePassword(dto: ChangePasswordDto): Promise<void> {

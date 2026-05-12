@@ -14,11 +14,20 @@ const PLAN_GATE_CODES = new Set<string>(['SUBSCRIPTION_REQUIRED', 'PLAN_UPGRADE_
 
 class ApiClient {
   private readonly baseUrl: string
+  private _accessToken: string | null = null
   onNoOrgContext?: () => void
   onPlanError?: (code: PlanGateCode, message: string) => void
 
   constructor() {
     this.baseUrl = import.meta.env.VITE_API_URL ?? 'https://tribo-api-production.up.railway.app'
+  }
+
+  setToken(token: string): void {
+    this._accessToken = token
+  }
+
+  clearToken(): void {
+    this._accessToken = null
   }
 
   urlFor(path: string): string {
@@ -28,19 +37,24 @@ class ApiClient {
   private async request<T>(path: string, init?: RequestInit, isRetry = false): Promise<T> {
     const hasBody = init?.body !== undefined
     const isFormData = init?.body instanceof FormData
+    const authHeader: Record<string, string> = this._accessToken
+      ? { Authorization: `Bearer ${this._accessToken}` }
+      : {}
+
     const res = await fetch(`${this.baseUrl}${path}`, {
       ...init,
       credentials: 'include',
-      headers: { ...(hasBody && !isFormData ? { 'Content-Type': 'application/json' } : {}), ...init?.headers },
+      headers: {
+        ...(hasBody && !isFormData ? { 'Content-Type': 'application/json' } : {}),
+        ...authHeader,
+        ...init?.headers,
+      },
     })
 
     if (res.status === 401 && !isRetry) {
-      const raw401 = await res.clone().json().catch(() => '(no body)')
-      console.warn(`[ApiClient] 401 on ${path} — server said:`, JSON.stringify(raw401))
       const refreshed = await this._tryRefresh()
-      console.warn(`[ApiClient] refresh attempt result:`, refreshed)
       if (refreshed) return this.request<T>(path, init, true)
-      throw new ApiError(401, { error: 'UNAUTHORIZED', _serverBody: raw401 })
+      throw new ApiError(401, { error: 'UNAUTHORIZED' })
     }
 
     if (res.status === 204) return undefined as T
@@ -70,7 +84,10 @@ class ApiClient {
         method: 'POST',
         credentials: 'include',
       })
-      return res.ok
+      if (!res.ok) return false
+      const data = await res.json().catch(() => null)
+      if (data?.accessToken) this._accessToken = data.accessToken
+      return true
     } catch {
       return false
     }

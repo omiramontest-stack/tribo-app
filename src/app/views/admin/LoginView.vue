@@ -2,7 +2,6 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/app/stores/auth/AuthStore'
-import { ApiError } from '@/infrastructure/http/ApiClient'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -24,18 +23,12 @@ async function handleLogin() {
   try {
     loading.value = true
     error.value = ''
-    error.value = `[debug] email="${loginForm.email}" pass="${loginForm.password}" api=${import.meta.env.VITE_API_URL}`
-    await new Promise(r => setTimeout(r, 1500))
     await authStore.login(loginForm.email, loginForm.password)
     await router.push({ name: 'Dashboard' })
   } catch (e) {
-    const debugPrefix = `email="${loginForm.email}" pass="${loginForm.password}" | `
-    if (e instanceof ApiError) {
-      const serverBody = (e.body as Record<string,unknown>)?._serverBody ?? e.body
-      error.value = `${debugPrefix}[${e.status}] ${JSON.stringify(serverBody)}`
-    } else {
-      error.value = `${debugPrefix}[network] ${String(e)}`
-    }
+    error.value = e instanceof ApiError
+      ? 'Credenciales incorrectas'
+      : 'No se pudo conectar al servidor. Verifica tu conexión.'
   } finally {
     loading.value = false
   }
@@ -45,16 +38,11 @@ async function handleRegister() {
   try {
     loading.value = true
     error.value = ''
-    error.value = `[debug] email="${registerForm.email}" len=${registerForm.email.length} passLen=${registerForm.password.length} api=${import.meta.env.VITE_API_URL}`
-    await new Promise(r => setTimeout(r, 1500))
     await authStore.register({ email: registerForm.email, password: registerForm.password })
     await router.push({ name: 'Onboarding' })
   } catch (e: unknown) {
-    if (e instanceof ApiError) {
-      error.value = `[${e.status}] server=${JSON.stringify((e.body as Record<string,unknown>)?._serverBody ?? e.body)}`
-    } else {
-      error.value = `[network] ${String(e)}`
-    }
+    const body = (e as { body?: { error?: string } })?.body
+    error.value = body?.error === 'EMAIL_TAKEN' ? 'Este email ya está registrado' : 'Error al crear la cuenta'
   } finally {
     loading.value = false
   }
