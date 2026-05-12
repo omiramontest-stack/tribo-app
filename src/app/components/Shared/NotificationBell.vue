@@ -38,7 +38,7 @@ async function handleResend() {
 </script>
 
 <template>
-  <div ref="panel" class="relative hidden md:block">
+  <div ref="panel" class="relative">
 
     <!-- Bell button -->
     <button
@@ -175,7 +175,7 @@ async function handleResend() {
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  width: 360px;
+  width: min(360px, calc(100vw - 24px));
   background: #fff;
   border-radius: 16px;
   border: 1px solid #ECEFEB;

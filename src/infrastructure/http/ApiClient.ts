@@ -12,6 +12,8 @@ export type PlanGateCode = 'SUBSCRIPTION_REQUIRED' | 'PLAN_UPGRADE_REQUIRED' | '
 
 const PLAN_GATE_CODES = new Set<string>(['SUBSCRIPTION_REQUIRED', 'PLAN_UPGRADE_REQUIRED', 'WALLET_LIMIT_REACHED', 'PASS_LIMIT_REACHED'])
 
+const TOKEN_KEY = 'tribo_at'
+
 class ApiClient {
   private readonly baseUrl: string
   private _accessToken: string | null = null
@@ -20,14 +22,17 @@ class ApiClient {
 
   constructor() {
     this.baseUrl = import.meta.env.VITE_API_URL ?? 'https://tribo-api-production.up.railway.app'
+    this._accessToken = localStorage.getItem(TOKEN_KEY)
   }
 
   setToken(token: string): void {
     this._accessToken = token
+    localStorage.setItem(TOKEN_KEY, token)
   }
 
   clearToken(): void {
     this._accessToken = null
+    localStorage.removeItem(TOKEN_KEY)
   }
 
   urlFor(path: string): string {
@@ -86,7 +91,10 @@ class ApiClient {
       })
       if (!res.ok) return false
       const data = await res.json().catch(() => null)
-      if (data?.accessToken) this._accessToken = data.accessToken
+      if (data?.accessToken) {
+        this._accessToken = data.accessToken
+        localStorage.setItem(TOKEN_KEY, data.accessToken)
+      }
       return true
     } catch {
       return false
