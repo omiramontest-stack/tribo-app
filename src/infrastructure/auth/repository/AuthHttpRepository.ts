@@ -1,7 +1,7 @@
 import 'reflect-metadata'
 import { injectable } from 'inversify'
 
-import type { AuthRepository, RegisterDto } from '@/domain/auth/repository/AuthRepository'
+import type { AuthRepository, RegisterDto, ChangeEmailDto, ChangePasswordDto } from '@/domain/auth/repository/AuthRepository'
 import type { Admin } from '@/domain/auth/entities/Admin'
 import { apiClient } from '@/infrastructure/http/ApiClient'
 
@@ -14,7 +14,7 @@ interface LoginResponse {
 }
 
 interface MeResponse {
-  admin: { adminId: string; email: string }
+  admin: { adminId: string; email: string; emailVerified?: boolean }
 }
 
 @injectable()
@@ -49,7 +49,7 @@ export class AuthHttpRepository implements AuthRepository {
   async checkSession(): Promise<Admin | null> {
     try {
       const { admin: payload } = await apiClient.get<MeResponse>('/auth/me')
-      this._admin = { id: payload.adminId, email: payload.email }
+      this._admin = { id: payload.adminId, email: payload.email, emailVerified: payload.emailVerified }
       return this._admin
     } catch {
       this._admin = null
@@ -59,5 +59,28 @@ export class AuthHttpRepository implements AuthRepository {
 
   async switchOrg(organizationId: string): Promise<void> {
     await apiClient.post('/auth/switch-org', { organizationId })
+  }
+
+  async verifyEmail(token: string): Promise<void> {
+    await apiClient.post(`/auth/verify-email/${token}`)
+  }
+
+  async resendVerification(): Promise<void> {
+    await apiClient.post('/auth/resend-verification')
+  }
+
+  async changeEmail(dto: ChangeEmailDto): Promise<void> {
+    await apiClient.patch('/auth/email', { newEmail: dto.newEmail })
+  }
+
+  async confirmEmailChange(token: string): Promise<void> {
+    await apiClient.post(`/auth/confirm-email-change/${token}`)
+  }
+
+  async changePassword(dto: ChangePasswordDto): Promise<void> {
+    await apiClient.patch('/auth/password', {
+      currentPassword: dto.currentPassword,
+      newPassword: dto.newPassword,
+    })
   }
 }

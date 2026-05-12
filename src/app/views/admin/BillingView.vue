@@ -4,11 +4,14 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useBillingStore } from '@/app/stores/billing/BillingStore'
 import { useOrganizationStore } from '@/app/stores/organization/OrganizationStore'
+import { useAuthStore } from '@/app/stores/auth/AuthStore'
 import { useToast } from '@/app/composables/useToast'
+import { ApiError } from '@/infrastructure/http/ApiClient'
 import type { BillingPlan, SmsPack } from '@/app/stores/billing/BillingStore'
 
 const billingStore = useBillingStore()
 const orgStore = useOrganizationStore()
+const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
@@ -16,6 +19,25 @@ const { activeOrgId } = storeToRefs(orgStore)
 
 const fetching = ref(false)
 const redirecting = ref<string | null>(null)
+const showEmailVerifyModal = ref(false)
+const resendingVerification = ref(false)
+
+function isEmailNotVerified(e: unknown): boolean {
+  return e instanceof ApiError && e.status === 403 && (e.body as { error?: string })?.error === 'EMAIL_NOT_VERIFIED'
+}
+
+async function handleResendVerification() {
+  resendingVerification.value = true
+  try {
+    await authStore.resendVerification()
+    toast.show('Email de verificación reenviado. Revisa tu bandeja.', 'success')
+    showEmailVerifyModal.value = false
+  } catch {
+    toast.show('No se pudo reenviar. Intenta de nuevo.', 'error')
+  } finally {
+    resendingVerification.value = false
+  }
+}
 
 onMounted(() => {
   if (route.query.success === 'true') {
@@ -110,9 +132,10 @@ async function handleCheckout(plan: BillingPlan) {
   try {
     const url = await billingStore.checkout(plan.slug)
     window.location.href = url
-  } catch {
-    toast.show('Error al procesar el pago. Intenta de nuevo.', 'error')
+  } catch (e) {
     redirecting.value = null
+    if (isEmailNotVerified(e)) { showEmailVerifyModal.value = true; return }
+    toast.show('Error al procesar el pago. Intenta de nuevo.', 'error')
   }
 }
 
@@ -121,9 +144,10 @@ async function handleBuyCredits(pack: SmsPack) {
   try {
     const url = await billingStore.buyCredits(pack.id)
     window.location.href = url
-  } catch {
-    toast.show('Error al procesar el pago. Intenta de nuevo.', 'error')
+  } catch (e) {
     redirecting.value = null
+    if (isEmailNotVerified(e)) { showEmailVerifyModal.value = true; return }
+    toast.show('Error al procesar el pago. Intenta de nuevo.', 'error')
   }
 }
 
@@ -441,7 +465,49 @@ async function handlePortal() {
         Los créditos no expiran. Úsalos cuando los necesites.
       </div>
     </section>
+
   </div>
+
+  <!-- Modal: email no verificado -->
+  <Teleport to="body">
+    <div
+      v-if="showEmailVerifyModal"
+      style="position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 16px;"
+      @click.self="showEmailVerifyModal = false"
+    >
+      <div style="background: #fff; border-radius: 16px; padding: 28px 28px 24px; max-width: 400px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.18);">
+        <div style="display: flex; align-items: flex-start; gap: 14px; margin-bottom: 18px;">
+          <div style="flex-shrink: 0; width: 40px; height: 40px; border-radius: 10px; background: #FEF3C7; display: flex; align-items: center; justify-content: center;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+            </svg>
+          </div>
+          <div>
+            <p style="font-size: 15px; font-weight: 700; color: #0F1B14; margin: 0 0 4px;">Verifica tu correo</p>
+            <p style="font-size: 13px; color: #6B7A72; margin: 0; line-height: 1.5;">
+              Debes verificar tu correo electrónico antes de realizar pagos. Revisa tu bandeja de entrada o reenvía el email.
+            </p>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button
+            style="padding: 9px 16px; border-radius: 8px; border: 1.5px solid #ECEFEB; background: #fff; font-size: 13px; font-weight: 600; color: #6B7A72; cursor: pointer;"
+            @click="showEmailVerifyModal = false"
+          >
+            Cerrar
+          </button>
+          <button
+            :disabled="resendingVerification"
+            style="padding: 9px 18px; border-radius: 8px; border: none; background: #1B4332; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer;"
+            :style="resendingVerification ? 'opacity: 0.6; cursor: not-allowed;' : ''"
+            @click="handleResendVerification"
+          >
+            {{ resendingVerification ? 'Enviando…' : 'Reenviar verificación' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>

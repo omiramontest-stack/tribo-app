@@ -7,4 +7,7 @@ export default {
   inviteMemberUseCase: Symbol('InviteMemberUseCase'),
   getInvitationUseCase: Symbol('GetInvitationUseCase'),
   acceptInvitationUseCase: Symbol('AcceptInvitationUseCase'),
+  updateOrganizationUseCase: Symbol('UpdateOrganizationUseCase'),
+  updateMemberRoleUseCase: Symbol('UpdateMemberRoleUseCase'),
+  removeMemberUseCase: Symbol('RemoveMemberUseCase'),
 }

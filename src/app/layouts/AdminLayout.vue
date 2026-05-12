@@ -4,6 +4,11 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/app/stores/auth/AuthStore'
 import { useOrganizationStore } from '@/app/stores/organization/OrganizationStore'
 import OrgSwitcher from '@/app/components/Admin/OrgSwitcher.vue'
+import NotificationBell from '@/app/components/Shared/NotificationBell.vue'
+import CommandPalette from '@/app/components/Shared/CommandPalette.vue'
+import { useCommandPalette } from '@/app/composables/useCommandPalette'
+
+const { open: openPalette } = useCommandPalette()
 import { apiClient } from '@/infrastructure/http/ApiClient'
 import { usePlanGate } from '@/app/composables/usePlanGate'
 import { useToast } from '@/app/composables/useToast'
@@ -53,6 +58,7 @@ async function handleLogout() {
   router.push({ name: 'Login' })
 }
 
+
 const navLinks = [
   { id: 'dashboard', label: 'Dashboard',  to: '/admin/dashboard', icon: 'home' },
   { id: 'wallets',   label: 'Wallets',    to: '/admin/wallets',   icon: 'wallet' },
@@ -61,6 +67,7 @@ const navLinks = [
   { id: 'analytics', label: 'Analítica',  to: '/admin/analytics',  icon: 'chart' },
   { id: 'campaigns', label: 'Campañas',   to: '/admin/campaigns',  icon: 'flash' },
   { id: 'billing',   label: 'Facturación', to: '/admin/billing',   icon: 'billing' },
+  { id: 'settings',  label: 'Ajustes',    to: '/admin/settings',  icon: 'settings' },
 ]
 
 const routeTitles: Record<string, string> = {
@@ -73,6 +80,7 @@ const routeTitles: Record<string, string> = {
   Analytics:    'Analítica',
   Campaigns:    'Campañas',
   Billing:      'Facturación',
+  Settings:     'Ajustes',
 }
 
 const pageTitle = computed(() => routeTitles[route.name as string] ?? '')
@@ -94,9 +102,10 @@ const iconPaths: Record<string, string> = {
   chart:  '<path d="M3 21V5M3 21h18"/><path d="M7 17v-5M11 17V9M15 17v-3M19 17V7"/>',
   flash:   '<path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>',
   billing: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5" fill="currentColor" stroke="none"/>',
-  search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
-  bell:   '<path d="M6 8a6 6 0 1112 0c0 7 3 7 3 9H3c0-2 3-2 3-9z"/><path d="M10 21a2 2 0 004 0"/>',
-  logout: '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>',
+  search:   '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  bell:     '<path d="M6 8a6 6 0 1112 0c0 7 3 7 3 9H3c0-2 3-2 3-9z"/><path d="M10 21a2 2 0 004 0"/>',
+  logout:   '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>',
   chevronDown: '<path d="M6 9l6 6 6-6"/>',
 }
 </script>
@@ -269,29 +278,21 @@ const iconPaths: Record<string, string> = {
           </h1>
         </div>
 
-        <!-- Search (decorative — functional search pending) -->
-        <div
+        <!-- Search trigger -->
+        <button
           class="hidden md:flex items-center gap-2"
-          style="padding: 8px 12px; background: #F7F4EF; border-radius: 8px; width: 240px;"
+          style="padding: 8px 12px; background: #F7F4EF; border-radius: 8px; width: 240px; border: 1px solid transparent; cursor: pointer; font-family: inherit; transition: border-color 0.15s;"
+          @click="openPalette"
+          @mouseenter="($event.currentTarget as HTMLElement).style.borderColor = '#D8DDD7'"
+          @mouseleave="($event.currentTarget as HTMLElement).style.borderColor = 'transparent'"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B7A72" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" v-html="iconPaths.search" />
-          <span style="font-size: 13px; color: #A8B3AC; flex: 1;">Buscar…</span>
+          <span style="font-size: 13px; color: #A8B3AC; flex: 1; text-align: left;">Buscar…</span>
           <span style="font-size: 10px; font-weight: 600; color: #6B7A72; padding: 2px 6px; background: #fff; border-radius: 4px; border: 1px solid #D8DDD7;">⌘K</span>
-        </div>
+        </button>
 
         <!-- Bell -->
-        <div class="relative hidden md:block">
-          <button
-            class="grid place-items-center"
-            style="width: 36px; height: 36px; border-radius: 8px; border: 1px solid #D8DDD7; background: #fff; cursor: pointer;"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3A4A41" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" v-html="iconPaths.bell" />
-          </button>
-          <span
-            class="absolute"
-            style="top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 999px; background: #E8920A; border: 1.5px solid #fff;"
-          />
-        </div>
+        <NotificationBell />
 
         <!-- RouterView action slot -->
         <slot name="actions" />
@@ -552,6 +553,10 @@ const iconPaths: Record<string, string> = {
         </div>
       </Transition>
     </Teleport>
+
+    <!-- ── Command Palette ── -->
+    <CommandPalette />
+
   </div>
 </template>
 

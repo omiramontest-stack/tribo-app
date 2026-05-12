@@ -10,6 +10,25 @@ export interface OnboardingDto {
   logoUrl?: string
 }
 
+export interface UpdateOrganizationDto {
+  name?: string
+  industry?: string | null
+  country?: string | null
+  phone?: string | null
+  logoUrl?: string | null
+}
+
+export interface UpdateMemberRoleDto {
+  organizationId: string
+  memberId: string
+  role: 'admin' | 'staff'
+}
+
+export interface RemoveMemberDto {
+  organizationId: string
+  memberId: string
+}
+
 export interface OrganizationRepository {
   getMyOrganizations(): Promise<Organization[]>
   createOrganization(dto: OnboardingDto): Promise<Organization>
@@ -18,4 +37,7 @@ export interface OrganizationRepository {
   inviteMember(organizationId: string, email: string, role: MemberRole): Promise<Invitation>
   getInvitation(token: string): Promise<Invitation>
   acceptInvitation(token: string, password: string): Promise<void>
+  updateOrganization(organizationId: string, dto: UpdateOrganizationDto): Promise<Organization>
+  updateMemberRole(dto: UpdateMemberRoleDto): Promise<OrganizationMember>
+  removeMember(dto: RemoveMemberDto): Promise<void>
 }

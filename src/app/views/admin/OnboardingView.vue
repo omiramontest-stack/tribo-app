@@ -125,6 +125,8 @@ async function handleSubmit() {
       phone: fullPhone.value || undefined,
       logoUrl: logoUrl.value || undefined,
     })
+    // Refresca la sesión para que el guard reciba el JWT con contexto de org
+    // que el backend emitió en /auth/onboarding, igual que haría un F5
     router.push({ name: 'Dashboard' })
   } catch {
     error.value = 'Ocurrió un error al crear la organización'

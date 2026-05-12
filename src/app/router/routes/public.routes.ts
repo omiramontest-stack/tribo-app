@@ -37,6 +37,18 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/app/views/wallet/LinkExpiredView.vue'),
     meta: { requiresAuth: false },
   },
+  {
+    path: '/verify-email',
+    name: 'VerifyEmail',
+    component: () => import('@/app/views/admin/VerifyEmailView.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/confirm-email-change',
+    name: 'ConfirmEmailChange',
+    component: () => import('@/app/views/admin/ConfirmEmailChangeView.vue'),
+    meta: { requiresAuth: false },
+  },
 ]
 
 export default routes

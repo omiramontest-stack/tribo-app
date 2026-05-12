@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 
 import { container } from '@/container'
 import authTypes from '@/infrastructure/auth/di/types'
-import type { AuthRepository } from '@/domain/auth/repository/AuthRepository'
+import type { AuthRepository, ChangeEmailDto, ChangePasswordDto } from '@/domain/auth/repository/AuthRepository'
 import type { Admin } from '@/domain/auth/entities/Admin'
 import type { Organization } from '@/domain/organization/entities/Organization'
 import type UseCase from '@/application/common/useCase/UseCase'
@@ -15,6 +15,9 @@ export const useAuthStore = defineStore('AuthStore', () => {
   const loginUseCase = container.get<UseCase<LoginDto, Admin>>(authTypes.loginUseCase)
   const logoutUseCase = container.get<UseCase<void, void>>(authTypes.logoutUseCase)
   const registerUseCase = container.get<UseCase<RegisterDto, Admin>>(authTypes.registerUseCase)
+  const changeEmailUseCase = container.get<UseCase<ChangeEmailDto, void>>(authTypes.changeEmailUseCase)
+  const confirmEmailChangeUseCase = container.get<UseCase<string, void>>(authTypes.confirmEmailChangeUseCase)
+  const changePasswordUseCase = container.get<UseCase<ChangePasswordDto, void>>(authTypes.changePasswordUseCase)
   const authRepository = container.get<AuthRepository>(authTypes.authRepository)
 
   const state = reactive<{ _admin: Admin | null }>({
@@ -23,6 +26,7 @@ export const useAuthStore = defineStore('AuthStore', () => {
 
   const isAuthenticated = computed(() => !!state._admin)
   const admin = computed(() => state._admin)
+  const emailVerified = computed(() => state._admin?.emailVerified)
 
   async function init() {
     try {
@@ -53,5 +57,27 @@ export const useAuthStore = defineStore('AuthStore', () => {
     useOrganizationStore().reset()
   }
 
-  return { admin, isAuthenticated, init, login, register, logout, switchOrg }
+  async function verifyEmail(token: string) {
+    await authRepository.verifyEmail(token)
+    state._admin = await authRepository.checkSession()
+  }
+
+  async function resendVerification() {
+    await authRepository.resendVerification()
+  }
+
+  async function changeEmail(newEmail: string) {
+    await changeEmailUseCase.run({ newEmail })
+  }
+
+  async function confirmEmailChange(token: string) {
+    await confirmEmailChangeUseCase.run(token)
+    state._admin = await authRepository.checkSession()
+  }
+
+  async function changePassword(newPassword: string, currentPassword?: string) {
+    await changePasswordUseCase.run({ newPassword, currentPassword })
+  }
+
+  return { admin, emailVerified, isAuthenticated, init, login, register, logout, switchOrg, verifyEmail, resendVerification, changeEmail, confirmEmailChange, changePassword }
 })

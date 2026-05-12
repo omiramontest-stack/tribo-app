@@ -3,4 +3,7 @@ export default {
   loginUseCase: Symbol('LoginUseCase'),
   logoutUseCase: Symbol('LogoutUseCase'),
   registerUseCase: Symbol('RegisterUseCase'),
+  changeEmailUseCase: Symbol('ChangeEmailUseCase'),
+  confirmEmailChangeUseCase: Symbol('ConfirmEmailChangeUseCase'),
+  changePasswordUseCase: Symbol('ChangePasswordUseCase'),
 }

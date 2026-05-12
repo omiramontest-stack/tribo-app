@@ -6,9 +6,10 @@ import organizationTypes from '@/infrastructure/organization/di/types'
 import type { Organization } from '@/domain/organization/entities/Organization'
 import type { OrganizationMember } from '@/domain/organization/entities/OrganizationMember'
 import type { Invitation } from '@/domain/organization/entities/Invitation'
-import type { OnboardingDto } from '@/domain/organization/repository/OrganizationRepository'
+import type { OnboardingDto, UpdateMemberRoleDto, RemoveMemberDto } from '@/domain/organization/repository/OrganizationRepository'
 import type { InviteMemberDto } from '@/application/organization/useCase/InviteMemberUseCase'
 import type { AcceptInvitationDto } from '@/application/organization/useCase/AcceptInvitationUseCase'
+import type { UpdateOrganizationUseCaseDto } from '@/application/organization/useCase/UpdateOrganizationUseCase'
 import type UseCase from '@/application/common/useCase/UseCase'
 
 const ACTIVE_ORG_KEY = 'wallet_saas_active_org_id'
@@ -20,6 +21,9 @@ export const useOrganizationStore = defineStore('OrganizationStore', () => {
   const inviteMemberUseCase = container.get<UseCase<InviteMemberDto, Invitation>>(organizationTypes.inviteMemberUseCase)
   const getInvitationUseCase = container.get<UseCase<string, Invitation>>(organizationTypes.getInvitationUseCase)
   const acceptInvitationUseCase = container.get<UseCase<AcceptInvitationDto, void>>(organizationTypes.acceptInvitationUseCase)
+  const updateOrganizationUseCase = container.get<UseCase<UpdateOrganizationUseCaseDto, Organization>>(organizationTypes.updateOrganizationUseCase)
+  const updateMemberRoleUseCase = container.get<UseCase<UpdateMemberRoleDto, OrganizationMember>>(organizationTypes.updateMemberRoleUseCase)
+  const removeMemberUseCase = container.get<UseCase<RemoveMemberDto, void>>(organizationTypes.removeMemberUseCase)
 
   const state = reactive<{
     _organizations: Organization[]
@@ -69,7 +73,7 @@ export const useOrganizationStore = defineStore('OrganizationStore', () => {
     const org = await onboardingUseCase.run(dto)
     state._organizations = [org]
     state._activeOrgId = org.id
-    state._initialized = true
+    state._initialized = false
     localStorage.setItem(ACTIVE_ORG_KEY, org.id)
     return org
   }
@@ -88,6 +92,31 @@ export const useOrganizationStore = defineStore('OrganizationStore', () => {
 
   async function acceptInvitation(dto: AcceptInvitationDto): Promise<void> {
     await acceptInvitationUseCase.run(dto)
+  }
+
+  async function updateOrg(dto: Omit<UpdateOrganizationUseCaseDto, 'organizationId'>): Promise<Organization> {
+    const orgId = activeOrgId.value
+    if (!orgId) throw new Error('No active organization')
+    const updated = await updateOrganizationUseCase.run({ organizationId: orgId, ...dto })
+    const idx = state._organizations.findIndex((o) => o.id === updated.id)
+    if (idx >= 0) state._organizations[idx] = updated
+    return updated
+  }
+
+  async function updateMemberRole(memberId: string, role: 'admin' | 'staff'): Promise<OrganizationMember> {
+    const orgId = activeOrgId.value
+    if (!orgId) throw new Error('No active organization')
+    const updated = await updateMemberRoleUseCase.run({ organizationId: orgId, memberId, role })
+    const idx = state._members.findIndex((m) => m.id === memberId)
+    if (idx >= 0) state._members[idx] = updated
+    return updated
+  }
+
+  async function removeMember(memberId: string): Promise<void> {
+    const orgId = activeOrgId.value
+    if (!orgId) throw new Error('No active organization')
+    await removeMemberUseCase.run({ organizationId: orgId, memberId })
+    state._members = state._members.filter((m) => m.id !== memberId)
   }
 
   function clearMembers() {
@@ -117,6 +146,9 @@ export const useOrganizationStore = defineStore('OrganizationStore', () => {
     inviteMember,
     getInvitation,
     acceptInvitation,
+    updateOrg,
+    updateMemberRole,
+    removeMember,
     clearMembers,
     reset,
   }

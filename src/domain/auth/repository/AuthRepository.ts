@@ -5,6 +5,15 @@ export interface RegisterDto {
   password: string
 }
 
+export interface ChangeEmailDto {
+  newEmail: string
+}
+
+export interface ChangePasswordDto {
+  currentPassword?: string
+  newPassword: string
+}
+
 export interface AuthRepository {
   login(email: string, password: string): Promise<Admin | null>
   register(dto: RegisterDto): Promise<Admin>
@@ -12,4 +21,9 @@ export interface AuthRepository {
   getCurrentAdmin(): Admin | null
   checkSession(): Promise<Admin | null>
   switchOrg(organizationId: string): Promise<void>
+  verifyEmail(token: string): Promise<void>
+  resendVerification(): Promise<void>
+  changeEmail(dto: ChangeEmailDto): Promise<void>
+  confirmEmailChange(token: string): Promise<void>
+  changePassword(dto: ChangePasswordDto): Promise<void>
 }

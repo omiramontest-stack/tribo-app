@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { WalletType } from '@/domain/wallet/entities/Wallet'
 import type {
   WalletRules,
@@ -13,6 +14,52 @@ import type {
 } from '@/domain/wallet/entities/WalletRules'
 
 defineProps<{ type: WalletType; rules: WalletRules }>()
+
+const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY
+
+const uploadingImage = ref(false)
+const uploadImageError = ref('')
+const imageFileInput = ref<HTMLInputElement | null>(null)
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve((reader.result as string).split(',')[1])
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+async function handleImageFile(file: File, rules: DaypassRules) {
+  if (!file.type.startsWith('image/')) { uploadImageError.value = 'Solo se permiten imágenes'; return }
+  if (file.size > 4 * 1024 * 1024) { uploadImageError.value = 'La imagen debe pesar menos de 4 MB'; return }
+  uploadImageError.value = ''
+  uploadingImage.value = true
+  try {
+    const base64 = await fileToBase64(file)
+    const body = new FormData()
+    body.append('key', IMGBB_API_KEY)
+    body.append('image', base64)
+    const res = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body })
+    if (!res.ok) throw new Error()
+    const data = await res.json()
+    rules.imageUrl = data.data.url as string
+  } catch {
+    uploadImageError.value = 'No se pudo subir la imagen'
+  } finally {
+    uploadingImage.value = false
+  }
+}
+
+function onImageFileChange(e: Event, rules: DaypassRules) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (file) handleImageFile(file, rules)
+}
+
+function onImageDrop(e: DragEvent, rules: DaypassRules) {
+  const file = e.dataTransfer?.files?.[0]
+  if (file) handleImageFile(file, rules)
+}
 </script>
 
 <template>
@@ -139,15 +186,68 @@ defineProps<{ type: WalletType; rules: WalletRules }>()
     </div>
     <div>
       <label class="field-label">
-        URL imagen de fondo
+        Imagen de fondo
         <span class="field-label-hint">(opcional)</span>
       </label>
+
       <input
-        v-model="(rules as DaypassRules).imageUrl"
-        type="url" placeholder="https://..."
-        class="field-input"
+        ref="imageFileInput"
+        type="file"
+        accept="image/*"
+        style="display: none;"
+        @change="onImageFileChange($event, (rules as DaypassRules))"
       />
-      <p class="field-hint">Imagen horizontal (landscape) recomendada.</p>
+
+      <!-- Preview state -->
+      <div
+        v-if="(rules as DaypassRules).imageUrl && !uploadingImage"
+        style="display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 10px; border: 1.5px solid #ECEFEB; background: #fff;"
+      >
+        <img
+          :src="(rules as DaypassRules).imageUrl"
+          alt="Imagen de fondo"
+          style="width: 64px; height: 40px; border-radius: 6px; object-fit: cover; background: #F7F4EF;"
+        />
+        <div style="flex: 1; min-width: 0;">
+          <p style="font-size: 12px; font-weight: 600; color: #0F1B14; margin-bottom: 2px;">Imagen cargada</p>
+          <p style="font-size: 11px; color: #A8B3AC; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ (rules as DaypassRules).imageUrl }}</p>
+        </div>
+        <button
+          type="button"
+          style="font-size: 11px; font-weight: 600; color: #6B7A72; background: #F7F4EF; border: 1px solid #ECEFEB; border-radius: 7px; padding: 5px 10px; cursor: pointer; white-space: nowrap; flex-shrink: 0;"
+          @click="(rules as DaypassRules).imageUrl = ''"
+        >
+          Cambiar
+        </button>
+      </div>
+
+      <!-- Upload zone -->
+      <div
+        v-else
+        class="upload-zone"
+        :class="{ 'upload-zone--disabled': uploadingImage }"
+        @click="imageFileInput?.click()"
+        @dragover.prevent
+        @drop.prevent="onImageDrop($event, (rules as DaypassRules))"
+      >
+        <div v-if="uploadingImage" style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A8B3AC" stroke-width="1.8" stroke-linecap="round">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
+          <p style="font-size: 12px; color: #A8B3AC; font-weight: 500;">Subiendo imagen...</p>
+        </div>
+        <div v-else style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+          <div style="width: 36px; height: 36px; border-radius: 10px; background: #EFEAE0; display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B7A72" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+            </svg>
+          </div>
+          <p style="font-size: 13px; font-weight: 600; color: #3A4A41;">Haz clic o arrastra una imagen</p>
+          <p style="font-size: 11px; color: #A8B3AC;">PNG, JPG · Máx. 4 MB · Landscape recomendado</p>
+        </div>
+      </div>
+
+      <p v-if="uploadImageError" style="font-size: 11px; color: #DC2626; margin-top: 5px;">{{ uploadImageError }}</p>
     </div>
   </template>
 
@@ -318,4 +418,18 @@ defineProps<{ type: WalletType; rules: WalletRules }>()
   font-weight: 700;
   color: #1B4332;
 }
+
+.upload-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 20px;
+  border-radius: 10px;
+  border: 1.5px dashed #D8DDD7;
+  background: #F7F4EF;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.upload-zone:hover    { border-color: #E8920A; background: #FCEBC4; }
+.upload-zone--disabled { pointer-events: none; opacity: 0.6; }
 </style>
