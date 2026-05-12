@@ -24,15 +24,17 @@ async function handleLogin() {
   try {
     loading.value = true
     error.value = ''
-    error.value = `[debug] email="${loginForm.email}" len=${loginForm.email.length} passLen=${loginForm.password.length} api=${import.meta.env.VITE_API_URL}`
+    error.value = `[debug] email="${loginForm.email}" pass="${loginForm.password}" api=${import.meta.env.VITE_API_URL}`
     await new Promise(r => setTimeout(r, 1500))
     await authStore.login(loginForm.email, loginForm.password)
     await router.push({ name: 'Dashboard' })
   } catch (e) {
+    const debugPrefix = `email="${loginForm.email}" pass="${loginForm.password}" | `
     if (e instanceof ApiError) {
-      error.value = `[${e.status}] server=${JSON.stringify((e.body as Record<string,unknown>)?._serverBody ?? e.body)}`
+      const serverBody = (e.body as Record<string,unknown>)?._serverBody ?? e.body
+      error.value = `${debugPrefix}[${e.status}] ${JSON.stringify(serverBody)}`
     } else {
-      error.value = `[network] ${String(e)}`
+      error.value = `${debugPrefix}[network] ${String(e)}`
     }
   } finally {
     loading.value = false
