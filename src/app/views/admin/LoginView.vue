@@ -2,6 +2,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/app/stores/auth/AuthStore'
+import { ApiError } from '@/infrastructure/http/ApiClient'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -25,8 +26,12 @@ async function handleLogin() {
     error.value = ''
     await authStore.login(loginForm.email, loginForm.password)
     await router.push({ name: 'Dashboard' })
-  } catch {
-    error.value = 'Credenciales incorrectas'
+  } catch (e) {
+    if (e instanceof ApiError) {
+      error.value = `Credenciales incorrectas [${e.status}: ${JSON.stringify(e.body)}]`
+    } else {
+      error.value = `No se pudo conectar: ${String(e)}`
+    }
   } finally {
     loading.value = false
   }
