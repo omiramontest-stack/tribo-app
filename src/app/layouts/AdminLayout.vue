@@ -19,7 +19,7 @@ const route = useRoute()
 const authStore = useAuthStore()
 const orgStore = useOrganizationStore()
 const billingStore = useBillingStore()
-const mobileOpen = ref(false)
+const moreOpen = ref(false)
 const planGate = usePlanGate()
 const toast = useToast()
 const layoutReady = ref(false)
@@ -58,17 +58,42 @@ async function handleLogout() {
   router.push({ name: 'Login' })
 }
 
-
 const navLinks = [
-  { id: 'dashboard', label: 'Dashboard',  to: '/admin/dashboard', icon: 'home' },
-  { id: 'wallets',   label: 'Wallets',    to: '/admin/wallets',   icon: 'wallet' },
-  { id: 'scan',      label: 'Escanear',   to: '/admin/scan',      icon: 'qr' },
-  { id: 'team',      label: 'Equipo',     to: '/admin/team',      icon: 'users' },
-  { id: 'analytics', label: 'Analítica',  to: '/admin/analytics',  icon: 'chart' },
-  { id: 'campaigns', label: 'Campañas',   to: '/admin/campaigns',  icon: 'flash' },
+  { id: 'dashboard', label: 'Dashboard',   to: '/admin/dashboard', icon: 'home' },
+  { id: 'wallets',   label: 'Wallets',     to: '/admin/wallets',   icon: 'wallet' },
+  { id: 'scan',      label: 'Escanear',    to: '/admin/scan',      icon: 'qr' },
+  { id: 'team',      label: 'Equipo',      to: '/admin/team',      icon: 'users' },
+  { id: 'analytics', label: 'Analítica',   to: '/admin/analytics', icon: 'chart' },
+  { id: 'campaigns', label: 'Campañas',    to: '/admin/campaigns', icon: 'flash' },
   { id: 'billing',   label: 'Facturación', to: '/admin/billing',   icon: 'billing' },
-  { id: 'settings',  label: 'Ajustes',    to: '/admin/settings',  icon: 'settings' },
+  { id: 'settings',  label: 'Ajustes',     to: '/admin/settings',  icon: 'settings' },
 ]
+
+// Primary bottom-tab items (mobile)
+const bottomTabs = [
+  { id: 'dashboard', label: 'Inicio',    to: '/admin/dashboard', icon: 'home',   center: false },
+  { id: 'wallets',   label: 'Wallets',   to: '/admin/wallets',   icon: 'wallet', center: false },
+  { id: 'scan',      label: 'Escanear',  to: '/admin/scan',      icon: 'qr',     center: true  },
+  { id: 'analytics', label: 'Analítica', to: '/admin/analytics', icon: 'chart',  center: false },
+  { id: 'more',      label: 'Más',       to: null,               icon: 'grid',   center: false },
+]
+
+// Secondary items in the "Más" sheet
+const moreLinks = [
+  { id: 'team',      label: 'Equipo',      to: '/admin/team',      icon: 'users'    },
+  { id: 'campaigns', label: 'Campañas',    to: '/admin/campaigns', icon: 'flash'    },
+  { id: 'billing',   label: 'Facturación', to: '/admin/billing',   icon: 'billing'  },
+  { id: 'settings',  label: 'Ajustes',     to: '/admin/settings',  icon: 'settings' },
+]
+
+const moreActive = computed(() =>
+  moreOpen.value || moreLinks.some(l => route.path.startsWith(l.to))
+)
+
+function navigateMore(to: string) {
+  router.push(to)
+  moreOpen.value = false
+}
 
 const routeTitles: Record<string, string> = {
   Dashboard:    'Dashboard',
@@ -93,40 +118,37 @@ function getInitials(name = ''): string {
   return name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('')
 }
 
-// SVG icon paths (stroke-based, lucide-style)
 const iconPaths: Record<string, string> = {
-  home:   '<path d="M3 11l9-8 9 8"/><path d="M5 9v12h14V9"/>',
-  wallet: '<rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5" fill="currentColor" stroke="none"/>',
-  qr:     '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v3M14 18v3M17 21h4"/>',
-  users:  '<circle cx="9" cy="8" r="3.5"/><path d="M2 21c0-3.5 3-6 7-6s7 2.5 7 6"/><circle cx="17" cy="7" r="2.5"/><path d="M16 14c3.5 0 6 2.5 6 6"/>',
-  chart:  '<path d="M3 21V5M3 21h18"/><path d="M7 17v-5M11 17V9M15 17v-3M19 17V7"/>',
-  flash:   '<path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>',
-  billing: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5" fill="currentColor" stroke="none"/>',
-  search:   '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
-  bell:     '<path d="M6 8a6 6 0 1112 0c0 7 3 7 3 9H3c0-2 3-2 3-9z"/><path d="M10 21a2 2 0 004 0"/>',
-  logout:   '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>',
-  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>',
+  home:        '<path d="M3 11l9-8 9 8"/><path d="M5 9v12h14V9"/>',
+  wallet:      '<rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5" fill="currentColor" stroke="none"/>',
+  qr:          '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v3M14 18v3M17 21h4"/>',
+  users:       '<circle cx="9" cy="8" r="3.5"/><path d="M2 21c0-3.5 3-6 7-6s7 2.5 7 6"/><circle cx="17" cy="7" r="2.5"/><path d="M16 14c3.5 0 6 2.5 6 6"/>',
+  chart:       '<path d="M3 21V5M3 21h18"/><path d="M7 17v-5M11 17V9M15 17v-3M19 17V7"/>',
+  flash:       '<path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>',
+  billing:     '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5" fill="currentColor" stroke="none"/>',
+  search:      '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  bell:        '<path d="M6 8a6 6 0 1112 0c0 7 3 7 3 9H3c0-2 3-2 3-9z"/><path d="M10 21a2 2 0 004 0"/>',
+  logout:      '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>',
+  settings:    '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>',
+  grid:        '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
   chevronDown: '<path d="M6 9l6 6 6-6"/>',
+  close:       '<path d="M18 6L6 18M6 6l12 12"/>',
+  arrowRight:  '<path d="M5 12h14M12 5l7 7-7 7"/>',
 }
 </script>
 
 <template>
   <!-- Full-page skeleton while layout initializes -->
   <div v-if="!layoutReady" class="flex h-screen overflow-hidden" style="background: #F7F4EF;">
-    <!-- Sidebar skeleton -->
     <aside class="hidden lg:flex flex-col shrink-0" style="width: 232px; background: #1B4332; padding: 20px 14px; gap: 18px;">
-      <!-- Logo -->
       <div style="padding: 4px 8px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; gap: 8px;">
         <div class="sk" style="width: 22px; height: 22px; border-radius: 6px; background: rgba(255,255,255,0.15);" />
         <div class="sk" style="width: 60px; height: 16px; border-radius: 4px; background: rgba(255,255,255,0.15);" />
       </div>
-      <!-- Org switcher -->
       <div class="sk" style="height: 48px; border-radius: 10px; background: rgba(255,255,255,0.1);" />
-      <!-- Nav items -->
       <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
         <div v-for="i in 7" :key="i" class="sk" style="height: 36px; border-radius: 8px; background: rgba(255,255,255,0.07);" />
       </div>
-      <!-- User -->
       <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 14px; display: flex; gap: 10px; align-items: center;">
         <div class="sk" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.15); flex-shrink: 0;" />
         <div style="flex: 1;">
@@ -135,10 +157,7 @@ const iconPaths: Record<string, string> = {
         </div>
       </div>
     </aside>
-
-    <!-- Main skeleton -->
     <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
-      <!-- Header -->
       <header style="padding: 18px 32px; border-bottom: 1px solid #ECEFEB; background: #fff; display: flex; align-items: center; gap: 16px;">
         <div style="flex: 1;">
           <div class="sk" style="height: 11px; width: 80px; border-radius: 4px; background: #EFEAE0; margin-bottom: 8px;" />
@@ -147,7 +166,6 @@ const iconPaths: Record<string, string> = {
         <div class="sk hidden md:block" style="height: 36px; width: 240px; border-radius: 8px; background: #EFEAE0;" />
         <div class="sk hidden md:block" style="height: 36px; width: 36px; border-radius: 8px; background: #EFEAE0;" />
       </header>
-      <!-- Content -->
       <main style="flex: 1; padding: 28px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px;">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px;">
           <div v-for="i in 4" :key="i" class="sk" style="height: 90px; border-radius: 14px; background: #EFEAE0;" />
@@ -164,7 +182,6 @@ const iconPaths: Record<string, string> = {
       class="hidden lg:flex flex-col shrink-0"
       style="width: 232px; background: #1B4332; padding: 20px 14px; gap: 18px;"
     >
-      <!-- Logo -->
       <div
         style="padding: 4px 8px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; gap: 8px; cursor: pointer;"
         @click="router.push({ name: 'Dashboard' })"
@@ -182,16 +199,13 @@ const iconPaths: Record<string, string> = {
         </span>
       </div>
 
-      <!-- Org switcher -->
       <OrgSwitcher :dark="true" />
 
-      <!-- Nav -->
       <nav style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
         <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: #7FA68B; padding: 6px 12px 4px;">
           NAVEGACIÓN
         </div>
         <template v-for="link in navLinks" :key="link.id">
-          <!-- Active nav item -->
           <button
             v-if="link.to"
             class="flex items-center gap-3 w-full"
@@ -210,11 +224,9 @@ const iconPaths: Record<string, string> = {
             />
             <span style="flex: 1;">{{ link.label }}</span>
           </button>
-
         </template>
       </nav>
 
-      <!-- User profile + logout -->
       <div style="border-top: 1px solid #13301F; padding-top: 14px;">
         <div class="flex items-center gap-2.5" style="padding: 4px 8px;">
           <div
@@ -251,34 +263,38 @@ const iconPaths: Record<string, string> = {
     <!-- ── Main area ── -->
     <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-      <!-- Top bar (mobile hamburger + desktop page header) -->
+      <!-- Top bar -->
       <header
-        class="flex items-center gap-4 shrink-0"
-        style="padding: 18px 32px; border-bottom: 1px solid #ECEFEB; background: #fff;"
+        class="admin-header flex items-center gap-4 shrink-0"
+        style="border-bottom: 1px solid #ECEFEB; background: #fff;"
       >
-        <!-- Mobile hamburger -->
-        <button
-          class="lg:hidden p-2 rounded-lg"
-          style="border: 1px solid #ECEFEB; color: #6B7A72;"
-          @click="mobileOpen = !mobileOpen"
+        <!-- Mobile: logo mark -->
+        <div
+          class="lg:hidden shrink-0 cursor-pointer"
+          style="display: flex; align-items: center; gap: 6px;"
+          @click="router.push({ name: 'Dashboard' })"
         >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path v-if="!mobileOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-            <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          <svg width="20" height="20" viewBox="0 0 40 40" fill="none">
+            <line x1="10" y1="28" x2="30" y2="28" stroke="#E8920A" stroke-width="2.5"/>
+            <line x1="10" y1="28" x2="20" y2="10" stroke="#E8920A" stroke-width="2.5"/>
+            <line x1="20" y1="10" x2="30" y2="28" stroke="#E8920A" stroke-width="2.5"/>
+            <circle cx="20" cy="10" r="3.5" fill="#E8920A"/>
+            <circle cx="10" cy="28" r="3.5" fill="#E8920A"/>
+            <circle cx="30" cy="28" r="3.5" fill="#E8920A"/>
           </svg>
-        </button>
+        </div>
 
         <!-- Page title -->
         <div style="flex: 1; min-width: 0;">
           <div v-if="orgStore.activeOrg?.name" style="font-size: 11px; color: #6B7A72; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;">
             {{ orgStore.activeOrg.name }}
           </div>
-          <h1 style="font-size: 22px; font-weight: 700; color: #0F1B14; letter-spacing: -0.01em; line-height: 1.2; margin-top: 2px;">
+          <h1 class="mobile-title" style="font-weight: 700; color: #0F1B14; letter-spacing: -0.01em; line-height: 1.2; margin-top: 2px;">
             {{ pageTitle }}
           </h1>
         </div>
 
-        <!-- Search trigger -->
+        <!-- Search trigger (desktop only) -->
         <button
           class="hidden md:flex items-center gap-2"
           style="padding: 8px 12px; background: #F7F4EF; border-radius: 8px; width: 240px; border: 1px solid transparent; cursor: pointer; font-family: inherit; transition: border-color 0.15s;"
@@ -291,71 +307,11 @@ const iconPaths: Record<string, string> = {
           <span style="font-size: 10px; font-weight: 600; color: #6B7A72; padding: 2px 6px; background: #fff; border-radius: 4px; border: 1px solid #D8DDD7;">⌘K</span>
         </button>
 
-        <!-- Bell -->
         <NotificationBell />
-
-        <!-- RouterView action slot -->
         <slot name="actions" />
       </header>
 
-      <!-- Mobile drawer -->
-      <div
-        v-if="mobileOpen"
-        class="lg:hidden absolute inset-0 z-40 flex"
-        @click.self="mobileOpen = false"
-      >
-        <aside class="flex flex-col shrink-0" style="width: 232px; background: #1B4332; padding: 20px 14px; box-shadow: 4px 0 24px rgba(0,0,0,0.2);">
-          <div
-            style="padding: 4px 8px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer;"
-            @click="() => { router.push({ name: 'Dashboard' }); mobileOpen = false }"
-          >
-            <svg width="20" height="20" viewBox="0 0 40 40" fill="none" style="flex-shrink: 0;">
-              <line x1="10" y1="28" x2="30" y2="28" stroke="#E8920A" stroke-width="2"/>
-              <line x1="10" y1="28" x2="20" y2="10" stroke="#E8920A" stroke-width="2"/>
-              <line x1="20" y1="10" x2="30" y2="28" stroke="#E8920A" stroke-width="2"/>
-              <circle cx="20" cy="10" r="3.5" fill="#E8920A"/>
-              <circle cx="10" cy="28" r="3.5" fill="#E8920A"/>
-              <circle cx="30" cy="28" r="3.5" fill="#E8920A"/>
-            </svg>
-            <span style="font-size: 16px; font-weight: 800; letter-spacing: -0.02em; color: #fff; font-family: 'Syne', sans-serif; line-height: 1;">
-              trib<span style="color: #E8920A;">o</span>
-            </span>
-          </div>
-          <nav style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
-            <template v-for="link in navLinks" :key="link.id">
-              <button
-                v-if="link.to"
-                class="flex items-center gap-3 w-full"
-                style="padding: 9px 12px; border-radius: 8px; font-size: 13.5px; font-weight: 500; border: none; cursor: pointer; text-align: left; transition: background 0.15s;"
-                :style="isActive(link)
-                  ? { background: '#E8920A', color: '#13301F', fontWeight: '600' }
-                  : { background: 'transparent', color: '#D4E0D8' }"
-                @click="() => { router.push(link.to!); mobileOpen = false }"
-              >
-                <svg
-                  width="17" height="17" viewBox="0 0 24 24"
-                  fill="none" stroke="currentColor" stroke-width="1.8"
-                  stroke-linecap="round" stroke-linejoin="round"
-                  :style="{ color: isActive(link) ? '#13301F' : '#9DB7A8' }"
-                  v-html="iconPaths[link.icon]"
-                />
-                <span>{{ link.label }}</span>
-              </button>
-            </template>
-          </nav>
-          <div style="border-top: 1px solid #13301F; padding-top: 12px;">
-            <button
-              class="w-full flex items-center gap-2 text-sm"
-              style="padding: 8px 12px; border-radius: 8px; border: none; background: transparent; color: #9DB7A8; cursor: pointer;"
-              @click="handleLogout"
-            >
-              Cerrar sesión
-            </button>
-          </div>
-        </aside>
-      </div>
-
-      <!-- Trial active banner (soft info) -->
+      <!-- Trial active banner -->
       <div
         v-if="!bannerDismissed && trialActive"
         style="flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 11px 24px; font-size: 13px; font-weight: 500; background: #EFF6FF; border-bottom: 1px solid #BFDBFE; color: #1E40AF;"
@@ -380,7 +336,7 @@ const iconPaths: Record<string, string> = {
         </button>
       </div>
 
-      <!-- Grace period / cancelled banner (non-trial subscriptions only) -->
+      <!-- Grace period / cancelled banner -->
       <div
         v-if="!bannerDismissed && billingStore.status && !billingStore.status.isActive && !isTrial && !trialExpired"
         style="flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 11px 24px; font-size: 13px; font-weight: 500;"
@@ -401,9 +357,7 @@ const iconPaths: Record<string, string> = {
         </span>
         <button
           style="padding: 5px 14px; border-radius: 7px; font-size: 12px; font-weight: 700; border: none; cursor: pointer; font-family: inherit; flex-shrink: 0;"
-          :style="billingStore.status.gracePeriod
-            ? 'background: #D97706; color: #fff;'
-            : 'background: #DC2626; color: #fff;'"
+          :style="billingStore.status.gracePeriod ? 'background: #D97706; color: #fff;' : 'background: #DC2626; color: #fff;'"
           @click="router.push({ name: 'Billing' })"
         >
           Renovar plan
@@ -418,9 +372,53 @@ const iconPaths: Record<string, string> = {
       </div>
 
       <!-- Page content -->
-      <main class="flex-1 overflow-y-auto" style="padding: 28px;">
+      <main class="flex-1 overflow-y-auto main-content">
         <RouterView />
       </main>
+
+      <!-- ── Bottom Nav (mobile only) ── -->
+      <nav class="bottom-nav lg:hidden" aria-label="Navegación principal">
+        <div class="bottom-nav-track">
+          <template v-for="tab in bottomTabs" :key="tab.id">
+
+            <!-- Scan: elevated center button -->
+            <button
+              v-if="tab.center"
+              class="tab-scan"
+              :aria-label="tab.label"
+              @click="router.push(tab.to!)"
+            >
+              <div class="scan-bubble" :class="{ 'scan-active': isActive({ to: tab.to }) }">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                  stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+                  v-html="iconPaths[tab.icon]"
+                />
+              </div>
+              <span class="tab-label" :class="{ 'tab-label-active': isActive({ to: tab.to }) }">
+                {{ tab.label }}
+              </span>
+            </button>
+
+            <!-- Regular tab -->
+            <button
+              v-else
+              class="tab-item"
+              :class="{ 'tab-active': tab.id === 'more' ? moreActive : isActive({ to: tab.to }) }"
+              :aria-label="tab.label"
+              @click="tab.id === 'more' ? (moreOpen = true) : router.push(tab.to!)"
+            >
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round"
+                v-html="iconPaths[tab.icon]"
+              />
+              <span class="tab-label">{{ tab.label }}</span>
+            </button>
+
+          </template>
+        </div>
+      </nav>
+
     </div>
 
     <!-- ── Toast global ── -->
@@ -464,7 +462,7 @@ const iconPaths: Record<string, string> = {
               @click="router.push({ name: 'Billing' })"
             >
               Ver planes
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="iconPaths.arrowRight" />
             </button>
           </div>
         </div>
@@ -481,7 +479,6 @@ const iconPaths: Record<string, string> = {
         >
           <div style="background: #fff; border-radius: 20px; padding: 40px; max-width: 460px; width: 100%; box-shadow: 0 24px 64px rgba(0,0,0,0.18);">
 
-            <!-- PLAN_UPGRADE_REQUIRED -->
             <template v-if="planGate.event.value.code === 'PLAN_UPGRADE_REQUIRED'">
               <div style="width: 64px; height: 64px; border-radius: 16px; background: #FEE2E2; display: grid; place-items: center; margin-bottom: 20px;">
                 <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -504,12 +501,11 @@ const iconPaths: Record<string, string> = {
                   @click="() => { planGate.dismiss(); router.push({ name: 'Billing' }) }"
                 >
                   Ver planes
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="iconPaths.arrowRight" />
                 </button>
               </div>
             </template>
 
-            <!-- WALLET_LIMIT_REACHED -->
             <template v-else-if="planGate.event.value.code === 'WALLET_LIMIT_REACHED'">
               <div style="width: 64px; height: 64px; border-radius: 16px; background: #FEF3C7; display: grid; place-items: center; margin-bottom: 20px;">
                 <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -525,11 +521,10 @@ const iconPaths: Record<string, string> = {
                 @click="() => { planGate.dismiss(); router.push({ name: 'Billing' }) }"
               >
                 Ver planes
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="iconPaths.arrowRight" />
               </button>
             </template>
 
-            <!-- PASS_LIMIT_REACHED -->
             <template v-else-if="planGate.event.value.code === 'PASS_LIMIT_REACHED'">
               <div style="width: 64px; height: 64px; border-radius: 16px; background: #FEF3C7; display: grid; place-items: center; margin-bottom: 20px;">
                 <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -545,10 +540,92 @@ const iconPaths: Record<string, string> = {
                 @click="() => { planGate.dismiss(); router.push({ name: 'Billing' }) }"
               >
                 Ver planes
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="iconPaths.arrowRight" />
               </button>
             </template>
 
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- ── "Más" bottom sheet (mobile only) ── -->
+    <Teleport to="body">
+      <Transition name="sheet-backdrop">
+        <div
+          v-if="moreOpen"
+          class="lg:hidden"
+          style="position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px);"
+          @click="moreOpen = false"
+        />
+      </Transition>
+      <Transition name="sheet-panel">
+        <div v-if="moreOpen" class="more-sheet lg:hidden">
+          <!-- Drag handle -->
+          <div style="display: flex; justify-content: center; padding: 10px 0 6px; flex-shrink: 0;">
+            <div style="width: 36px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.18);" />
+          </div>
+
+          <!-- Org switcher -->
+          <div style="padding: 8px 16px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); flex-shrink: 0;">
+            <OrgSwitcher :dark="true" />
+          </div>
+
+          <!-- Secondary nav links -->
+          <nav style="padding: 10px 12px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 3px;">
+            <template v-for="link in moreLinks" :key="link.id">
+              <button
+                class="flex items-center gap-3 w-full more-link"
+                :class="{ 'more-link-active': isActive(link) }"
+                @click="navigateMore(link.to)"
+              >
+                <svg
+                  width="18" height="18" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round"
+                  v-html="iconPaths[link.icon]"
+                />
+                <span style="flex: 1; text-align: left;">{{ link.label }}</span>
+                <svg
+                  width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                  style="opacity: 0.4;"
+                  v-html="iconPaths.arrowRight"
+                />
+              </button>
+            </template>
+          </nav>
+
+          <!-- User row + Logout -->
+          <div style="padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.08); flex-shrink: 0;">
+            <div class="flex items-center gap-3" style="padding: 6px 12px 12px;">
+              <div
+                class="grid place-items-center shrink-0 font-bold"
+                style="width: 36px; height: 36px; border-radius: 999px; background: #F5B942; color: #13301F; font-size: 13px;"
+              >
+                {{ getInitials(authStore.admin?.email ?? '') }}
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 13px; font-weight: 600; color: #fff; line-height: 1.3;">
+                  {{ orgStore.activeOrg?.name ?? 'Admin' }}
+                </div>
+                <div class="truncate" style="font-size: 11.5px; color: #9DB7A8;">
+                  {{ authStore.admin?.email }}
+                </div>
+              </div>
+            </div>
+            <button
+              class="w-full flex items-center gap-3"
+              style="padding: 12px 14px; border-radius: 10px; border: none; background: rgba(255,255,255,0.06); color: #9DB7A8; cursor: pointer; font-size: 14px; font-weight: 500; font-family: inherit; transition: background 0.15s;"
+              @click="handleLogout"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round"
+                v-html="iconPaths.logout"
+              />
+              Cerrar sesión
+            </button>
           </div>
         </div>
       </Transition>
@@ -561,14 +638,177 @@ const iconPaths: Record<string, string> = {
 </template>
 
 <style scoped>
+/* ── Header ── */
+.admin-header {
+  padding: 12px 16px;
+}
+@media (min-width: 1024px) {
+  .admin-header { padding: 18px 32px; }
+}
+
+.mobile-title {
+  font-size: 18px;
+}
+@media (min-width: 1024px) {
+  .mobile-title { font-size: 22px; }
+}
+
+/* ── Main content: extra bottom padding on mobile for the tab bar ── */
+.main-content {
+  padding: 16px 16px calc(16px + 68px + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 1024px) {
+  .main-content { padding: 28px; }
+}
+
+/* ── Bottom navigation bar ── */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: #fff;
+  border-top: 1px solid #ECEFEB;
+  /* Subtle top shadow */
+  box-shadow: 0 -4px 16px rgba(15, 27, 20, 0.06);
+}
+
+.bottom-nav-track {
+  display: flex;
+  align-items: center;
+  height: 60px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Regular tab button */
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #B0BFBA;
+  font-family: inherit;
+  transition: color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.tab-item.tab-active {
+  color: #E8920A;
+}
+
+/* Scan: center elevated button */
+.tab-scan {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.scan-bubble {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: #1B4332;
+  display: grid;
+  place-items: center;
+  margin-top: -14px;
+  box-shadow: 0 4px 14px rgba(27, 67, 50, 0.38), 0 1px 3px rgba(0,0,0,0.1);
+  transition: transform 0.12s ease, background 0.15s, box-shadow 0.15s;
+}
+.scan-bubble:active {
+  transform: scale(0.92);
+}
+.scan-active {
+  background: #E8920A !important;
+  box-shadow: 0 4px 14px rgba(232, 146, 10, 0.42), 0 1px 3px rgba(0,0,0,0.1) !important;
+}
+
+/* Tab labels */
+.tab-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: inherit;
+  line-height: 1;
+}
+.tab-label-active {
+  color: #E8920A;
+}
+
+/* ── More sheet ── */
+.more-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 201;
+  background: #1B4332;
+  border-radius: 20px 20px 0 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 82vh;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.3);
+}
+
+.more-link {
+  padding: 13px 14px;
+  border-radius: 10px;
+  font-size: 14.5px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  color: #C8D8D0;
+  transition: background 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.more-link:active {
+  background: rgba(255,255,255,0.08);
+}
+.more-link-active {
+  background: #E8920A !important;
+  color: #13301F !important;
+  font-weight: 600;
+}
+
+/* ── Sheet transitions ── */
+.sheet-backdrop-enter-active,
+.sheet-backdrop-leave-active { transition: opacity 0.22s ease; }
+.sheet-backdrop-enter-from,
+.sheet-backdrop-leave-to { opacity: 0; }
+
+.sheet-panel-enter-active { transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1); }
+.sheet-panel-leave-active { transition: transform 0.24s cubic-bezier(0.4, 0, 1, 1); }
+.sheet-panel-enter-from,
+.sheet-panel-leave-to { transform: translateY(100%); }
+
+/* ── Toast ── */
 .toast-enter-active, .toast-leave-active { transition: all 0.25s ease; }
 .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(-8px); }
 
+/* ── Modal ── */
 .modal-enter-active, .modal-leave-active { transition: all 0.2s ease; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
 .modal-enter-active > div, .modal-leave-active > div { transition: transform 0.2s ease; }
 .modal-enter-from > div, .modal-leave-to > div { transform: scale(0.96); }
 
+/* ── Skeleton pulse ── */
 @keyframes sk-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.45; }
