@@ -166,6 +166,10 @@ const features = [
               type="email"
               required
               placeholder="admin@negocio.com"
+              autocomplete="email"
+              autocapitalize="none"
+              autocorrect="off"
+              spellcheck="false"
               class="field-input"
               @focus="(e) => { (e.target as HTMLInputElement).style.borderColor = '#E8920A'; (e.target as HTMLInputElement).style.boxShadow = '0 0 0 3px #FCEBC4'; }"
               @blur="(e) => { (e.target as HTMLInputElement).style.borderColor = '#ECEFEB'; (e.target as HTMLInputElement).style.boxShadow = 'none'; }"
@@ -178,6 +182,7 @@ const features = [
               type="password"
               required
               placeholder="••••••••"
+              autocomplete="current-password"
               class="field-input"
               @focus="(e) => { (e.target as HTMLInputElement).style.borderColor = '#E8920A'; (e.target as HTMLInputElement).style.boxShadow = '0 0 0 3px #FCEBC4'; }"
               @blur="(e) => { (e.target as HTMLInputElement).style.borderColor = '#ECEFEB'; (e.target as HTMLInputElement).style.boxShadow = 'none'; }"
@@ -202,6 +207,10 @@ const features = [
               type="email"
               required
               placeholder="admin@negocio.com"
+              autocomplete="email"
+              autocapitalize="none"
+              autocorrect="off"
+              spellcheck="false"
               class="field-input"
               @focus="(e) => { (e.target as HTMLInputElement).style.borderColor = '#E8920A'; (e.target as HTMLInputElement).style.boxShadow = '0 0 0 3px #FCEBC4'; }"
               @blur="(e) => { (e.target as HTMLInputElement).style.borderColor = '#ECEFEB'; (e.target as HTMLInputElement).style.boxShadow = 'none'; }"
@@ -215,6 +224,7 @@ const features = [
               required
               minlength="8"
               placeholder="Mínimo 8 caracteres"
+              autocomplete="new-password"
               class="field-input"
               @focus="(e) => { (e.target as HTMLInputElement).style.borderColor = '#E8920A'; (e.target as HTMLInputElement).style.boxShadow = '0 0 0 3px #FCEBC4'; }"
               @blur="(e) => { (e.target as HTMLInputElement).style.borderColor = '#ECEFEB'; (e.target as HTMLInputElement).style.boxShadow = 'none'; }"
