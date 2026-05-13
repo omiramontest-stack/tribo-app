@@ -6,4 +6,6 @@ export default {
   changeEmailUseCase: Symbol('ChangeEmailUseCase'),
   confirmEmailChangeUseCase: Symbol('ConfirmEmailChangeUseCase'),
   changePasswordUseCase: Symbol('ChangePasswordUseCase'),
+  forgotPasswordUseCase: Symbol('ForgotPasswordUseCase'),
+  resetPasswordUseCase: Symbol('ResetPasswordUseCase'),
 }

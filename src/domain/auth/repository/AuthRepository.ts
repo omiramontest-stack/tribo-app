@@ -14,6 +14,15 @@ export interface ChangePasswordDto {
   newPassword: string
 }
 
+export interface ForgotPasswordDto {
+  email: string
+}
+
+export interface ResetPasswordDto {
+  token: string
+  newPassword: string
+}
+
 export interface AuthRepository {
   login(email: string, password: string): Promise<Admin | null>
   register(dto: RegisterDto): Promise<Admin>
@@ -26,4 +35,6 @@ export interface AuthRepository {
   changeEmail(dto: ChangeEmailDto): Promise<void>
   confirmEmailChange(token: string): Promise<void>
   changePassword(dto: ChangePasswordDto): Promise<void>
+  forgotPassword(dto: ForgotPasswordDto): Promise<void>
+  resetPassword(dto: ResetPasswordDto): Promise<void>
 }

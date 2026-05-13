@@ -49,6 +49,18 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/app/views/admin/ConfirmEmailChangeView.vue'),
     meta: { requiresAuth: false },
   },
+  {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('@/app/views/admin/ForgotPasswordView.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: () => import('@/app/views/admin/ResetPasswordView.vue'),
+    meta: { requiresAuth: false },
+  },
 ]
 
 export default routes

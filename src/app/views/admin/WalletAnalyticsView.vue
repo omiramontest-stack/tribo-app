@@ -174,7 +174,7 @@ onMounted(load)
     </div>
 
     <!-- Insights row: gauge + day grid + best hour -->
-    <div v-if="data" style="display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 16px; align-items: stretch;">
+    <div v-if="data" class="insights-grid">
 
       <!-- Redemption gauge -->
       <div style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 12px;">
@@ -203,7 +203,7 @@ onMounted(load)
       </div>
 
       <!-- Day-of-week grid -->
-      <div style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 20px;">
+      <div class="insights-day-card" style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 20px;">
         <p style="font-size: 11px; font-weight: 700; color: #A8B3AC; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 14px;">Mejor día de la semana</p>
         <div style="display: flex; gap: 6px;">
           <div
@@ -255,7 +255,7 @@ onMounted(load)
           </div>
 
           <!-- Name -->
-          <div style="width: 150px; flex-shrink: 0; font-size: 12.5px; font-weight: 600; color: #0F1B14; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          <div class="customer-name" style="font-size: 12.5px; font-weight: 600; color: #0F1B14; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
             {{ c.firstName }} {{ c.lastName }}
           </div>
 
@@ -288,20 +288,40 @@ onMounted(load)
   grid-template-columns: repeat(6, 1fr);
   gap: 14px;
 }
+
+.insights-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.customer-name {
+  width: 150px;
+  flex-shrink: 0;
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
+
 @media (max-width: 1100px) {
   .kpi-grid { grid-template-columns: repeat(3, 1fr); }
 }
+
 @media (max-width: 768px) {
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  div[style*="grid-template-columns: 1fr 2fr 1fr"] {
-    grid-template-columns: 1fr 1fr !important;
+  .insights-grid { grid-template-columns: 1fr 1fr; }
+  .insights-day-card {
+    order: 1;
+    grid-column: 1 / -1;
   }
+  .customer-name { width: auto; flex: 1; max-width: 120px; }
 }
+
 @media (max-width: 520px) {
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .insights-grid { grid-template-columns: 1fr; }
+  .insights-day-card { order: 0; grid-column: auto; }
 }
 </style>

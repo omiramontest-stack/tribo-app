@@ -1,7 +1,8 @@
 import 'reflect-metadata'
 import { injectable } from 'inversify'
 
-import type { AuthRepository, RegisterDto, ChangeEmailDto, ChangePasswordDto } from '@/domain/auth/repository/AuthRepository'
+import type { AuthRepository, RegisterDto, ChangeEmailDto, ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto } from '@/domain/auth/repository/AuthRepository'
+
 import type { Admin } from '@/domain/auth/entities/Admin'
 import { apiClient } from '@/infrastructure/http/ApiClient'
 
@@ -95,5 +96,13 @@ export class AuthHttpRepository implements AuthRepository {
       currentPassword: dto.currentPassword,
       newPassword: dto.newPassword,
     })
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto): Promise<void> {
+    await apiClient.post('/auth/forgot-password', { email: dto.email })
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<void> {
+    await apiClient.post(`/auth/reset-password/${dto.token}`, { newPassword: dto.newPassword })
   }
 }

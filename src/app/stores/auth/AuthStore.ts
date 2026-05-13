@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 
 import { container } from '@/container'
 import authTypes from '@/infrastructure/auth/di/types'
-import type { AuthRepository, ChangeEmailDto, ChangePasswordDto } from '@/domain/auth/repository/AuthRepository'
+import type { AuthRepository, ChangeEmailDto, ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto } from '@/domain/auth/repository/AuthRepository'
 import type { Admin } from '@/domain/auth/entities/Admin'
 import type { Organization } from '@/domain/organization/entities/Organization'
 import type UseCase from '@/application/common/useCase/UseCase'
@@ -18,6 +18,8 @@ export const useAuthStore = defineStore('AuthStore', () => {
   const changeEmailUseCase = container.get<UseCase<ChangeEmailDto, void>>(authTypes.changeEmailUseCase)
   const confirmEmailChangeUseCase = container.get<UseCase<string, void>>(authTypes.confirmEmailChangeUseCase)
   const changePasswordUseCase = container.get<UseCase<ChangePasswordDto, void>>(authTypes.changePasswordUseCase)
+  const forgotPasswordUseCase = container.get<UseCase<ForgotPasswordDto, void>>(authTypes.forgotPasswordUseCase)
+  const resetPasswordUseCase = container.get<UseCase<ResetPasswordDto, void>>(authTypes.resetPasswordUseCase)
   const authRepository = container.get<AuthRepository>(authTypes.authRepository)
 
   const state = reactive<{ _admin: Admin | null }>({
@@ -79,5 +81,13 @@ export const useAuthStore = defineStore('AuthStore', () => {
     await changePasswordUseCase.run({ newPassword, currentPassword })
   }
 
-  return { admin, emailVerified, isAuthenticated, init, login, register, logout, switchOrg, verifyEmail, resendVerification, changeEmail, confirmEmailChange, changePassword }
+  async function forgotPassword(email: string): Promise<void> {
+    await forgotPasswordUseCase.run({ email })
+  }
+
+  async function resetPassword(token: string, newPassword: string): Promise<void> {
+    await resetPasswordUseCase.run({ token, newPassword })
+  }
+
+  return { admin, emailVerified, isAuthenticated, init, login, register, logout, switchOrg, verifyEmail, resendVerification, changeEmail, confirmEmailChange, changePassword, forgotPassword, resetPassword }
 })

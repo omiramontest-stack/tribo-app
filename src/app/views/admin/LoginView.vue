@@ -193,6 +193,18 @@ const features = [
           <button type="submit" :disabled="loading" class="btn-primary" :class="{ 'btn-loading': loading }">
             {{ loading ? 'Entrando...' : 'Iniciar sesión' }}
           </button>
+
+          <div style="text-align: center;">
+            <button
+              type="button"
+              style="background: none; border: none; cursor: pointer; font-size: 12.5px; color: #6B7A72; font-family: inherit; padding: 0; transition: color 0.15s;"
+              @click="router.push({ name: 'ForgotPassword' })"
+              @mouseenter="($event.target as HTMLElement).style.color = '#1B4332'"
+              @mouseleave="($event.target as HTMLElement).style.color = '#6B7A72'"
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
+          </div>
         </form>
 
         <!-- Register form -->

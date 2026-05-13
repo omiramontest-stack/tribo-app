@@ -348,9 +348,9 @@ onMounted(load)
         <p style="font-size: 12px; color: #6B7A72; margin: 2px 0 0;">Distribución de eventos en el período seleccionado</p>
       </div>
 
-      <div v-if="donutSegments.length" style="display: flex; gap: 40px; align-items: center; width: 100%;">
+      <div v-if="donutSegments.length" class="donut-layout">
         <!-- Donut -->
-        <div style="flex-shrink: 0;">
+        <div class="donut-svg-wrap">
           <svg width="200" height="200" viewBox="0 0 36 36">
             <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#F3F5F2" stroke-width="3" />
             <circle
@@ -368,7 +368,7 @@ onMounted(load)
         </div>
 
         <!-- Legend — fills remaining space, 2-col grid -->
-        <div style="flex: 1; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 40px; align-content: center;">
+        <div class="donut-legend">
           <div
             v-for="seg in donutSegments"
             :key="seg.key"
@@ -391,7 +391,45 @@ onMounted(load)
         <h3 style="font-size: 14px; font-weight: 700; color: #0F1B14; margin: 0;">Top wallets</h3>
         <p style="font-size: 12px; color: #6B7A72; margin: 2px 0 0;">Las más activas en el período</p>
       </div>
-      <table style="width: 100%; border-collapse: collapse;">
+      <!-- Mobile cards (hidden on desktop) -->
+      <div class="top-wallets-cards">
+        <div
+          v-for="(w, i) in data.topWallets"
+          :key="w.walletId"
+          style="padding: 14px 20px; border-bottom: 1px solid #F3F5F2; display: flex; align-items: flex-start; gap: 10px;"
+        >
+          <span style="font-size: 12px; font-weight: 700; color: #A8B3AC; min-width: 18px; margin-top: 2px;">{{ i + 1 }}</span>
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <span style="font-size: 13px; font-weight: 600; color: #0F1B14; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ w.walletName }}</span>
+              <span
+                style="display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 999px; flex-shrink: 0;"
+                :style="w.delta7d >= 0 ? { background: '#D1FAE5', color: '#065F46' } : { background: '#FEE2E2', color: '#991B1B' }"
+              >
+                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+                  <path :d="w.delta7d >= 0 ? 'M18 15l-6-6-6 6' : 'M6 9l6 6 6-6'" />
+                </svg>
+                {{ Math.abs(w.delta7d) }}%
+              </span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 20px; height: 20px; border-radius: 5px; background: #F7F4EF; display: flex; align-items: center; justify-content: center;">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#1B4332" stroke-width="1.8" stroke-linecap="round">
+                    <path :d="typeIconPaths[w.walletType] ?? typeIconPaths.stamps" />
+                  </svg>
+                </div>
+                <span style="font-size: 11.5px; color: #6B7A72; text-transform: capitalize;">{{ w.walletType }}</span>
+              </div>
+              <span style="font-size: 11.5px; font-weight: 600; color: #3A4A41;">{{ w.totalScans.toLocaleString() }} escaneos</span>
+              <span style="font-size: 11.5px; color: #6B7A72;">{{ w.activeCount.toLocaleString() }} activos</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop table (hidden on mobile) -->
+      <table class="top-wallets-table">
         <thead>
           <tr style="background: #FAFAF9;">
             <th style="text-align: left; font-size: 10.5px; font-weight: 700; color: #A8B3AC; text-transform: uppercase; letter-spacing: 0.06em; padding: 10px 20px;">#</th>
@@ -454,10 +492,32 @@ onMounted(load)
   gap: 16px;
   align-items: flex-start;
 }
+
+/* Donut */
+.donut-layout {
+  display: flex;
+  gap: 40px;
+  align-items: center;
+  width: 100%;
+}
+.donut-svg-wrap { flex-shrink: 0; }
+.donut-legend {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px 40px;
+  align-content: center;
+}
+
+/* Top wallets */
+.top-wallets-table { width: 100%; border-collapse: collapse; }
+.top-wallets-cards { display: none; flex-direction: column; }
+
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
+
 @media (max-width: 1200px) {
   .kpi-grid { grid-template-columns: repeat(3, 1fr); }
 }
@@ -465,7 +525,11 @@ onMounted(load)
   .charts-row { flex-direction: column; }
   .charts-row > div:last-child { width: 100% !important; }
 }
-@media (max-width: 600px) {
+@media (max-width: 640px) {
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .donut-layout { flex-direction: column; align-items: center; gap: 20px; }
+  .donut-legend { grid-template-columns: 1fr; gap: 8px; }
+  .top-wallets-table { display: none; }
+  .top-wallets-cards { display: flex; }
 }
 </style>
