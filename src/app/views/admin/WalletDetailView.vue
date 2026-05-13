@@ -24,8 +24,6 @@ const scannedPage = ref(1)
 
 const isDaypass = computed(() => walletStore.currentWallet?.type === 'daypass')
 
-import { walletTypeConfig } from '@/app/config/walletTypeConfig'
-
 const wt = computed(() => {
   const found = walletTypeConfig.find(c => c.value === walletStore.currentWallet?.type)
   return found
