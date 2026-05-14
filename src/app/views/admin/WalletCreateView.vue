@@ -437,7 +437,6 @@ async function handleSubmit() {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  max-width: 640px;
 }
 
 /* Back nav */
