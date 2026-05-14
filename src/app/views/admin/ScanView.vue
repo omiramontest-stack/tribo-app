@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { BrowserQRCodeReader } from '@zxing/browser'
 import { usePassStore } from '@/app/stores/pass/PassStore'
 import { apiClient } from '@/infrastructure/http/ApiClient'
@@ -7,6 +7,7 @@ import type { PassWithWallet } from '@/application/pass/useCase/GetPassByTokenUs
 import type { StampsRules, PointsRules, MembershipRules, CashbackRules, BundleRules, GiftcardRules, CouponRules } from '@/domain/wallet/entities/WalletRules'
 import type { CashbackTransaction } from '@/domain/pass/repository/PassRepository'
 import { PassErrorCodes } from '@/application/pass/error/enum/PassErrorCodes'
+import { walletTypeConfig } from '@/app/config/walletTypeConfig'
 
 type ScanStep = 'scanning' | 'confirm' | 'success' | 'error'
 
@@ -47,6 +48,15 @@ const showGiftcardModal = ref(false)
 const giftcardAction = ref<'add_giftcard' | 'subtract_giftcard'>('add_giftcard')
 const giftcardAmount = ref('')
 const giftcardModalError = ref('')
+
+const walletInitials = computed(() =>
+  (passResult.value?.wallet.businessName ?? '')
+    .split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
+)
+
+const walletWt = computed(() =>
+  walletTypeConfig.find(c => c.value === passResult.value?.wallet.type)
+)
 
 function cashbackPreview() {
   const purchase = parseFloat(cashbackForm.value.purchaseAmount)
@@ -93,7 +103,7 @@ async function submitCashback() {
     passResult.value = result
     showCashbackModal.value = false
     successMsg.value = cashbackAction.value === 'add_cashback'
-      ? `¡Cashback agregado correctamente!`
+      ? '¡Cashback agregado correctamente!'
       : `¡${rules.currency} canjeado correctamente!`
     step.value = 'success'
   } catch {
@@ -271,161 +281,238 @@ startScanner()
 </script>
 
 <template>
-  <div class="max-w-sm mx-auto space-y-6">
-    <h1 class="text-2xl font-bold text-neutral-800 dark:text-white">Escanear Pase</h1>
+  <div class="scan-page">
 
-    <!-- SCANNING -->
-    <div v-if="step === 'scanning'" class="space-y-4">
-      <p class="text-sm text-neutral-500 dark:text-neutral-400">
-        Apunta la cámara al QR del cliente para cargar su pase.
-      </p>
-      <div class="relative rounded-2xl overflow-hidden bg-black aspect-square">
-        <video ref="videoRef" class="w-full h-full object-cover" autoplay muted playsinline />
-        <!-- viewfinder overlay -->
-        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div class="w-48 h-48 border-2 border-white/70 rounded-xl" />
+    <!-- ── Scanning ─────────────────────────────────────────── -->
+    <div v-if="step === 'scanning'" class="scan-state">
+      <div class="scan-header">
+        <p class="scan-hint">Apunta la cámara al código QR del cliente</p>
+      </div>
+
+      <div class="viewfinder-wrap">
+        <video ref="videoRef" class="viewfinder-video" autoplay muted playsinline />
+
+        <!-- Corner brackets -->
+        <div class="vf-overlay">
+          <span class="corner tl" />
+          <span class="corner tr" />
+          <span class="corner bl" />
+          <span class="corner br" />
+          <div class="scan-line" />
         </div>
       </div>
-      <p class="text-xs text-center text-neutral-400">Buscando código QR...</p>
+
+      <div class="scan-status">
+        <span class="scan-dot" />
+        <span class="scan-status-text">Buscando código QR…</span>
+      </div>
     </div>
 
-    <!-- CONFIRM (pass loaded) -->
-    <div v-else-if="step === 'confirm' && passResult" class="space-y-4">
-      <!-- Pass summary card -->
+    <!-- ── Confirm ─────────────────────────────────────────── -->
+    <div v-else-if="step === 'confirm' && passResult" class="confirm-state">
+
+      <!-- Pass identity card -->
       <div
-        class="rounded-2xl p-5 text-white space-y-1"
+        class="pass-card"
         :style="{ background: `linear-gradient(135deg, ${passResult.wallet.primaryColor}, ${passResult.wallet.accentColor})` }"
       >
-        <p class="text-xs opacity-75 font-medium uppercase tracking-wide">
-          {{ passResult.wallet.businessName }}
-        </p>
-        <p class="text-xl font-bold">{{ passResult.pass.customerName }}</p>
+        <div class="pass-card-header">
+          <div class="pass-avatar" :style="{ background: 'rgba(255,255,255,0.2)' }">
+            <img
+              v-if="passResult.wallet.logoUrl"
+              :src="passResult.wallet.logoUrl"
+              :alt="passResult.wallet.businessName"
+              class="pass-avatar-img"
+            />
+            <span v-else class="pass-avatar-initials">{{ walletInitials }}</span>
+          </div>
+          <div class="pass-card-meta">
+            <p class="pass-business">{{ passResult.wallet.businessName }}</p>
+            <p class="pass-customer">{{ passResult.pass.customerName }}</p>
+          </div>
+          <span v-if="walletWt" class="pass-type-badge" :style="{ background: 'rgba(255,255,255,0.18)', color: '#fff' }">
+            {{ walletWt.label }}
+          </span>
+        </div>
 
-        <!-- stamps progress -->
-        <template v-if="passResult.pass.data.type === 'stamps'">
-          <p class="text-sm opacity-90">
-            {{ passResult.pass.data.currentStamps }} /
-            {{ (passResult.wallet.rules as StampsRules).totalStamps }} sellos
-          </p>
-        </template>
+        <!-- Type-specific data -->
+        <div class="pass-data">
+          <!-- Stamps progress -->
+          <template v-if="passResult.pass.data.type === 'stamps'">
+            <div class="pass-progress-row">
+              <span class="pass-data-value">
+                {{ passResult.pass.data.currentStamps }} / {{ (passResult.wallet.rules as StampsRules).totalStamps }}
+              </span>
+              <span class="pass-data-label">sellos</span>
+            </div>
+            <div class="progress-bar-wrap">
+              <div
+                class="progress-bar-fill"
+                :style="{
+                  width: `${Math.min(100, (passResult.pass.data.currentStamps / (passResult.wallet.rules as StampsRules).totalStamps) * 100)}%`
+                }"
+              />
+            </div>
+            <p v-if="passResult.pass.data.currentStamps >= (passResult.wallet.rules as StampsRules).totalStamps" class="pass-reward-hint">
+              ¡Recompensa lista para canjear!
+            </p>
+          </template>
 
-        <!-- points progress -->
-        <template v-else-if="passResult.pass.data.type === 'points'">
-          <p class="text-sm opacity-90">
-            {{ passResult.pass.data.currentPoints }}
-            {{ (passResult.wallet.rules as PointsRules).pointsLabel }}
-          </p>
-        </template>
+          <!-- Points -->
+          <template v-else-if="passResult.pass.data.type === 'points'">
+            <div class="pass-progress-row">
+              <span class="pass-data-value">{{ passResult.pass.data.currentPoints }}</span>
+              <span class="pass-data-label">{{ (passResult.wallet.rules as PointsRules).pointsLabel }}</span>
+            </div>
+            <div class="progress-bar-wrap">
+              <div
+                class="progress-bar-fill"
+                :style="{
+                  width: `${Math.min(100, (passResult.pass.data.currentPoints / (passResult.wallet.rules as PointsRules).rewardThreshold) * 100)}%`
+                }"
+              />
+            </div>
+            <p class="pass-data-sub">Meta: {{ (passResult.wallet.rules as PointsRules).rewardThreshold }} · {{ (passResult.wallet.rules as PointsRules).reward }}</p>
+          </template>
 
-        <!-- membership -->
-        <template v-else-if="passResult.pass.data.type === 'membership'">
-          <p class="text-sm opacity-90">
-            {{ (passResult.wallet.rules as MembershipRules).level }}
-          </p>
-        </template>
+          <!-- Membership -->
+          <template v-else-if="passResult.pass.data.type === 'membership'">
+            <p class="pass-data-value">{{ (passResult.wallet.rules as MembershipRules).level }}</p>
+            <p class="pass-data-sub">Membresía activa</p>
+          </template>
 
-        <!-- bundle -->
-        <template v-else-if="passResult.pass.data.type === 'bundle'">
-          <p class="text-sm opacity-90">
-            {{ passResult.pass.data.remainingUses }} /
-            {{ (passResult.wallet.rules as BundleRules).totalUses }}
-            {{ (passResult.wallet.rules as BundleRules).label }} restantes
-          </p>
-        </template>
+          <!-- Cashback -->
+          <template v-else-if="passResult.pass.data.type === 'cashback'">
+            <div class="pass-progress-row">
+              <span class="pass-data-value">{{ (passResult.wallet.rules as CashbackRules).currency }} {{ passResult.pass.data.balance.toFixed(2) }}</span>
+              <span class="pass-data-label">saldo</span>
+            </div>
+            <p class="pass-data-sub">{{ (passResult.wallet.rules as CashbackRules).cashbackPercent }}% de cashback por compra</p>
+          </template>
 
-        <!-- giftcard -->
-        <template v-else-if="passResult.pass.data.type === 'giftcard'">
-          <p class="text-sm opacity-90">
-            {{ (passResult.wallet.rules as GiftcardRules).currency }}
-            {{ passResult.pass.data.currentBalance.toFixed(2) }} disponibles
-          </p>
-        </template>
+          <!-- Bundle -->
+          <template v-else-if="passResult.pass.data.type === 'bundle'">
+            <div class="pass-progress-row">
+              <span class="pass-data-value">{{ passResult.pass.data.remainingUses }}</span>
+              <span class="pass-data-label">/ {{ (passResult.wallet.rules as BundleRules).totalUses }} {{ (passResult.wallet.rules as BundleRules).label }} restantes</span>
+            </div>
+            <div class="progress-bar-wrap">
+              <div
+                class="progress-bar-fill"
+                :style="{
+                  width: `${Math.min(100, (passResult.pass.data.remainingUses / (passResult.wallet.rules as BundleRules).totalUses) * 100)}%`
+                }"
+              />
+            </div>
+          </template>
 
-        <!-- coupon -->
-        <template v-else-if="passResult.pass.data.type === 'coupon'">
-          <p class="text-sm opacity-90">
-            {{ (passResult.wallet.rules as CouponRules).discountType === 'percent'
-              ? `${(passResult.wallet.rules as CouponRules).discount}% OFF`
-              : `${(passResult.wallet.rules as CouponRules).currency ?? ''} ${(passResult.wallet.rules as CouponRules).discount} OFF` }}
-            · {{ passResult.pass.data.used ? 'Ya canjeado' : 'Válido' }}
-          </p>
-        </template>
+          <!-- Giftcard -->
+          <template v-else-if="passResult.pass.data.type === 'giftcard'">
+            <div class="pass-progress-row">
+              <span class="pass-data-value">{{ (passResult.wallet.rules as GiftcardRules).currency }} {{ passResult.pass.data.currentBalance.toFixed(2) }}</span>
+              <span class="pass-data-label">disponibles</span>
+            </div>
+          </template>
+
+          <!-- Coupon -->
+          <template v-else-if="passResult.pass.data.type === 'coupon'">
+            <p class="pass-data-value">
+              {{ (passResult.wallet.rules as CouponRules).discountType === 'percent'
+                ? `${(passResult.wallet.rules as CouponRules).discount}% OFF`
+                : `${(passResult.wallet.rules as CouponRules).currency ?? ''} ${(passResult.wallet.rules as CouponRules).discount} OFF` }}
+            </p>
+            <p class="pass-data-sub">{{ passResult.pass.data.used ? 'Ya fue canjeado' : 'Válido · listo para canjear' }}</p>
+          </template>
+        </div>
       </div>
 
       <!-- Action buttons -->
-      <div class="space-y-2">
+      <div class="action-group">
+
+        <!-- Stamps -->
         <button
           v-if="passResult.pass.data.type === 'stamps'"
-          class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-colors disabled:opacity-50"
+          class="btn-action-primary"
           :disabled="loading"
           @click="applyAction('add_stamp')"
         >
-          + Agregar sello
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          {{ loading ? 'Agregando…' : 'Agregar sello' }}
         </button>
 
+        <!-- Points -->
         <template v-else-if="passResult.pass.data.type === 'points'">
-          <div class="flex gap-2">
-            <input
-              v-model.number="pointsAmount"
-              type="number"
-              min="1"
-              class="flex-1 px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm text-neutral-800 dark:text-white"
-              placeholder="Cantidad"
-            />
+          <div class="points-row">
+            <div class="stepper-wrap">
+              <button type="button" class="stepper-btn" :disabled="pointsAmount <= 1" @click="pointsAmount = Math.max(1, pointsAmount - 1)">−</button>
+              <input v-model.number="pointsAmount" type="number" min="1" class="stepper-input" />
+              <button type="button" class="stepper-btn" @click="pointsAmount++">+</button>
+            </div>
             <button
-              class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-colors disabled:opacity-50"
+              class="btn-action-primary"
               :disabled="loading || pointsAmount < 1"
               @click="applyAction('add_points')"
             >
-              + Agregar
+              {{ loading ? 'Agregando…' : `+ Agregar ${(passResult.wallet.rules as PointsRules).pointsLabel}` }}
             </button>
           </div>
-          <p class="text-xs text-neutral-400 text-center">
-            {{ (passResult.wallet.rules as PointsRules).pointsLabel }}
-          </p>
         </template>
 
+        <!-- Membership -->
         <button
           v-else-if="passResult.pass.data.type === 'membership'"
-          class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-colors disabled:opacity-50"
+          class="btn-action-primary"
           :disabled="loading"
           @click="applyAction('renew_membership')"
         >
-          Renovar membresía
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+          </svg>
+          {{ loading ? 'Renovando…' : 'Renovar membresía' }}
         </button>
 
+        <!-- Daypass -->
         <button
           v-else-if="passResult.pass.data.type === 'daypass'"
-          class="w-full py-3 rounded-xl text-white font-semibold text-sm transition-colors disabled:opacity-50"
-          :class="passResult.pass.data.used ? 'bg-neutral-500 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'"
+          class="btn-action-primary"
+          :class="{ 'btn-disabled': passResult.pass.data.used }"
           :disabled="loading || passResult.pass.data.used"
           @click="markDaypassUsed"
         >
-          {{ passResult.pass.data.used ? 'Pase ya utilizado' : 'Marcar como usado ✓' }}
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+          {{ passResult.pass.data.used ? 'Pase ya utilizado' : (loading ? 'Validando…' : 'Validar pase') }}
         </button>
 
         <!-- Bundle -->
         <button
           v-else-if="passResult.pass.data.type === 'bundle'"
-          class="w-full py-3 rounded-xl text-white font-semibold text-sm transition-colors disabled:opacity-50"
-          :class="passResult.pass.data.remainingUses <= 0 ? 'bg-neutral-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'"
+          class="btn-action-primary"
+          :class="{ 'btn-disabled': passResult.pass.data.remainingUses <= 0 }"
           :disabled="loading || passResult.pass.data.remainingUses <= 0"
           @click="useBundle"
         >
-          {{ passResult.pass.data.remainingUses <= 0 ? 'Sin usos disponibles' : `Registrar uso (${passResult.pass.data.remainingUses} restantes)` }}
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+          {{ passResult.pass.data.remainingUses <= 0
+            ? 'Sin usos disponibles'
+            : (loading ? 'Registrando…' : `Registrar uso`) }}
         </button>
 
         <!-- Giftcard -->
         <template v-else-if="passResult.pass.data.type === 'giftcard'">
-          <button
-            class="w-full py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold text-sm transition-colors"
-            :disabled="loading"
-            @click="openGiftcardModal('add_giftcard')"
-          >
-            + Recargar saldo
+          <button class="btn-action-primary" :disabled="loading" @click="openGiftcardModal('add_giftcard')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Recargar saldo
           </button>
           <button
-            class="w-full py-3 rounded-xl bg-neutral-600 hover:bg-neutral-500 text-white font-semibold text-sm transition-colors"
+            class="btn-action-secondary"
             :disabled="loading || passResult.pass.data.currentBalance <= 0"
             @click="openGiftcardModal('subtract_giftcard')"
           >
@@ -436,44 +523,45 @@ startScanner()
         <!-- Coupon -->
         <button
           v-else-if="passResult.pass.data.type === 'coupon'"
-          class="w-full py-3 rounded-xl text-white font-semibold text-sm transition-colors disabled:opacity-50"
-          :class="passResult.pass.data.used ? 'bg-neutral-500 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'"
+          class="btn-action-primary"
+          :class="{ 'btn-disabled': passResult.pass.data.used }"
           :disabled="loading || passResult.pass.data.used"
           @click="redeemCoupon"
         >
-          {{ passResult.pass.data.used ? 'Cupón ya canjeado' : 'Canjear cupón ✓' }}
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+          {{ passResult.pass.data.used ? 'Cupón ya canjeado' : (loading ? 'Canjeando…' : 'Canjear cupón') }}
         </button>
 
+        <!-- Cashback -->
         <template v-else-if="passResult.pass.data.type === 'cashback'">
-          <button
-            class="w-full py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold text-sm transition-colors"
-            :disabled="loading"
-            @click="openCashbackModal('add_cashback')"
-          >
-            + Agregar cashback
+          <button class="btn-action-primary" :disabled="loading" @click="openCashbackModal('add_cashback')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Agregar cashback
           </button>
           <button
-            class="w-full py-3 rounded-xl bg-neutral-600 hover:bg-neutral-500 text-white font-semibold text-sm transition-colors"
+            class="btn-action-secondary"
             :disabled="loading || passResult.pass.data.balance <= 0"
             @click="openCashbackModal('subtract_cashback')"
           >
             Canjear cashback
           </button>
 
-          <!-- Historial de transacciones -->
-          <div class="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-100 dark:border-neutral-700 overflow-hidden mt-2">
-            <p class="px-4 py-2 text-xs font-semibold text-neutral-500 uppercase tracking-wide border-b border-neutral-100 dark:border-neutral-700">
-              Historial
-            </p>
-            <div v-if="loadingTx" class="px-4 py-4 text-center text-neutral-400 text-xs">Cargando...</div>
-            <div v-else-if="!transactions.length" class="px-4 py-4 text-center text-neutral-400 text-xs">Sin transacciones</div>
-            <div v-else class="divide-y divide-neutral-100 dark:divide-neutral-700 max-h-48 overflow-y-auto">
-              <div v-for="tx in transactions" :key="tx.id" class="px-4 py-2 flex justify-between items-start text-xs">
+          <!-- Transaction history -->
+          <div class="tx-history">
+            <p class="tx-title">Historial de transacciones</p>
+            <div v-if="loadingTx" class="tx-empty">Cargando…</div>
+            <div v-else-if="!transactions.length" class="tx-empty">Sin transacciones aún.</div>
+            <div v-else class="tx-list">
+              <div v-for="tx in transactions" :key="tx.id" class="tx-row">
                 <div>
-                  <p class="text-neutral-700 dark:text-neutral-200">Compra: {{ (passResult.wallet.rules as CashbackRules).currency }} {{ tx.purchaseAmount.toFixed(2) }} · {{ tx.cashbackPercent }}%</p>
-                  <p class="text-neutral-400">{{ new Date(tx.createdAt).toLocaleDateString('es-MX') }}</p>
+                  <p class="tx-detail">Compra: {{ (passResult.wallet.rules as CashbackRules).currency }} {{ tx.purchaseAmount.toFixed(2) }} · {{ tx.cashbackPercent }}%</p>
+                  <p class="tx-date">{{ new Date(tx.createdAt).toLocaleDateString('es-MX') }}</p>
                 </div>
-                <p :class="tx.cashbackAmount >= 0 ? 'text-green-500' : 'text-red-500'" class="font-semibold">
+                <p class="tx-amount" :class="tx.cashbackAmount >= 0 ? 'tx-amount--pos' : 'tx-amount--neg'">
                   {{ tx.cashbackAmount >= 0 ? '+' : '' }}{{ (passResult.wallet.rules as CashbackRules).currency }} {{ Math.abs(tx.cashbackAmount).toFixed(2) }}
                 </p>
               </div>
@@ -482,204 +570,757 @@ startScanner()
         </template>
       </div>
 
-      <button
-        class="w-full py-2 text-sm text-neutral-400 hover:text-neutral-600"
-        @click="startScanner"
-      >
+      <button class="btn-cancel" @click="startScanner">
         Cancelar y escanear otro
       </button>
     </div>
 
-    <!-- SUCCESS -->
-    <div v-else-if="step === 'success' && passResult" class="space-y-4 text-center">
-      <div class="flex justify-center">
-        <div class="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-3xl">
-          ✓
-        </div>
+    <!-- ── Success ──────────────────────────────────────────── -->
+    <div v-else-if="step === 'success' && passResult" class="result-state">
+      <div class="result-icon result-icon--success">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary-mid)" stroke-width="2.5" stroke-linecap="round">
+          <path d="M20 6L9 17l-5-5"/>
+        </svg>
       </div>
-      <p class="text-lg font-semibold text-neutral-800 dark:text-white">{{ successMsg }}</p>
-      <p class="text-sm text-neutral-500 dark:text-neutral-400">{{ passResult.pass.customerName }}</p>
 
-      <!-- Updated state -->
+      <div class="result-text">
+        <p class="result-title">{{ successMsg }}</p>
+        <p class="result-sub">{{ passResult.pass.customerName }}</p>
+      </div>
+
+      <!-- Updated state pill -->
       <div
-        class="rounded-2xl p-4 text-white text-sm"
+        class="result-state-card"
         :style="{ background: `linear-gradient(135deg, ${passResult.wallet.primaryColor}, ${passResult.wallet.accentColor})` }"
       >
+        <p class="result-business">{{ passResult.wallet.businessName }}</p>
         <template v-if="passResult.pass.data.type === 'stamps'">
-          {{ passResult.pass.data.currentStamps }} /
-          {{ (passResult.wallet.rules as StampsRules).totalStamps }} sellos
-          <span
-            v-if="passResult.pass.data.currentStamps >= (passResult.wallet.rules as StampsRules).totalStamps"
-            class="ml-1"
-          >— ¡Recompensa lista!</span>
+          <p class="result-state-val">
+            {{ passResult.pass.data.currentStamps }} / {{ (passResult.wallet.rules as StampsRules).totalStamps }} sellos
+            <span v-if="passResult.pass.data.currentStamps >= (passResult.wallet.rules as StampsRules).totalStamps"> · ¡Recompensa lista!</span>
+          </p>
         </template>
         <template v-else-if="passResult.pass.data.type === 'points'">
-          {{ passResult.pass.data.currentPoints }}
-          {{ (passResult.wallet.rules as PointsRules).pointsLabel }}
+          <p class="result-state-val">{{ passResult.pass.data.currentPoints }} {{ (passResult.wallet.rules as PointsRules).pointsLabel }}</p>
         </template>
         <template v-else-if="passResult.pass.data.type === 'membership'">
-          Membresía activa
+          <p class="result-state-val">Membresía activa</p>
         </template>
         <template v-else-if="passResult.pass.data.type === 'cashback'">
-          {{ (passResult.wallet.rules as CashbackRules).currency }} {{ passResult.pass.data.balance.toFixed(2) }} de saldo
+          <p class="result-state-val">{{ (passResult.wallet.rules as CashbackRules).currency }} {{ passResult.pass.data.balance.toFixed(2) }} de saldo</p>
         </template>
         <template v-else-if="passResult.pass.data.type === 'bundle'">
-          {{ passResult.pass.data.remainingUses }} /
-          {{ (passResult.wallet.rules as BundleRules).totalUses }}
-          {{ (passResult.wallet.rules as BundleRules).label }} restantes
+          <p class="result-state-val">
+            {{ passResult.pass.data.remainingUses }} / {{ (passResult.wallet.rules as BundleRules).totalUses }} {{ (passResult.wallet.rules as BundleRules).label }} restantes
+          </p>
         </template>
         <template v-else-if="passResult.pass.data.type === 'giftcard'">
-          {{ (passResult.wallet.rules as GiftcardRules).currency }}
-          {{ passResult.pass.data.currentBalance.toFixed(2) }} de saldo
+          <p class="result-state-val">{{ (passResult.wallet.rules as GiftcardRules).currency }} {{ passResult.pass.data.currentBalance.toFixed(2) }} de saldo</p>
         </template>
         <template v-else-if="passResult.pass.data.type === 'coupon'">
-          {{ passResult.pass.data.used ? 'Cupón canjeado' : 'Cupón válido' }}
+          <p class="result-state-val">{{ passResult.pass.data.used ? 'Cupón canjeado' : 'Cupón válido' }}</p>
         </template>
       </div>
 
-      <button
-        class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-colors"
-        @click="scanAnother"
-      >
+      <button class="btn-action-primary" @click="scanAnother">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <path d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+        </svg>
         Escanear otro pase
       </button>
     </div>
 
-    <!-- ERROR -->
-    <div v-else-if="step === 'error'" class="space-y-4 text-center">
-      <div class="flex justify-center">
-        <div class="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-3xl">
-          ✕
-        </div>
+    <!-- ── Error ────────────────────────────────────────────── -->
+    <div v-else-if="step === 'error'" class="result-state">
+      <div class="result-icon result-icon--error">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2.5" stroke-linecap="round">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
       </div>
-      <p class="text-sm text-red-500 font-medium">{{ errorMsg }}</p>
-      <button
-        class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-colors"
-        @click="startScanner"
-      >
+
+      <div class="result-text">
+        <p class="result-title">No se pudo procesar</p>
+        <p class="result-sub error-msg">{{ errorMsg }}</p>
+      </div>
+
+      <button class="btn-action-primary" @click="startScanner">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+        </svg>
         Intentar de nuevo
       </button>
     </div>
 
-    <!-- Giftcard modal -->
+    <!-- ── Giftcard Modal ───────────────────────────────────── -->
     <Teleport to="body">
-      <div
-        v-if="showGiftcardModal"
-        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 px-4 pb-4 sm:pb-0"
-        @click.self="showGiftcardModal = false"
-      >
-        <div class="w-full max-w-sm bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 space-y-4">
-          <h3 class="font-semibold text-neutral-800 dark:text-white">
-            {{ giftcardAction === 'add_giftcard' ? 'Recargar saldo' : 'Canjear saldo' }}
-          </h3>
-          <div>
-            <label class="block text-xs text-neutral-500 mb-1">
-              {{ giftcardAction === 'add_giftcard' ? 'Monto a recargar *' : 'Monto a canjear *' }}
-              <span v-if="giftcardAction === 'subtract_giftcard'" class="text-neutral-400">
-                (máx. {{ (passResult?.wallet.rules as GiftcardRules)?.currency }}
-                {{ (passResult?.pass.data as any)?.currentBalance?.toFixed(2) }})
-              </span>
-            </label>
-            <input
-              v-model="giftcardAmount"
-              type="number" min="0" step="0.01" placeholder="0.00"
-              class="w-full border border-neutral-200 dark:border-neutral-700 bg-transparent dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <p v-if="giftcardModalError" class="text-red-500 text-xs">{{ giftcardModalError }}</p>
-          <div class="flex gap-2">
-            <button class="flex-1 border border-neutral-200 dark:border-neutral-600 text-neutral-600 dark:text-neutral-300 py-2.5 rounded-lg text-sm" @click="showGiftcardModal = false">Cancelar</button>
-            <button
-              :disabled="loading"
-              class="flex-1 text-white font-medium py-2.5 rounded-lg text-sm disabled:opacity-50"
-              :class="giftcardAction === 'add_giftcard' ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'"
-              @click="submitGiftcard"
-            >
-              {{ loading ? 'Procesando...' : 'Confirmar' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
-
-    <!-- Cashback modal -->
-    <Teleport to="body">
-      <div
-        v-if="showCashbackModal"
-        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 px-4 pb-4 sm:pb-0"
-        @click.self="showCashbackModal = false"
-      >
-        <div class="w-full max-w-sm bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 space-y-4">
-          <h3 class="font-semibold text-neutral-800 dark:text-white">
-            {{ cashbackAction === 'add_cashback' ? 'Agregar cashback' : 'Canjear cashback' }}
-          </h3>
-
-          <!-- Agregar cashback -->
-          <template v-if="cashbackAction === 'add_cashback'">
-            <div>
-              <label class="block text-xs text-neutral-500 mb-1">Monto de compra *</label>
-              <input v-model="cashbackForm.purchaseAmount" type="number" min="0" step="0.01" placeholder="0.00"
-                class="w-full border border-neutral-200 dark:border-neutral-700 bg-transparent dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
-            <div>
-              <label class="block text-xs text-neutral-500 mb-1">
-                % Cashback
-                <span class="text-neutral-400">(vacío = {{ (passResult?.wallet.rules as CashbackRules)?.cashbackPercent }}% configurado)</span>
-              </label>
-              <input v-model="cashbackForm.cashbackPercent" type="number" min="1" max="100"
-                :placeholder="`${(passResult?.wallet.rules as CashbackRules)?.cashbackPercent ?? ''}`"
-                class="w-full border border-neutral-200 dark:border-neutral-700 bg-transparent dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
-            <div v-if="cashbackPreview() !== null" class="bg-neutral-100 dark:bg-neutral-800 rounded-lg px-4 py-2 text-center">
-              <p class="text-neutral-500 text-xs">Cashback a agregar</p>
-              <p class="font-bold text-lg text-neutral-800 dark:text-white">
-                {{ (passResult?.wallet.rules as CashbackRules)?.currency }} {{ cashbackPreview()!.toFixed(2) }}
+      <Transition name="modal">
+        <div v-if="showGiftcardModal" class="modal-backdrop" @click.self="showGiftcardModal = false">
+          <div class="modal-card">
+            <div class="modal-header">
+              <p class="modal-title">{{ giftcardAction === 'add_giftcard' ? 'Recargar saldo' : 'Canjear saldo' }}</p>
+              <p class="modal-sub">
+                {{ giftcardAction === 'subtract_giftcard'
+                  ? `Máx. ${(passResult?.wallet.rules as GiftcardRules)?.currency} ${(passResult?.pass.data as any)?.currentBalance?.toFixed(2)}`
+                  : 'Ingresa el monto a recargar' }}
               </p>
             </div>
-          </template>
-
-          <!-- Canjear cashback -->
-          <template v-else>
-            <div>
-              <label class="block text-xs text-neutral-500 mb-1">
-                Monto a canjear *
-                <span class="text-neutral-400">
-                  (máx. {{ (passResult?.wallet.rules as CashbackRules)?.currency }}
-                  {{ (passResult?.pass.data as any)?.balance?.toFixed(2) }})
-                </span>
-              </label>
+            <div class="modal-field">
+              <label class="field-label">Monto <span class="required">*</span></label>
               <input
-                v-model="cashbackForm.amount"
-                type="number"
-                min="0"
-                step="0.01"
-                :max="(passResult?.pass.data as any)?.balance"
-                placeholder="0.00"
-                class="w-full border border-neutral-200 dark:border-neutral-700 bg-transparent dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                v-model="giftcardAmount"
+                type="number" min="0" step="0.01" placeholder="0.00"
+                class="field-input"
               />
             </div>
-          </template>
-
-          <div>
-            <label class="block text-xs text-neutral-500 mb-1">Descripción (opcional)</label>
-            <input v-model="cashbackForm.description" type="text"
-              :placeholder="cashbackAction === 'add_cashback' ? 'Ej. Compra en tienda' : 'Ej. Canje en caja'"
-              class="w-full border border-neutral-200 dark:border-neutral-700 bg-transparent dark:text-white rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <p v-if="cashbackModalError" class="text-red-500 text-xs">{{ cashbackModalError }}</p>
-          <div class="flex gap-2">
-            <button class="flex-1 border border-neutral-200 dark:border-neutral-600 text-neutral-600 dark:text-neutral-300 py-2.5 rounded-lg text-sm" @click="showCashbackModal = false">Cancelar</button>
-            <button
-              :disabled="loading"
-              class="flex-1 text-white font-medium py-2.5 rounded-lg text-sm disabled:opacity-50"
-              :class="cashbackAction === 'add_cashback' ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'"
-              @click="submitCashback"
-            >
-              {{ loading ? 'Procesando...' : 'Confirmar' }}
-            </button>
+            <p v-if="giftcardModalError" class="modal-error">{{ giftcardModalError }}</p>
+            <div class="modal-actions">
+              <button class="modal-btn-cancel" @click="showGiftcardModal = false">Cancelar</button>
+              <button
+                class="modal-btn-confirm"
+                :disabled="loading"
+                @click="submitGiftcard"
+              >
+                {{ loading ? 'Procesando…' : 'Confirmar' }}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </Transition>
+    </Teleport>
+
+    <!-- ── Cashback Modal ───────────────────────────────────── -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showCashbackModal" class="modal-backdrop" @click.self="showCashbackModal = false">
+          <div class="modal-card">
+            <div class="modal-header">
+              <p class="modal-title">{{ cashbackAction === 'add_cashback' ? 'Agregar cashback' : 'Canjear cashback' }}</p>
+              <p v-if="cashbackAction === 'subtract_cashback'" class="modal-sub">
+                Máx. {{ (passResult?.wallet.rules as CashbackRules)?.currency }} {{ (passResult?.pass.data as any)?.balance?.toFixed(2) }}
+              </p>
+            </div>
+
+            <template v-if="cashbackAction === 'add_cashback'">
+              <div class="modal-field">
+                <label class="field-label">Monto de compra <span class="required">*</span></label>
+                <input v-model="cashbackForm.purchaseAmount" type="number" min="0" step="0.01" placeholder="0.00" class="field-input" />
+              </div>
+              <div class="modal-field">
+                <label class="field-label">
+                  % Cashback
+                  <span class="field-label-hint">(vacío = {{ (passResult?.wallet.rules as CashbackRules)?.cashbackPercent }}% configurado)</span>
+                </label>
+                <input
+                  v-model="cashbackForm.cashbackPercent" type="number" min="1" max="100"
+                  :placeholder="`${(passResult?.wallet.rules as CashbackRules)?.cashbackPercent ?? ''}`"
+                  class="field-input"
+                />
+              </div>
+              <div v-if="cashbackPreview() !== null" class="cashback-preview">
+                <p class="cashback-preview-label">Cashback a agregar</p>
+                <p class="cashback-preview-amount">
+                  {{ (passResult?.wallet.rules as CashbackRules)?.currency }} {{ cashbackPreview()!.toFixed(2) }}
+                </p>
+              </div>
+            </template>
+
+            <template v-else>
+              <div class="modal-field">
+                <label class="field-label">Monto a canjear <span class="required">*</span></label>
+                <input
+                  v-model="cashbackForm.amount" type="number" min="0" step="0.01"
+                  :max="(passResult?.pass.data as any)?.balance"
+                  placeholder="0.00"
+                  class="field-input"
+                />
+              </div>
+            </template>
+
+            <div class="modal-field">
+              <label class="field-label">Descripción <span class="field-label-hint">(opcional)</span></label>
+              <input
+                v-model="cashbackForm.description" type="text"
+                :placeholder="cashbackAction === 'add_cashback' ? 'Ej. Compra en tienda' : 'Ej. Canje en caja'"
+                class="field-input"
+              />
+            </div>
+
+            <p v-if="cashbackModalError" class="modal-error">{{ cashbackModalError }}</p>
+
+            <div class="modal-actions">
+              <button class="modal-btn-cancel" @click="showCashbackModal = false">Cancelar</button>
+              <button class="modal-btn-confirm" :disabled="loading" @click="submitCashback">
+                {{ loading ? 'Procesando…' : 'Confirmar' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
     </Teleport>
   </div>
 </template>
+
+<style scoped>
+.scan-page {
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Scanning ──────────────────────────────────────────────── */
+.scan-state { display: flex; flex-direction: column; gap: 16px; }
+
+.scan-header { text-align: center; }
+
+.scan-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.viewfinder-wrap {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--primary);
+  aspect-ratio: 1;
+}
+
+.viewfinder-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.vf-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.corner {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  border-color: var(--amber);
+  border-style: solid;
+  border-width: 0;
+}
+.corner.tl { top: 28px; left: 28px; border-top-width: 3px; border-left-width: 3px; border-radius: 4px 0 0 0; }
+.corner.tr { top: 28px; right: 28px; border-top-width: 3px; border-right-width: 3px; border-radius: 0 4px 0 0; }
+.corner.bl { bottom: 28px; left: 28px; border-bottom-width: 3px; border-left-width: 3px; border-radius: 0 0 0 4px; }
+.corner.br { bottom: 28px; right: 28px; border-bottom-width: 3px; border-right-width: 3px; border-radius: 0 0 4px 0; }
+
+.scan-line {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--amber), transparent);
+  animation: scan-sweep 2s ease-in-out infinite;
+  border-radius: 2px;
+}
+
+@keyframes scan-sweep {
+  0%   { top: 28px; opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { top: calc(100% - 28px); opacity: 0; }
+}
+
+.scan-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.scan-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--amber);
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+.scan-status-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ── Confirm ───────────────────────────────────────────────── */
+.confirm-state { display: flex; flex-direction: column; gap: 16px; }
+
+.pass-card {
+  border-radius: 18px;
+  padding: 18px;
+  color: #fff;
+}
+
+.pass-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.pass-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.pass-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
+}
+
+.pass-avatar-initials {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #fff;
+}
+
+.pass-card-meta { flex: 1; min-width: 0; }
+
+.pass-business {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.75;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 2px;
+}
+
+.pass-customer {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pass-type-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.pass-data { }
+
+.pass-progress-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.pass-data-value {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.pass-data-label {
+  font-size: 13px;
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+.pass-data-sub {
+  font-size: 11px;
+  opacity: 0.75;
+  margin: 4px 0 0;
+}
+
+.pass-reward-hint {
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(255,255,255,0.2);
+  border-radius: 6px;
+  padding: 4px 10px;
+  margin-top: 8px;
+  display: inline-block;
+}
+
+.progress-bar-wrap {
+  height: 5px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
+  transition: width 0.5s ease;
+}
+
+/* Action group */
+.action-group { display: flex; flex-direction: column; gap: 10px; }
+
+.points-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+/* Stepper (for points) */
+.stepper-wrap {
+  display: flex;
+  align-items: stretch;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-surface);
+  flex-shrink: 0;
+}
+
+.stepper-btn {
+  width: 36px;
+  background: var(--bg-page);
+  border: none;
+  font-size: 17px;
+  color: var(--text-medium);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.stepper-btn:hover:not(:disabled) { background: var(--bg-subtle); }
+.stepper-btn:disabled { opacity: 0.3; cursor: default; }
+
+.stepper-input {
+  width: 52px;
+  border: none;
+  border-left: 1.5px solid var(--border);
+  border-right: 1.5px solid var(--border);
+  background: var(--bg-surface);
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-ink);
+  font-family: inherit;
+  outline: none;
+}
+
+.btn-action-primary {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 14px 20px;
+  border-radius: 12px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.btn-action-primary:hover:not(:disabled):not(.btn-disabled) { background: var(--primary-mid); }
+.btn-action-primary:disabled,
+.btn-action-primary.btn-disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn-action-secondary {
+  width: 100%;
+  padding: 13px 20px;
+  border-radius: 12px;
+  background: var(--bg-surface);
+  color: var(--text-medium);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.btn-action-secondary:hover:not(:disabled) { background: var(--bg-page); }
+.btn-action-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-cancel {
+  width: 100%;
+  padding: 10px;
+  font-size: 13px;
+  color: var(--text-faint);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s;
+  text-align: center;
+}
+.btn-cancel:hover { color: var(--text-muted); }
+
+/* Cashback tx history */
+.tx-history {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.tx-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  margin: 0;
+}
+
+.tx-empty {
+  padding: 16px 14px;
+  font-size: 12px;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+.tx-list {
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.tx-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.tx-row:last-child { border-bottom: none; }
+
+.tx-detail { font-size: 12px; color: var(--text-medium); margin: 0 0 2px; }
+.tx-date { font-size: 10px; color: var(--text-faint); margin: 0; }
+
+.tx-amount {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  margin: 0;
+}
+.tx-amount--pos { color: var(--primary-mid); }
+.tx-amount--neg { color: var(--danger); }
+
+/* ── Success / Error ───────────────────────────────────────── */
+.result-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.result-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.result-icon--success { background: var(--primary-light); }
+.result-icon--error   { background: var(--danger-bg); }
+
+.result-text { display: flex; flex-direction: column; gap: 4px; }
+
+.result-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-ink);
+  margin: 0;
+}
+
+.result-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.error-msg { color: var(--danger); }
+
+.result-state-card {
+  width: 100%;
+  border-radius: 14px;
+  padding: 14px 18px;
+  color: #fff;
+}
+
+.result-business {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 4px;
+}
+
+.result-state-val {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* ── Modals ────────────────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  background: var(--overlay);
+  backdrop-filter: blur(2px);
+}
+
+@media (min-width: 480px) {
+  .modal-backdrop { align-items: center; }
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg-surface);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(15, 27, 20, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal-header { display: flex; flex-direction: column; gap: 3px; }
+
+.modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-ink);
+  margin: 0;
+}
+
+.modal-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.modal-field { display: flex; flex-direction: column; gap: 6px; }
+
+.field-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.field-label-hint {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-faint);
+}
+
+.required { color: var(--danger); }
+
+.field-input {
+  width: 100%;
+  padding: 11px 13px;
+  border-radius: 9px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-surface);
+  font-size: 13px;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  color: var(--text-ink);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+.field-input::placeholder { color: var(--text-faint); }
+.field-input:focus {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px var(--amber-bg);
+}
+
+.cashback-preview {
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  text-align: center;
+}
+.cashback-preview-label { font-size: 11px; color: var(--text-muted); margin: 0 0 4px; }
+.cashback-preview-amount { font-size: 20px; font-weight: 700; color: var(--text-ink); margin: 0; }
+
+.modal-error { font-size: 11px; color: var(--danger); margin: 0; }
+
+.modal-actions { display: flex; gap: 10px; }
+
+.modal-btn-cancel {
+  flex: 1;
+  padding: 11px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-surface);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-medium);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.modal-btn-cancel:hover { background: var(--bg-page); }
+
+.modal-btn-confirm {
+  flex: 1;
+  padding: 11px;
+  border-radius: 10px;
+  border: none;
+  background: var(--primary);
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, opacity 0.15s;
+}
+.modal-btn-confirm:hover:not(:disabled) { background: var(--primary-mid); }
+.modal-btn-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
+.modal-enter-from, .modal-leave-to { opacity: 0; }
+.modal-enter-active .modal-card,
+.modal-leave-active .modal-card { transition: transform 0.2s ease; }
+.modal-enter-from .modal-card,
+.modal-leave-to .modal-card { transform: translateY(16px) scale(0.98); }
+</style>

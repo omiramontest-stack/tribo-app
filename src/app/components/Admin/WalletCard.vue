@@ -1,84 +1,238 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import type { Wallet } from '@/domain/wallet/entities/Wallet'
+import { walletTypeConfig } from '@/app/config/walletTypeConfig'
 
 const props = defineProps<{ wallet: Wallet }>()
 const router = useRouter()
 
-const typeConfig: Record<string, { label: string; accent: string; bg: string; iconPath: string }> = {
-  stamps:     { label: 'Sellos',    accent: '#7C5E3C', bg: '#F1E6D4', iconPath: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
-  membership: { label: 'Membresía', accent: '#1B4332', bg: '#D9E5DD', iconPath: 'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z' },
-  points:     { label: 'Puntos',    accent: '#8B5CF6', bg: '#EBE3FB', iconPath: 'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z' },
-  cashback:   { label: 'Cashback',  accent: '#E8920A', bg: '#FCEBC4', iconPath: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
-  daypass:    { label: 'Day Pass',  accent: '#0EA5E9', bg: '#D6EEFB', iconPath: 'M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z' },
-}
+const wt = computed(() =>
+  walletTypeConfig.find(c => c.value === props.wallet.type)
+  ?? { label: props.wallet.type, iconColor: 'var(--text-muted)', iconBg: 'var(--bg-page)', iconPath: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' }
+)
 
-const wt = (type: string) => typeConfig[type] ?? { label: type, accent: '#6B7A72', bg: '#F7F4EF', iconPath: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' }
+const initials = computed(() =>
+  props.wallet.businessName
+    .split(' ')
+    .slice(0, 2)
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
+)
 </script>
 
 <template>
   <div
-    style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; overflow: hidden; cursor: pointer; transition: box-shadow 0.15s;"
-    @mouseenter="(e) => (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(15,27,20,0.08)'"
-    @mouseleave="(e) => (e.currentTarget as HTMLElement).style.boxShadow = 'none'"
+    class="wallet-card"
     @click="router.push({ name: 'WalletDetail', params: { id: wallet.id } })"
   >
-    <!-- Color strip -->
-    <div style="height: 3px;" :style="{ background: wallet.primaryColor || wt(wallet.type).accent }" />
+    <div class="card-strip" :style="{ background: wallet.primaryColor || wt.iconColor }" />
 
-    <div style="padding: 18px; padding-bottom: 14px;">
-      <!-- Header -->
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-        <div style="min-width: 0; flex: 1;">
-          <div style="font-size: 13.5px; font-weight: 700; color: #0F1B14; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            {{ wallet.businessName }}
-          </div>
-          <div v-if="wallet.description" style="font-size: 11.5px; color: #6B7A72; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            {{ wallet.description }}
-          </div>
+    <div class="card-body">
+      <div class="card-header">
+        <div class="card-avatar" :style="wallet.logoUrl ? {} : { background: wallet.primaryColor || wt.iconBg }">
+          <img v-if="wallet.logoUrl" :src="wallet.logoUrl" :alt="wallet.businessName" class="card-avatar-img" />
+          <span v-else class="card-avatar-initials">{{ initials }}</span>
         </div>
-        <div
-          class="grid place-items-center shrink-0"
-          style="width: 28px; height: 28px; border-radius: 8px; margin-left: 10px;"
-          :style="{ background: wt(wallet.type).bg }"
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" :stroke="wt(wallet.type).accent">
-            <path :d="wt(wallet.type).iconPath" />
+
+        <div class="card-name-wrap">
+          <p class="card-name">{{ wallet.businessName }}</p>
+          <p v-if="wallet.description" class="card-desc">{{ wallet.description }}</p>
+        </div>
+
+        <div class="card-type-icon" :style="{ background: wt.iconBg }">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round" :stroke="wt.iconColor">
+            <path :d="wt.iconPath" />
           </svg>
         </div>
       </div>
 
-      <!-- Stats row -->
-      <div style="display: flex; gap: 14px; padding: 10px 0; border-top: 1px solid #ECEFEB; border-bottom: 1px solid #ECEFEB; margin-bottom: 12px;">
-        <div style="flex: 1;">
-          <div style="font-size: 10px; color: #6B7A72; font-weight: 600; margin-bottom: 2px; letter-spacing: 0.04em;">TIPO</div>
-          <div style="font-size: 12px; font-weight: 600; color: #0F1B14;">{{ wt(wallet.type).label }}</div>
+      <div class="card-divider" />
+
+      <div class="card-meta">
+        <div class="meta-item">
+          <span class="meta-label">Tipo</span>
+          <span class="meta-value" :style="{ color: wt.iconColor }">{{ wt.label }}</span>
         </div>
-        <div style="flex: 1;">
-          <div style="font-size: 10px; color: #6B7A72; font-weight: 600; margin-bottom: 2px; letter-spacing: 0.04em;">CREADO</div>
-          <div style="font-size: 12px; font-weight: 600; color: #0F1B14; font-variant-numeric: tabular-nums;">
+        <div class="meta-item">
+          <span class="meta-label">Creado</span>
+          <span class="meta-value">
             {{ new Date(wallet.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) }}
-          </div>
+          </span>
         </div>
-        <div style="flex: 1;">
-          <div style="font-size: 10px; color: #6B7A72; font-weight: 600; margin-bottom: 2px; letter-spacing: 0.04em;">COLOR</div>
-          <div style="display: flex; align-items: center; gap: 5px;">
-            <div style="width: 12px; height: 12px; border-radius: 3px;" :style="{ background: wallet.primaryColor }" />
-            <div style="width: 12px; height: 12px; border-radius: 3px; opacity: 0.7;" :style="{ background: wallet.accentColor }" />
-          </div>
+        <div class="meta-item">
+          <span class="meta-label">Colores</span>
+          <span class="meta-colors">
+            <span class="color-dot" :style="{ background: wallet.primaryColor }" :title="wallet.primaryColor" />
+            <span class="color-dot accent" :style="{ background: wallet.accentColor }" :title="wallet.accentColor" />
+          </span>
         </div>
       </div>
 
-      <!-- Footer -->
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span
-          style="display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px;"
-          :style="{ color: wt(wallet.type).accent, background: wt(wallet.type).bg }"
-        >
-          {{ wt(wallet.type).label }}
+      <div class="card-footer">
+        <span class="type-badge" :style="{ color: wt.iconColor, background: wt.iconBg }">
+          {{ wt.label }}
         </span>
-        <span style="font-size: 12px; font-weight: 600; color: #2D6A4F;">Detalles →</span>
+        <span class="card-cta">Ver detalles →</span>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.wallet-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow 0.18s, transform 0.18s;
+}
+.wallet-card:hover {
+  box-shadow: 0 6px 24px var(--overlay);
+  transform: translateY(-2px);
+}
+
+.card-strip { height: 3px; }
+
+.card-body { padding: 16px; }
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.card-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.card-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 3px;
+  background: var(--bg-page);
+}
+
+.card-avatar-initials {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--bg-surface);
+  letter-spacing: -0.5px;
+}
+
+.card-name-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-ink);
+  margin: 0 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-desc {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-type-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.card-divider {
+  height: 1px;
+  background: var(--border);
+  margin-bottom: 12px;
+}
+
+.card-meta {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.meta-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.meta-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.meta-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-ink);
+}
+
+.meta-colors {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.color-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+.color-dot.accent { opacity: 0.7; }
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.type-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.card-cta {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary-mid);
+  transition: color 0.15s;
+}
+.wallet-card:hover .card-cta { color: var(--primary); }
+</style>

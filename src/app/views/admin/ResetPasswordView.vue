@@ -28,9 +28,9 @@ const passwordStrength = computed(() => {
 
 const strengthLabel = computed(() => {
   const s = passwordStrength.value
-  if (s <= 1) return { text: 'Débil',  color: '#DC2626' }
-  if (s <= 3) return { text: 'Media',  color: '#D97706' }
-  return             { text: 'Fuerte', color: '#16A34A' }
+  if (s <= 1) return { text: 'Débil',  color: 'var(--danger)' }
+  if (s <= 3) return { text: 'Media',  color: 'var(--warning)' }
+  return             { text: 'Fuerte', color: 'var(--success)' }
 })
 
 async function handleSubmit() {
@@ -59,15 +59,15 @@ async function handleSubmit() {
 
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:52px;">
           <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
-            <line x1="10" y1="28" x2="30" y2="28" stroke="#E8920A" stroke-width="2"/>
-            <line x1="10" y1="28" x2="20" y2="10" stroke="#E8920A" stroke-width="2"/>
-            <line x1="20" y1="10" x2="30" y2="28" stroke="#E8920A" stroke-width="2"/>
-            <circle cx="20" cy="10" r="3.5" fill="#E8920A"/>
-            <circle cx="10" cy="28" r="3.5" fill="#E8920A"/>
-            <circle cx="30" cy="28" r="3.5" fill="#E8920A"/>
+            <line x1="10" y1="28" x2="30" y2="28" stroke="var(--amber)" stroke-width="2"/>
+            <line x1="10" y1="28" x2="20" y2="10" stroke="var(--amber)" stroke-width="2"/>
+            <line x1="20" y1="10" x2="30" y2="28" stroke="var(--amber)" stroke-width="2"/>
+            <circle cx="20" cy="10" r="3.5" fill="var(--amber)"/>
+            <circle cx="10" cy="28" r="3.5" fill="var(--amber)"/>
+            <circle cx="30" cy="28" r="3.5" fill="var(--amber)"/>
           </svg>
           <span style="font-size:18px;font-weight:800;letter-spacing:-0.02em;color:#fff;">
-            trib<span style="color:#E8920A;">o</span>
+            trib<span style="color:var(--amber);">o</span>
           </span>
         </div>
 
@@ -98,15 +98,15 @@ async function handleSubmit() {
       <!-- Mobile logo -->
       <div class="mobile-logo">
         <svg width="24" height="24" viewBox="0 0 40 40" fill="none">
-          <line x1="10" y1="28" x2="30" y2="28" stroke="#E8920A" stroke-width="2"/>
-          <line x1="10" y1="28" x2="20" y2="10" stroke="#E8920A" stroke-width="2"/>
-          <line x1="20" y1="10" x2="30" y2="28" stroke="#E8920A" stroke-width="2"/>
-          <circle cx="20" cy="10" r="3.5" fill="#E8920A"/>
-          <circle cx="10" cy="28" r="3.5" fill="#E8920A"/>
-          <circle cx="30" cy="28" r="3.5" fill="#E8920A"/>
+          <line x1="10" y1="28" x2="30" y2="28" stroke="var(--amber)" stroke-width="2"/>
+          <line x1="10" y1="28" x2="20" y2="10" stroke="var(--amber)" stroke-width="2"/>
+          <line x1="20" y1="10" x2="30" y2="28" stroke="var(--amber)" stroke-width="2"/>
+          <circle cx="20" cy="10" r="3.5" fill="var(--amber)"/>
+          <circle cx="10" cy="28" r="3.5" fill="var(--amber)"/>
+          <circle cx="30" cy="28" r="3.5" fill="var(--amber)"/>
         </svg>
-        <span style="font-size:17px;font-weight:800;letter-spacing:-0.02em;color:#0F1B14;">
-          trib<span style="color:#E8920A;">o</span>
+        <span style="font-size:17px;font-weight:800;letter-spacing:-0.02em;color:var(--text-ink);">
+          trib<span style="color:var(--amber);">o</span>
         </span>
       </div>
 
@@ -115,7 +115,7 @@ async function handleSubmit() {
         <!-- ── No token in URL ── -->
         <template v-if="!token">
           <div class="state-icon state-icon--error">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"/>
               <line x1="12" y1="8" x2="12" y2="12"/>
               <line x1="12" y1="16" x2="12.01" y2="16"/>
@@ -134,7 +134,7 @@ async function handleSubmit() {
         <!-- ── Success state ── -->
         <template v-else-if="success">
           <div class="state-icon state-icon--success">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M5 12l5 5L20 7"/>
             </svg>
           </div>
@@ -148,7 +148,7 @@ async function handleSubmit() {
         <!-- ── Expired/invalid token error ── -->
         <template v-else-if="errorCode === 'INVALID_OR_EXPIRED_TOKEN'">
           <div class="state-icon state-icon--error">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
               <line x1="12" y1="9" x2="12" y2="13"/>
               <line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -189,7 +189,7 @@ async function handleSubmit() {
                     v-for="i in 5"
                     :key="i"
                     class="strength-bar__seg"
-                    :style="{ background: i <= passwordStrength ? strengthLabel.color : '#ECEFEB' }"
+                    :style="{ background: i <= passwordStrength ? strengthLabel.color : 'var(--border)' }"
                   />
                 </div>
                 <span class="strength-bar__label" :style="{ color: strengthLabel.color }">
@@ -222,13 +222,13 @@ async function handleSubmit() {
   display: flex;
   min-height: 100vh;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  background: #fff;
+  background: var(--bg-surface);
 }
 
 /* ── Hero ── */
 .auth-hero {
   flex: 1;
-  background: linear-gradient(135deg, #1B4332 0%, #2D6A4F 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-mid) 100%);
   padding: 40px;
   display: flex;
   flex-direction: column;
@@ -252,7 +252,7 @@ async function handleSubmit() {
   align-items: center;
   justify-content: center;
   padding: 48px 24px;
-  background: #F7F4EF;
+  background: var(--bg-page);
 }
 .mobile-logo {
   display: none;
@@ -277,19 +277,19 @@ async function handleSubmit() {
   display: grid;
   place-items: center;
 }
-.state-icon--success { background: #D1FAE5; }
-.state-icon--error   { background: #FEE2E2; }
+.state-icon--success { background: var(--success-bg); }
+.state-icon--error   { background: var(--danger-bg); }
 
 .card-title {
   font-size: 22px;
   font-weight: 800;
-  color: #0F1B14;
+  color: var(--text-ink);
   letter-spacing: -0.02em;
   margin: 0;
 }
 .card-sub {
   font-size: 13.5px;
-  color: #6B7A72;
+  color: var(--text-muted);
   line-height: 1.6;
   margin: 0;
 }
@@ -304,7 +304,7 @@ async function handleSubmit() {
   display: block;
   font-size: 11px;
   font-weight: 700;
-  color: #6B7A72;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin-bottom: 7px;
@@ -313,20 +313,20 @@ async function handleSubmit() {
   width: 100%;
   padding: 12px 14px;
   border-radius: 10px;
-  border: 1.5px solid #ECEFEB;
-  background: #fff;
+  border: 1.5px solid var(--border);
+  background: var(--bg-surface);
   font-size: 13px;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  color: #0F1B14;
+  color: var(--text-ink);
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
   box-sizing: border-box;
 }
 .field-input:focus {
-  border-color: #E8920A;
-  box-shadow: 0 0 0 3px #FCEBC4;
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px var(--amber-bg);
 }
-.field-input::placeholder { color: #A8B3AC; }
+.field-input::placeholder { color: var(--text-faint); }
 
 /* ── Strength bar ── */
 .strength-bar {
@@ -349,7 +349,7 @@ async function handleSubmit() {
   width: 100%;
   padding: 13px 16px;
   border-radius: 10px;
-  background: #1B4332;
+  background: var(--primary);
   color: #fff;
   font-size: 14px;
   font-weight: 700;
@@ -358,7 +358,7 @@ async function handleSubmit() {
   cursor: pointer;
   transition: background 0.2s, opacity 0.2s;
 }
-.btn-primary:hover:not(:disabled) { background: #2D6A4F; }
+.btn-primary:hover:not(:disabled) { background: var(--primary-mid); }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .btn-back {
@@ -367,13 +367,13 @@ async function handleSubmit() {
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
-  color: #6B7A72;
+  color: var(--text-muted);
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   padding: 0;
   text-align: left;
   transition: color 0.15s;
 }
-.btn-back:hover { color: #1B4332; }
+.btn-back:hover { color: var(--primary); }
 
 /* ── Mobile ── */
 @media (max-width: 768px) {
@@ -381,14 +381,14 @@ async function handleSubmit() {
   .auth-form-side {
     justify-content: flex-start;
     padding: 0;
-    background: #F7F4EF;
+    background: var(--bg-page);
   }
   .mobile-logo { display: flex; }
   .auth-card {
     width: 100%;
     max-width: 100%;
     padding: 28px 20px 40px;
-    background: #F7F4EF;
+    background: var(--bg-page);
     min-height: 100vh;
   }
 }

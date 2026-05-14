@@ -12,8 +12,6 @@ export type PlanGateCode = 'SUBSCRIPTION_REQUIRED' | 'PLAN_UPGRADE_REQUIRED' | '
 
 const PLAN_GATE_CODES = new Set<string>(['SUBSCRIPTION_REQUIRED', 'PLAN_UPGRADE_REQUIRED', 'WALLET_LIMIT_REACHED', 'PASS_LIMIT_REACHED'])
 
-const TOKEN_KEY = 'tribo_at'
-
 class ApiClient {
   private readonly baseUrl: string
   private _accessToken: string | null = null
@@ -22,17 +20,14 @@ class ApiClient {
 
   constructor() {
     this.baseUrl = import.meta.env.VITE_API_URL ?? 'https://tribo-api-production.up.railway.app'
-    this._accessToken = localStorage.getItem(TOKEN_KEY)
   }
 
   setToken(token: string): void {
     this._accessToken = token
-    localStorage.setItem(TOKEN_KEY, token)
   }
 
   clearToken(): void {
     this._accessToken = null
-    localStorage.removeItem(TOKEN_KEY)
   }
 
   urlFor(path: string): string {
@@ -60,6 +55,11 @@ class ApiClient {
       const refreshed = await this._tryRefresh()
       if (refreshed) return this.request<T>(path, init, true)
       throw new ApiError(401, { error: 'UNAUTHORIZED' })
+    }
+
+    if (res.status === 429) {
+      const data429 = await res.json().catch(() => null)
+      throw new ApiError(429, data429)
     }
 
     if (res.status === 204) return undefined as T
@@ -93,7 +93,6 @@ class ApiClient {
       const data = await res.json().catch(() => null)
       if (data?.accessToken) {
         this._accessToken = data.accessToken
-        localStorage.setItem(TOKEN_KEY, data.accessToken)
       }
       return true
     } catch {

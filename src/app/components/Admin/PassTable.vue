@@ -113,7 +113,7 @@ const rows = computed(() => props.passes.map(pass => ({
 <template>
   <!-- ── Empty ─────────────────────────────────────────────────────────── -->
   <div v-if="!rows.length" class="empty-passes">
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#C4CEC7" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary-light)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
       <rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/>
     </svg>
     <p>No hay pases generados aún.</p>
@@ -330,7 +330,7 @@ const rows = computed(() => props.passes.map(pass => ({
       >
         <div class="modal-card">
           <div class="modal-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
               <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
             </svg>
@@ -368,7 +368,7 @@ const rows = computed(() => props.passes.map(pass => ({
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  color: #9DB7A8;
+  color: var(--text-nav-icon);
   font-size: 13px;
 }
 
@@ -380,15 +380,15 @@ const rows = computed(() => props.passes.map(pass => ({
 
 .pass-card {
   padding: 16px;
-  border-bottom: 1px solid #F0F2EF;
+  border-bottom: 1px solid var(--bg-subtle);
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: #fff;
+  background: var(--bg-surface);
   transition: background 0.12s;
 }
 .pass-card:last-child { border-bottom: none; }
-.pass-card:active { background: #FAFCFA; }
+.pass-card:active { background: var(--bg-surface); }
 
 /* Top row */
 .pc-top {
@@ -419,7 +419,7 @@ const rows = computed(() => props.passes.map(pass => ({
 .pc-name {
   font-size: 14px;
   font-weight: 600;
-  color: #0F1B14;
+  color: var(--text-ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -427,12 +427,12 @@ const rows = computed(() => props.passes.map(pass => ({
 
 .pc-phone {
   font-size: 11.5px;
-  color: #9DB7A8;
+  color: var(--text-nav-icon);
 }
 
 .pc-date {
   font-size: 11px;
-  color: #A8B3AC;
+  color: var(--text-faint);
   flex-shrink: 0;
 }
 
@@ -449,18 +449,18 @@ const rows = computed(() => props.passes.map(pass => ({
 .pc-progress-text {
   font-size: 12px;
   font-weight: 600;
-  color: #3A4A41;
+  color: var(--text-medium);
 }
 
 .pc-reward {
   font-size: 11px;
   font-weight: 600;
-  color: #16A34A;
+  color: var(--success);
 }
 
 .pc-bar-track {
   height: 5px;
-  background: #ECEFEB;
+  background: var(--border);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -480,8 +480,8 @@ const rows = computed(() => props.passes.map(pass => ({
   padding: 3px 10px;
   border-radius: 999px;
 }
-.pc-badge--ok   { background: #E6EFE9; color: #16A34A; }
-.pc-badge--warn { background: #FEE2E2; color: #DC2626; }
+.pc-badge--ok   { background: var(--primary-light); color: var(--success); }
+.pc-badge--warn { background: var(--danger-bg); color: var(--danger); }
 
 /* Action bar */
 .pc-actions {
@@ -496,9 +496,9 @@ const rows = computed(() => props.passes.map(pass => ({
   gap: 5px;
   padding: 6px 10px;
   border-radius: 8px;
-  border: 1px solid #ECEFEB;
-  background: #F7F4EF;
-  color: #3A4A41;
+  border: 1px solid var(--border);
+  background: var(--bg-page);
+  color: var(--text-medium);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -507,8 +507,8 @@ const rows = computed(() => props.passes.map(pass => ({
   transition: background 0.12s, border-color 0.12s, color 0.12s;
   -webkit-tap-highlight-color: transparent;
 }
-.pc-action-btn:hover { background: #EFEAE0; }
-.pc-action-btn--copied { background: #E6EFE9; border-color: #A7D9B5; color: #16A34A; }
+.pc-action-btn:hover { background: var(--bg-subtle); }
+.pc-action-btn--copied { background: var(--primary-light); border-color: var(--primary-light); color: var(--success); }
 .pc-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .pc-delete-btn {
@@ -518,15 +518,15 @@ const rows = computed(() => props.passes.map(pass => ({
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  border: 1px solid #FCA5A5;
-  background: #FEF2F2;
-  color: #DC2626;
+  border: 1px solid var(--danger-bg);
+  background: var(--danger-bg);
+  color: var(--danger);
   cursor: pointer;
   flex-shrink: 0;
   transition: background 0.12s;
   -webkit-tap-highlight-color: transparent;
 }
-.pc-delete-btn:hover { background: #FEE2E2; }
+.pc-delete-btn:hover { background: var(--danger-bg); }
 
 /* ── Desktop table (hidden on mobile) ── */
 .pass-table-wrap { display: none; overflow-x: auto; }
@@ -546,12 +546,12 @@ const rows = computed(() => props.passes.map(pass => ({
 
 .pass-table thead tr {
   font-size: 10.5px;
-  color: #6B7A72;
+  color: var(--text-muted);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  background: #F7F4EF;
-  border-bottom: 1px solid #ECEFEB;
+  background: var(--bg-page);
+  border-bottom: 1px solid var(--border);
 }
 
 .pass-table thead th {
@@ -561,10 +561,10 @@ const rows = computed(() => props.passes.map(pass => ({
 }
 
 .pass-row {
-  border-bottom: 1px solid #F0F2EF;
+  border-bottom: 1px solid var(--bg-subtle);
   transition: background 0.1s;
 }
-.pass-row:hover { background: #FAFCFA; }
+.pass-row:hover { background: var(--bg-surface); }
 .pass-row:last-child { border-bottom: none; }
 
 /* Cells */
@@ -589,13 +589,13 @@ const rows = computed(() => props.passes.map(pass => ({
 .tbl-name {
   font-size: 13px;
   font-weight: 600;
-  color: #0F1B14;
+  color: var(--text-ink);
   margin: 0;
 }
 
 .tbl-phone {
   font-size: 11px;
-  color: #9DB7A8;
+  color: var(--text-nav-icon);
   margin: 2px 0 0;
 }
 
@@ -604,13 +604,13 @@ const rows = computed(() => props.passes.map(pass => ({
 .tbl-progress-text {
   font-size: 11.5px;
   font-weight: 600;
-  color: #3A4A41;
+  color: var(--text-medium);
   margin: 0 0 5px;
 }
 
 .tbl-bar-track {
   height: 5px;
-  background: #ECEFEB;
+  background: var(--border);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -623,7 +623,7 @@ const rows = computed(() => props.passes.map(pass => ({
 
 .tbl-reward {
   font-size: 10.5px;
-  color: #16A34A;
+  color: var(--success);
   font-weight: 600;
   margin: 4px 0 0;
 }
@@ -634,12 +634,12 @@ const rows = computed(() => props.passes.map(pass => ({
   padding: 3px 10px;
   border-radius: 999px;
 }
-.tbl-badge--ok   { background: #E6EFE9; color: #16A34A; }
-.tbl-badge--warn { background: #FEE2E2; color: #DC2626; }
+.tbl-badge--ok   { background: var(--primary-light); color: var(--success); }
+.tbl-badge--warn { background: var(--danger-bg); color: var(--danger); }
 
 .td-date {
   padding: 12px 16px;
-  color: #9DB7A8;
+  color: var(--text-nav-icon);
   font-size: 12px;
   white-space: nowrap;
 }
@@ -654,17 +654,17 @@ const rows = computed(() => props.passes.map(pass => ({
   width: 30px;
   height: 30px;
   border-radius: 7px;
-  border: 1px solid #ECEFEB;
+  border: 1px solid var(--border);
   background: transparent;
-  color: #6B7A72;
+  color: var(--text-muted);
   cursor: pointer;
   text-decoration: none;
   transition: background 0.12s, color 0.12s, border-color 0.12s;
   margin-right: 4px;
 }
-.tbl-icon-btn:hover { background: #F7F4EF; color: #0F1B14; }
-.tbl-icon-btn--copied { background: #E6EFE9; border-color: #A7D9B5; color: #16A34A; }
-.tbl-icon-btn--danger:hover { background: #FEE2E2; border-color: #FCA5A5; color: #DC2626; }
+.tbl-icon-btn:hover { background: var(--bg-page); color: var(--text-ink); }
+.tbl-icon-btn--copied { background: var(--primary-light); border-color: var(--primary-light); color: var(--success); }
+.tbl-icon-btn--danger:hover { background: var(--danger-bg); border-color: var(--danger-bg); color: var(--danger); }
 .tbl-icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ── Delete modal ── */
@@ -676,12 +676,12 @@ const rows = computed(() => props.passes.map(pass => ({
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: rgba(15, 27, 20, 0.45);
+  background: var(--overlay);
   backdrop-filter: blur(2px);
 }
 
 .modal-card {
-  background: #fff;
+  background: var(--bg-surface);
   border-radius: 18px;
   box-shadow: 0 20px 60px rgba(15, 27, 20, 0.18);
   width: 100%;
@@ -696,7 +696,7 @@ const rows = computed(() => props.passes.map(pass => ({
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: #FEE2E2;
+  background: var(--danger-bg);
   display: grid;
   place-items: center;
 }
@@ -704,13 +704,13 @@ const rows = computed(() => props.passes.map(pass => ({
 .modal-title {
   font-size: 15px;
   font-weight: 700;
-  color: #0F1B14;
+  color: var(--text-ink);
   margin: 0 0 6px;
 }
 
 .modal-body {
   font-size: 13px;
-  color: #6B7A72;
+  color: var(--text-muted);
   margin: 0;
   line-height: 1.55;
 }
@@ -724,11 +724,11 @@ const rows = computed(() => props.passes.map(pass => ({
 .modal-btn-cancel {
   padding: 9px 18px;
   border-radius: 9px;
-  border: 1px solid #ECEFEB;
-  background: #fff;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
   font-size: 13px;
   font-weight: 600;
-  color: #3A4A41;
+  color: var(--text-medium);
   cursor: pointer;
   font-family: inherit;
 }
@@ -737,7 +737,7 @@ const rows = computed(() => props.passes.map(pass => ({
   padding: 9px 18px;
   border-radius: 9px;
   border: none;
-  background: #DC2626;
+  background: var(--danger);
   font-size: 13px;
   font-weight: 600;
   color: #fff;

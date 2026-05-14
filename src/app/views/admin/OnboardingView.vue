@@ -137,38 +137,38 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div style="min-height: 100vh; background: #1B4332; display: flex; align-items: center; justify-content: center; padding: 24px; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;">
+  <div style="min-height: 100vh; background: var(--primary); display: flex; align-items: center; justify-content: center; padding: 24px; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;">
     <div style="width: 100%; max-width: 480px;">
 
       <!-- Logo -->
       <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 32px;">
         <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
-          <line x1="10" y1="28" x2="30" y2="28" stroke="#E8920A" stroke-width="2"/>
-          <line x1="10" y1="28" x2="20" y2="10" stroke="#E8920A" stroke-width="2"/>
-          <line x1="20" y1="10" x2="30" y2="28" stroke="#E8920A" stroke-width="2"/>
-          <circle cx="20" cy="10" r="3.5" fill="#E8920A"/>
-          <circle cx="10" cy="28" r="3.5" fill="#E8920A"/>
-          <circle cx="30" cy="28" r="3.5" fill="#E8920A"/>
+          <line x1="10" y1="28" x2="30" y2="28" stroke="var(--amber)" stroke-width="2"/>
+          <line x1="10" y1="28" x2="20" y2="10" stroke="var(--amber)" stroke-width="2"/>
+          <line x1="20" y1="10" x2="30" y2="28" stroke="var(--amber)" stroke-width="2"/>
+          <circle cx="20" cy="10" r="3.5" fill="var(--amber)"/>
+          <circle cx="10" cy="28" r="3.5" fill="var(--amber)"/>
+          <circle cx="30" cy="28" r="3.5" fill="var(--amber)"/>
         </svg>
-        <span style="font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: #fff; font-family: 'Syne', sans-serif; line-height: 1;">
-          trib<span style="color: #E8920A;">o</span>
+        <span style="font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: #fff; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; line-height: 1;">
+          trib<span style="color: var(--amber);">o</span>
         </span>
       </div>
 
       <!-- Card -->
-      <div style="background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.2);">
+      <div style="background: var(--bg-surface); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.2);">
 
         <!-- Top accent -->
-        <div style="height: 3px; background: linear-gradient(90deg, #1B4332, #E8920A);" />
+        <div style="height: 3px; background: linear-gradient(90deg, var(--primary), var(--amber));" />
 
         <div style="padding: 28px 28px 32px;">
 
           <!-- Heading -->
           <div style="margin-bottom: 24px;">
-            <h1 style="font-size: 20px; font-weight: 800; color: #0F1B14; margin: 0 0 6px; letter-spacing: -0.01em;">
+            <h1 style="font-size: 20px; font-weight: 800; color: var(--text-ink); margin: 0 0 6px; letter-spacing: -0.01em;">
               Crea tu organización
             </h1>
-            <p style="font-size: 13px; color: #6B7A72; margin: 0; line-height: 1.5;">
+            <p style="font-size: 13px; color: var(--text-muted); margin: 0; line-height: 1.5;">
               Podrás cambiar estos datos después en configuración.
             </p>
           </div>
@@ -179,15 +179,15 @@ async function handleSubmit() {
             <!-- Nombre -->
             <div>
               <label class="field-label">
-                Nombre del negocio <span style="color: #DC2626;">*</span>
+                Nombre del negocio <span style="color: var(--danger);">*</span>
               </label>
               <input
                 v-model="form.organizationName"
                 type="text"
                 placeholder="Ej. Café La Estrella"
                 class="field-input"
-                @focus="(e) => { (e.target as HTMLInputElement).style.borderColor='#E8920A'; (e.target as HTMLInputElement).style.boxShadow='0 0 0 3px #FCEBC4'; }"
-                @blur="(e) => { (e.target as HTMLInputElement).style.borderColor='#ECEFEB'; (e.target as HTMLInputElement).style.boxShadow='none'; }"
+                @focus="(e) => { (e.target as HTMLInputElement).style.borderColor='var(--amber)'; (e.target as HTMLInputElement).style.boxShadow='0 0 0 3px var(--amber-bg)'; }"
+                @blur="(e) => { (e.target as HTMLInputElement).style.borderColor='var(--border)'; (e.target as HTMLInputElement).style.boxShadow='none'; }"
                 @keyup.enter="handleSubmit"
               />
             </div>
@@ -195,20 +195,20 @@ async function handleSubmit() {
             <!-- Logo upload -->
             <div>
               <label class="field-label">
-                Logo <span style="font-weight: 400; text-transform: none; letter-spacing: 0; color: #A8B3AC;">(opcional)</span>
+                Logo <span style="font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-faint);">(opcional)</span>
               </label>
               <input ref="fileInputRef" type="file" accept="image/*" style="display: none;" @change="handleLogoChange" />
 
               <!-- Preview -->
-              <div v-if="logoPreview && !logoUploading" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #ECEFEB; background: #fff;">
-                <img :src="logoPreview" alt="Logo" style="width: 44px; height: 44px; border-radius: 8px; object-fit: contain; background: #F7F4EF; padding: 4px; flex-shrink: 0;" />
+              <div v-if="logoPreview && !logoUploading" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg-surface);">
+                <img :src="logoPreview" alt="Logo" style="width: 44px; height: 44px; border-radius: 8px; object-fit: contain; background: var(--bg-page); padding: 4px; flex-shrink: 0;" />
                 <div style="flex: 1; min-width: 0;">
-                  <p style="font-size: 12px; font-weight: 600; color: #0F1B14; margin: 0 0 2px;">Logo cargado</p>
-                  <p style="font-size: 11px; color: #A8B3AC; margin: 0;">Listo para usar</p>
+                  <p style="font-size: 12px; font-weight: 600; color: var(--text-ink); margin: 0 0 2px;">Logo cargado</p>
+                  <p style="font-size: 11px; color: var(--text-faint); margin: 0;">Listo para usar</p>
                 </div>
                 <button
                   type="button"
-                  style="font-size: 11px; font-weight: 600; color: #6B7A72; background: #F7F4EF; border: 1px solid #ECEFEB; border-radius: 7px; padding: 5px 10px; cursor: pointer; white-space: nowrap;"
+                  style="font-size: 11px; font-weight: 600; color: var(--text-muted); background: var(--bg-page); border: 1px solid var(--border); border-radius: 7px; padding: 5px 10px; cursor: pointer; white-space: nowrap;"
                   @click="removeLogo"
                 >
                   Cambiar
@@ -225,32 +225,32 @@ async function handleSubmit() {
                 @drop.prevent="(e) => { const f = e.dataTransfer?.files?.[0]; if(f) { const ev = { target: { files: [f] } } as any; handleLogoChange(ev); } }"
               >
                 <div v-if="logoUploading" style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A8B3AC" stroke-width="1.8" stroke-linecap="round">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="1.8" stroke-linecap="round">
                     <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
                   </svg>
-                  <p style="font-size: 12px; color: #A8B3AC; font-weight: 500; margin: 0;">Subiendo logo...</p>
+                  <p style="font-size: 12px; color: var(--text-faint); font-weight: 500; margin: 0;">Subiendo logo...</p>
                 </div>
                 <div v-else style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
-                  <div style="width: 32px; height: 32px; border-radius: 9px; background: #EFEAE0; display: flex; align-items: center; justify-content: center; margin-bottom: 2px;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7A72" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <div style="width: 32px; height: 32px; border-radius: 9px; background: var(--bg-subtle); display: flex; align-items: center; justify-content: center; margin-bottom: 2px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
                     </svg>
                   </div>
-                  <p style="font-size: 12.5px; font-weight: 600; color: #3A4A41; margin: 0;">Haz clic o arrastra tu logo</p>
-                  <p style="font-size: 11px; color: #A8B3AC; margin: 0;">PNG, JPG, SVG · Máx. 4 MB</p>
+                  <p style="font-size: 12.5px; font-weight: 600; color: var(--text-medium); margin: 0;">Haz clic o arrastra tu logo</p>
+                  <p style="font-size: 11px; color: var(--text-faint); margin: 0;">PNG, JPG, SVG · Máx. 4 MB</p>
                 </div>
               </div>
             </div>
 
             <!-- Industria -->
             <div>
-              <label class="field-label">Industria <span style="font-weight: 400; text-transform: none; letter-spacing: 0; color: #A8B3AC;">(opcional)</span></label>
+              <label class="field-label">Industria <span style="font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-faint);">(opcional)</span></label>
               <select
                 v-model="form.industry"
                 class="field-input"
                 style="cursor: pointer;"
-                @focus="(e) => { (e.target as HTMLSelectElement).style.borderColor='#E8920A'; }"
-                @blur="(e) => { (e.target as HTMLSelectElement).style.borderColor='#ECEFEB'; }"
+                @focus="(e) => { (e.target as HTMLSelectElement).style.borderColor='var(--amber)'; }"
+                @blur="(e) => { (e.target as HTMLSelectElement).style.borderColor='var(--border)'; }"
               >
                 <option value="">Seleccionar...</option>
                 <option v-for="ind in industries" :key="ind" :value="ind">{{ ind }}</option>
@@ -259,14 +259,14 @@ async function handleSubmit() {
 
             <!-- País + Teléfono -->
             <div>
-              <label class="field-label">Teléfono <span style="font-weight: 400; text-transform: none; letter-spacing: 0; color: #A8B3AC;">(opcional)</span></label>
+              <label class="field-label">Teléfono <span style="font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-faint);">(opcional)</span></label>
               <div style="display: flex; gap: 8px;">
                 <select
                   v-model="form.selectedCountry"
                   class="field-input"
                   style="flex-shrink: 0; width: auto; cursor: pointer; padding-left: 10px; padding-right: 10px;"
-                  @focus="(e) => { (e.target as HTMLSelectElement).style.borderColor='#E8920A'; }"
-                  @blur="(e) => { (e.target as HTMLSelectElement).style.borderColor='#ECEFEB'; }"
+                  @focus="(e) => { (e.target as HTMLSelectElement).style.borderColor='var(--amber)'; }"
+                  @blur="(e) => { (e.target as HTMLSelectElement).style.borderColor='var(--border)'; }"
                 >
                   <option v-for="c in countries" :key="c.code" :value="c">
                     {{ c.flag }} {{ c.dial }}
@@ -278,14 +278,14 @@ async function handleSubmit() {
                   placeholder="55 0000 0000"
                   class="field-input"
                   style="flex: 1;"
-                  @focus="(e) => { (e.target as HTMLInputElement).style.borderColor='#E8920A'; (e.target as HTMLInputElement).style.boxShadow='0 0 0 3px #FCEBC4'; }"
-                  @blur="(e) => { (e.target as HTMLInputElement).style.borderColor='#ECEFEB'; (e.target as HTMLInputElement).style.boxShadow='none'; }"
+                  @focus="(e) => { (e.target as HTMLInputElement).style.borderColor='var(--amber)'; (e.target as HTMLInputElement).style.boxShadow='0 0 0 3px var(--amber-bg)'; }"
+                  @blur="(e) => { (e.target as HTMLInputElement).style.borderColor='var(--border)'; (e.target as HTMLInputElement).style.boxShadow='none'; }"
                 />
               </div>
             </div>
 
             <!-- Error -->
-            <div v-if="error" style="font-size: 12px; color: #DC2626; padding: 10px 12px; background: #FEE2E2; border-radius: 8px;">
+            <div v-if="error" style="font-size: 12px; color: var(--danger); padding: 10px 12px; background: var(--danger-bg); border-radius: 8px;">
               {{ error }}
             </div>
 
@@ -319,7 +319,7 @@ async function handleSubmit() {
   display: block;
   font-size: 11px;
   font-weight: 700;
-  color: #6B7A72;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin-bottom: 7px;
@@ -328,17 +328,17 @@ async function handleSubmit() {
   width: 100%;
   padding: 11px 13px;
   border-radius: 9px;
-  border: 1.5px solid #ECEFEB;
-  background: #fff;
+  border: 1.5px solid var(--border);
+  background: var(--bg-surface);
   font-size: 13px;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  color: #0F1B14;
+  color: var(--text-ink);
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
   box-sizing: border-box;
   appearance: auto;
 }
-.field-input::placeholder { color: #A8B3AC; }
+.field-input::placeholder { color: var(--text-faint); }
 
 .upload-zone {
   display: flex;
@@ -346,14 +346,14 @@ async function handleSubmit() {
   justify-content: center;
   padding: 24px 20px;
   border-radius: 10px;
-  border: 1.5px dashed #D8DDD7;
-  background: #F7F4EF;
+  border: 1.5px dashed var(--border);
+  background: var(--bg-page);
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }
 .upload-zone:hover {
-  border-color: #E8920A;
-  background: #FCEBC4;
+  border-color: var(--amber);
+  background: var(--amber-bg);
 }
 
 .btn-submit {
@@ -364,7 +364,7 @@ async function handleSubmit() {
   gap: 8px;
   padding: 13px 16px;
   border-radius: 10px;
-  background: #1B4332;
+  background: var(--primary);
   color: #fff;
   font-size: 14px;
   font-weight: 700;
@@ -374,5 +374,5 @@ async function handleSubmit() {
   transition: background 0.15s;
   margin-top: 4px;
 }
-.btn-submit:hover:not(:disabled) { background: #2D6A4F; }
+.btn-submit:hover:not(:disabled) { background: var(--primary-mid); }
 </style>

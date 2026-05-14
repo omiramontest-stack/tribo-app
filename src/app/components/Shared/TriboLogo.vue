@@ -10,9 +10,9 @@ const props = withDefaults(defineProps<{
 })
 
 const colors = {
-  dark:   { icon: '#E8920A', text: '#FFFFFF' },
-  light:  { icon: '#1B4332', text: '#1B4332' },
-  accent: { icon: '#1B4332', text: '#1B4332' },
+  dark:   { icon: '#F5A623', text: '#FFFFFF' },
+  light:  { icon: '#1B3A2D', text: '#1B3A2D' },
+  accent: { icon: '#1B3A2D', text: '#1B3A2D' },
 }
 
 const c = colors[props.variant]
@@ -31,9 +31,9 @@ const textSize = `${Math.round(props.size * 0.44)}px`
     </svg>
     <span
       v-if="showText"
-      :style="{ fontSize: textSize, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1, color: c.text, fontFamily: '\'Syne\', sans-serif' }"
+      :style="{ fontSize: textSize, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1, color: c.text, fontFamily: '\'Plus Jakarta Sans\', system-ui, sans-serif' }"
     >
-      trib<span :style="{ color: '#E8920A' }">o</span>
+      trib<span :style="{ color: '#F5A623' }">o</span>
     </span>
   </div>
 </template>

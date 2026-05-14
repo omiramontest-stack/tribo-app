@@ -81,9 +81,9 @@ function formatDate(dateStr: string | null | undefined): string {
 }
 
 function subscriptionBadge(status: string | null | undefined) {
-  if (status === 'active') return { label: 'Activo', bg: '#D1FAE5', color: '#16A34A' }
-  if (status === 'past_due' || status === 'unpaid') return { label: 'Vencido', bg: '#FEE2E2', color: '#DC2626' }
-  return { label: 'Sin plan', bg: '#F0F0F0', color: '#6B7A72' }
+  if (status === 'active') return { label: 'Activo', bg: 'var(--success-bg)', color: 'var(--success)' }
+  if (status === 'past_due' || status === 'unpaid') return { label: 'Vencido', bg: 'var(--danger-bg)', color: 'var(--danger)' }
+  return { label: 'Sin plan', bg: 'var(--bg-subtle)', color: 'var(--text-muted)' }
 }
 
 function planFeatures(plan: BillingPlan) {
@@ -121,9 +121,9 @@ function planButtonLabel(plan: BillingPlan): string {
 
 function planButtonStyle(plan: BillingPlan): Record<string, string> {
   if (billingStore.status?.plan?.slug === plan.slug || plan.price < currentPlanPrice.value) {
-    return { background: '#F0F0F0', color: '#A8B3AC', cursor: 'not-allowed' }
+    return { background: 'var(--bg-subtle)', color: 'var(--text-faint)', cursor: 'not-allowed' }
   }
-  return { background: '#E8920A', color: '#13301F' }
+  return { background: 'var(--amber)', color: 'var(--primary)' }
 }
 
 async function handleCheckout(plan: BillingPlan) {
@@ -168,47 +168,47 @@ async function handlePortal() {
 
     <!-- ── SECCIÓN A: Estado actual ── -->
     <section>
-      <div style="font-size: 11px; color: #6B7A72; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 12px;">
+      <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 12px;">
         Estado actual
       </div>
 
       <!-- Skeleton -->
       <div
         v-if="fetching"
-        style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 22px; animation: pulse 1.5s infinite;"
+        style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; animation: pulse 1.5s infinite;"
       >
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px;">
           <div>
-            <div style="height: 20px; width: 200px; background: #EFEAE0; border-radius: 6px; margin-bottom: 10px;" />
-            <div style="height: 13px; width: 140px; background: #F7F4EF; border-radius: 4px;" />
+            <div style="height: 20px; width: 200px; background: var(--bg-field); border-radius: 6px; margin-bottom: 10px;" />
+            <div style="height: 13px; width: 140px; background: var(--bg-subtle); border-radius: 4px;" />
           </div>
-          <div style="height: 36px; width: 180px; background: #EFEAE0; border-radius: 9px;" />
+          <div style="height: 36px; width: 180px; background: var(--bg-field); border-radius: 9px;" />
         </div>
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
-          <div v-for="i in 3" :key="i" style="height: 68px; background: #F7F4EF; border-radius: 10px;" />
+          <div v-for="i in 3" :key="i" style="height: 68px; background: var(--bg-subtle); border-radius: 10px;" />
         </div>
       </div>
 
       <!-- Sin plan activo -->
       <div
         v-else-if="billingStore.status && !billingStore.status.plan"
-        style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 28px; display: flex; align-items: center; gap: 20px; box-shadow: 0 1px 0 rgba(15,27,20,0.02);"
+        style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; display: flex; align-items: center; gap: 20px; box-shadow: 0 1px 0 rgba(15,27,20,0.02);"
       >
-        <div style="width: 44px; height: 44px; border-radius: 12px; background: #F7F4EF; display: grid; place-items: center; flex-shrink: 0;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A8B3AC" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5" fill="#A8B3AC" stroke="none"/>
+        <div style="width: 44px; height: 44px; border-radius: 12px; background: var(--bg-field); display: grid; place-items: center; flex-shrink: 0;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5" fill="var(--text-faint)" stroke="none"/>
           </svg>
         </div>
         <div style="flex: 1;">
-          <div style="font-size: 14px; font-weight: 700; color: #0F1B14; margin-bottom: 4px;">Sin suscripción activa</div>
-          <div style="font-size: 12.5px; color: #6B7A72;">Elige un plan de los disponibles abajo para comenzar.</div>
+          <div style="font-size: 14px; font-weight: 700; color: var(--text-ink); margin-bottom: 4px;">Sin suscripción activa</div>
+          <div style="font-size: 12.5px; color: var(--text-muted);">Elige un plan de los disponibles abajo para comenzar.</div>
         </div>
       </div>
 
       <!-- Con plan activo -->
       <div
         v-else-if="billingStore.status?.plan"
-        style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 22px; box-shadow: 0 1px 0 rgba(15,27,20,0.02);"
+        style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; box-shadow: 0 1px 0 rgba(15,27,20,0.02);"
       >
         <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
           <div>
@@ -217,7 +217,7 @@ async function handlePortal() {
                 style="width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;"
                 :style="{ background: subscriptionBadge(billingStore.status.subscription?.status).color }"
               />
-              <span style="font-size: 16px; font-weight: 700; color: #0F1B14;">
+              <span style="font-size: 16px; font-weight: 700; color: var(--text-ink);">
                 {{ billingStore.status.plan.name }}
               </span>
               <span
@@ -230,15 +230,15 @@ async function handlePortal() {
                 {{ subscriptionBadge(billingStore.status.subscription?.status).label }}
               </span>
             </div>
-            <div v-if="billingStore.status.subscription" style="font-size: 12.5px; color: #6B7A72;">
-              Próxima renovación: <strong>{{ formatDate(billingStore.status.subscription.currentPeriodEnd) }}</strong>
+            <div v-if="billingStore.status.subscription" style="font-size: 12.5px; color: var(--text-muted);">
+              Próxima renovación: <strong style="color: var(--text-ink);">{{ formatDate(billingStore.status.subscription.currentPeriodEnd) }}</strong>
             </div>
           </div>
 
           <button
             v-if="billingStore.status.subscription"
             :disabled="redirecting === 'portal'"
-            style="display: flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 9px; border: 1px solid #D8DDD7; background: #fff; font-size: 12.5px; font-weight: 600; color: #3A4A41; cursor: pointer; white-space: nowrap; font-family: inherit;"
+            style="display: flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg-surface); font-size: 12.5px; font-weight: 600; color: var(--text-medium); cursor: pointer; white-space: nowrap; font-family: inherit;"
             @click="handlePortal"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -252,22 +252,22 @@ async function handlePortal() {
 
         <!-- Stats chips -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
-          <div style="padding: 14px 16px; background: #F7F4EF; border-radius: 10px;">
-            <div style="font-size: 10.5px; color: #6B7A72; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; text-transform: uppercase;">Precio</div>
-            <div style="font-size: 17px; font-weight: 800; color: #1B4332;">
+          <div style="padding: 14px 16px; background: var(--bg-field); border-radius: 10px;">
+            <div style="font-size: 10.5px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; text-transform: uppercase;">Precio</div>
+            <div style="font-size: 17px; font-weight: 800; color: var(--primary-text);">
               {{ formatPrice(billingStore.status.plan.price, billingStore.status.plan.currency) }}
-              <span style="font-size: 11px; font-weight: 500; color: #6B7A72;">/mes</span>
+              <span style="font-size: 11px; font-weight: 500; color: var(--text-muted);">/mes</span>
             </div>
           </div>
-          <div style="padding: 14px 16px; background: #F7F4EF; border-radius: 10px;">
-            <div style="font-size: 10.5px; color: #6B7A72; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; text-transform: uppercase;">Wallets</div>
-            <div style="font-size: 17px; font-weight: 800; color: #1B4332;">
+          <div style="padding: 14px 16px; background: var(--bg-field); border-radius: 10px;">
+            <div style="font-size: 10.5px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; text-transform: uppercase;">Wallets</div>
+            <div style="font-size: 17px; font-weight: 800; color: var(--primary-text);">
               {{ billingStore.status.plan.maxWallets }}
             </div>
           </div>
-          <div style="padding: 14px 16px; background: #1B4332; border-radius: 10px;">
-            <div style="font-size: 10.5px; color: #9DB7A8; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; text-transform: uppercase;">Créditos SMS</div>
-            <div style="font-size: 17px; font-weight: 800; color: #fff;">
+          <div style="padding: 14px 16px; background: var(--primary); border-radius: 10px;">
+            <div style="font-size: 10.5px; color: var(--text-nav-icon); font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; text-transform: uppercase;">Créditos SMS</div>
+            <div style="font-size: 17px; font-weight: 800; color: var(--bg-surface);">
               {{ billingStore.status.smsCredits.toLocaleString('es-MX') }}
             </div>
           </div>
@@ -277,7 +277,7 @@ async function handlePortal() {
 
     <!-- ── SECCIÓN B: Planes disponibles ── -->
     <section>
-      <div style="font-size: 11px; color: #6B7A72; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 12px;">
+      <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 12px;">
         Planes disponibles
       </div>
 
@@ -289,12 +289,12 @@ async function handlePortal() {
         <div
           v-for="i in 2"
           :key="i"
-          style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 22px; animation: pulse 1.5s infinite;"
+          style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; animation: pulse 1.5s infinite;"
         >
-          <div style="height: 20px; width: 100px; background: #EFEAE0; border-radius: 6px; margin-bottom: 10px;" />
-          <div style="height: 34px; width: 130px; background: #EFEAE0; border-radius: 6px; margin-bottom: 22px;" />
-          <div v-for="j in 6" :key="j" style="height: 13px; background: #F7F4EF; border-radius: 4px; margin-bottom: 10px;" />
-          <div style="height: 40px; background: #EFEAE0; border-radius: 9px; margin-top: 18px;" />
+          <div style="height: 20px; width: 100px; background: var(--bg-field); border-radius: 6px; margin-bottom: 10px;" />
+          <div style="height: 34px; width: 130px; background: var(--bg-field); border-radius: 6px; margin-bottom: 22px;" />
+          <div v-for="j in 6" :key="j" style="height: 13px; background: var(--bg-subtle); border-radius: 4px; margin-bottom: 10px;" />
+          <div style="height: 40px; background: var(--bg-field); border-radius: 9px; margin-top: 18px;" />
         </div>
       </div>
 
@@ -306,17 +306,17 @@ async function handlePortal() {
         <div
           v-for="plan in displayedPlans"
           :key="plan.id"
-          style="background: #fff; border-radius: 14px; padding: 22px; display: flex; flex-direction: column; position: relative; box-shadow: 0 1px 0 rgba(15,27,20,0.02);"
+          style="background: var(--bg-surface); border-radius: 14px; padding: 22px; display: flex; flex-direction: column; position: relative; box-shadow: 0 1px 0 rgba(15,27,20,0.02);"
           :style="plan.slug === 'base'
-            ? { border: '2px solid #E8920A' }
-            : { border: '1px solid #ECEFEB' }"
+            ? { border: '2px solid var(--amber)' }
+            : { border: '1px solid var(--border)' }"
         >
           <!-- Highlighted badge -->
           <div
             v-if="plan.slug === 'base'"
-            style="position: absolute; top: -12px; right: 18px; background: #E8920A; color: #13301F; padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 4px;"
+            style="position: absolute; top: -12px; right: 18px; background: var(--amber); color: var(--primary); padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 4px;"
           >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="#13301F">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--primary)">
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
             </svg>
             Destacado
@@ -324,12 +324,12 @@ async function handlePortal() {
 
           <!-- Name + price -->
           <div style="margin-bottom: 18px;">
-            <div style="font-size: 18px; font-weight: 700; color: #0F1B14; margin-bottom: 8px;">{{ plan.name }}</div>
+            <div style="font-size: 18px; font-weight: 700; color: var(--text-ink); margin-bottom: 8px;">{{ plan.name }}</div>
             <div style="display: flex; align-items: baseline; gap: 4px;">
-              <span style="font-size: 28px; font-weight: 800; color: #1B4332; letter-spacing: -0.02em;">
+              <span style="font-size: 28px; font-weight: 800; color: var(--primary-text); letter-spacing: -0.02em;">
                 {{ formatPrice(plan.price, plan.currency) }}
               </span>
-              <span style="font-size: 12px; color: #6B7A72;">/mes</span>
+              <span style="font-size: 12px; color: var(--text-muted);">/mes</span>
             </div>
           </div>
 
@@ -342,18 +342,18 @@ async function handlePortal() {
             >
               <div
                 style="width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0;"
-                :style="feature.included ? { background: '#D1FAE5' } : { background: '#F0F0F0' }"
+                :style="feature.included ? { background: 'rgba(52,183,120,0.12)' } : { background: 'var(--bg-field)' }"
               >
                 <svg
                   width="10" height="10" viewBox="0 0 24 24" fill="none"
                   stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-                  :stroke="feature.included ? '#16A34A' : '#A8B3AC'"
+                  :stroke="feature.included ? 'var(--success)' : 'var(--text-faint)'"
                 >
                   <path v-if="feature.included" d="M5 12l5 5L20 7" />
                   <path v-else d="M18 6L6 18M6 6l12 12" />
                 </svg>
               </div>
-              <span :style="{ color: feature.included ? '#0F1B14' : '#A8B3AC' }">{{ feature.label }}</span>
+              <span :style="{ color: feature.included ? 'var(--text-ink)' : 'var(--text-faint)' }">{{ feature.label }}</span>
             </div>
           </div>
 
@@ -370,22 +370,23 @@ async function handlePortal() {
         </div>
       </div>
 
-      <div v-else-if="!fetching" style="padding: 32px; text-align: center; color: #6B7A72; font-size: 13px; background: #fff; border: 1px solid #ECEFEB; border-radius: 14px;">
+      <div v-else-if="!fetching" style="padding: 32px; text-align: center; color: var(--text-muted); font-size: 13px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px;">
         No hay planes disponibles en este momento.
       </div>
 
-      <div style="margin-top: 10px; font-size: 11.5px; color: #A8B3AC; font-style: italic;">
+      <div style="margin-top: 10px; font-size: 11.5px; color: var(--text-faint); font-style: italic;">
         Los precios no cambian para suscriptores existentes. Cancela cuando quieras.
       </div>
     </section>
+
     <section>
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
-        <div style="font-size: 11px; color: #6B7A72; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;">
+        <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;">
           Comprar créditos
         </div>
-        <div v-if="billingStore.status && !fetching" style="font-size: 12.5px; color: #6B7A72;">
+        <div v-if="billingStore.status && !fetching" style="font-size: 12.5px; color: var(--text-muted);">
           Saldo actual:
-          <strong style="color: #1B4332;">
+          <strong style="color: var(--primary-text);">
             {{ billingStore.status.smsCredits.toLocaleString('es-MX') }} créditos
           </strong>
         </div>
@@ -399,12 +400,12 @@ async function handlePortal() {
         <div
           v-for="i in 3"
           :key="i"
-          style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 20px; animation: pulse 1.5s infinite;"
+          style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; animation: pulse 1.5s infinite;"
         >
-          <div style="height: 16px; width: 80px; background: #EFEAE0; border-radius: 4px; margin-bottom: 14px;" />
-          <div style="height: 34px; width: 100px; background: #EFEAE0; border-radius: 6px; margin-bottom: 8px;" />
-          <div style="height: 26px; width: 120px; background: #F7F4EF; border-radius: 6px; margin-bottom: 16px;" />
-          <div style="height: 38px; background: #EFEAE0; border-radius: 9px;" />
+          <div style="height: 16px; width: 80px; background: var(--bg-field); border-radius: 4px; margin-bottom: 14px;" />
+          <div style="height: 34px; width: 100px; background: var(--bg-field); border-radius: 6px; margin-bottom: 8px;" />
+          <div style="height: 26px; width: 120px; background: var(--bg-subtle); border-radius: 6px; margin-bottom: 16px;" />
+          <div style="height: 38px; background: var(--bg-field); border-radius: 9px;" />
         </div>
       </div>
 
@@ -416,40 +417,40 @@ async function handlePortal() {
         <div
           v-for="(pack, index) in billingStore.smsPacks"
           :key="pack.id"
-          style="background: #fff; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; position: relative; box-shadow: 0 1px 0 rgba(15,27,20,0.02);"
+          style="background: var(--bg-surface); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; position: relative; box-shadow: 0 1px 0 rgba(15,27,20,0.02);"
           :style="isPopularPack(index, billingStore.smsPacks.length)
-            ? { border: '2px solid #E8920A' }
-            : { border: '1px solid #ECEFEB' }"
+            ? { border: '2px solid var(--amber)' }
+            : { border: '1px solid var(--border)' }"
         >
           <div
             v-if="isPopularPack(index, billingStore.smsPacks.length)"
-            style="position: absolute; top: -11px; right: 16px; background: #E8920A; color: #13301F; padding: 3px 10px; border-radius: 999px; font-size: 10px; font-weight: 700;"
+            style="position: absolute; top: -11px; right: 16px; background: var(--amber); color: var(--primary); padding: 3px 10px; border-radius: 999px; font-size: 10px; font-weight: 700;"
           >
             Más popular
           </div>
 
-          <div style="font-size: 15px; font-weight: 700; color: #0F1B14; margin-bottom: 12px;">
+          <div style="font-size: 15px; font-weight: 700; color: var(--text-ink); margin-bottom: 12px;">
             {{ pack.name }}
           </div>
 
           <div style="flex: 1; margin-bottom: 18px;">
             <div style="display: flex; align-items: baseline; gap: 4px; margin-bottom: 4px;">
-              <span style="font-size: 28px; font-weight: 800; color: #1B4332; letter-spacing: -0.01em;">
+              <span style="font-size: 28px; font-weight: 800; color: var(--primary-text); letter-spacing: -0.01em;">
                 {{ pack.credits.toLocaleString('es-MX') }}
               </span>
-              <span style="font-size: 12px; color: #6B7A72; font-weight: 600;">Creditos</span>
+              <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Creditos</span>
             </div>
-            <div style="font-size: 20px; font-weight: 700; color: #0F1B14; margin-bottom: 4px;">
+            <div style="font-size: 20px; font-weight: 700; color: var(--text-ink); margin-bottom: 4px;">
               {{ formatPrice(pack.price, pack.currency) }}
             </div>
-            <div style="font-size: 11px; color: #6B7A72;">
+            <div style="font-size: 11px; color: var(--text-muted);">
               {{ formatPrice(pack.price / pack.credits, pack.currency) }} por credito
             </div>
           </div>
 
           <button
             :disabled="redirecting === pack.id"
-            style="width: 100%; padding: 10px 16px; border-radius: 9px; background: #E8920A; border: none; font-size: 13px; font-weight: 700; color: #13301F; cursor: pointer; transition: opacity 0.15s; font-family: inherit;"
+            style="width: 100%; padding: 10px 16px; border-radius: 9px; background: var(--amber); border: none; font-size: 13px; font-weight: 700; color: var(--primary); cursor: pointer; transition: opacity 0.15s; font-family: inherit;"
             @click="handleBuyCredits(pack)"
           >
             {{ redirecting === pack.id ? 'Redirigiendo…' : 'Comprar' }}
@@ -457,11 +458,11 @@ async function handlePortal() {
         </div>
       </div>
 
-      <div v-else-if="!fetching" style="padding: 32px; text-align: center; color: #6B7A72; font-size: 13px; background: #fff; border: 1px solid #ECEFEB; border-radius: 14px;">
+      <div v-else-if="!fetching" style="padding: 32px; text-align: center; color: var(--text-muted); font-size: 13px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px;">
         No hay paquetes disponibles en este momento.
       </div>
 
-      <div style="margin-top: 12px; font-size: 11.5px; color: #A8B3AC; text-align: center; font-style: italic;">
+      <div style="margin-top: 12px; font-size: 11.5px; color: var(--text-faint); text-align: center; font-style: italic;">
         Los créditos no expiran. Úsalos cuando los necesites.
       </div>
     </section>
@@ -472,33 +473,33 @@ async function handlePortal() {
   <Teleport to="body">
     <div
       v-if="showEmailVerifyModal"
-      style="position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 16px;"
+      style="position: fixed; inset: 0; background: var(--overlay); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 16px;"
       @click.self="showEmailVerifyModal = false"
     >
-      <div style="background: #fff; border-radius: 16px; padding: 28px 28px 24px; max-width: 400px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.18);">
+      <div style="background: var(--bg-surface); border-radius: 16px; padding: 28px 28px 24px; max-width: 400px; width: 100%; box-shadow: 0 20px 60px var(--overlay);">
         <div style="display: flex; align-items: flex-start; gap: 14px; margin-bottom: 18px;">
-          <div style="flex-shrink: 0; width: 40px; height: 40px; border-radius: 10px; background: #FEF3C7; display: flex; align-items: center; justify-content: center;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <div style="flex-shrink: 0; width: 40px; height: 40px; border-radius: 10px; background: var(--warning-bg); display: flex; align-items: center; justify-content: center;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
             </svg>
           </div>
           <div>
-            <p style="font-size: 15px; font-weight: 700; color: #0F1B14; margin: 0 0 4px;">Verifica tu correo</p>
-            <p style="font-size: 13px; color: #6B7A72; margin: 0; line-height: 1.5;">
+            <p style="font-size: 15px; font-weight: 700; color: var(--text-ink); margin: 0 0 4px;">Verifica tu correo</p>
+            <p style="font-size: 13px; color: var(--text-muted); margin: 0; line-height: 1.5;">
               Debes verificar tu correo electrónico antes de realizar pagos. Revisa tu bandeja de entrada o reenvía el email.
             </p>
           </div>
         </div>
         <div style="display: flex; gap: 8px; justify-content: flex-end;">
           <button
-            style="padding: 9px 16px; border-radius: 8px; border: 1.5px solid #ECEFEB; background: #fff; font-size: 13px; font-weight: 600; color: #6B7A72; cursor: pointer;"
+            style="padding: 9px 16px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg-surface); font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer;"
             @click="showEmailVerifyModal = false"
           >
             Cerrar
           </button>
           <button
             :disabled="resendingVerification"
-            style="padding: 9px 18px; border-radius: 8px; border: none; background: #1B4332; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer;"
+            style="padding: 9px 18px; border-radius: 8px; border: none; background: var(--primary); font-size: 13px; font-weight: 700; color: var(--bg-surface); cursor: pointer;"
             :style="resendingVerification ? 'opacity: 0.6; cursor: not-allowed;' : ''"
             @click="handleResendVerification"
           >

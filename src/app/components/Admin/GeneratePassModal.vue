@@ -75,19 +75,19 @@ async function handleGenerate() {
   <Teleport to="body">
     <div
       v-if="modelValue"
-      style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(15,27,20,0.5);"
+      style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; background: var(--overlay);"
       @click.self="close"
     >
-      <div style="background: #fff; border-radius: 16px; box-shadow: 0 20px 60px rgba(15,27,20,0.15); width: 100%; max-width: 400px; overflow: hidden;">
+      <div style="background: var(--bg-surface); border-radius: 16px; box-shadow: 0 20px 60px var(--shadow-card); width: 100%; max-width: 400px; overflow: hidden;">
 
         <!-- Header -->
-        <div style="padding: 18px 20px 16px; border-bottom: 1px solid #ECEFEB; display: flex; align-items: center; justify-content: space-between;">
+        <div style="padding: 18px 20px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
           <div>
-            <h3 style="font-size: 15px; font-weight: 700; color: #0F1B14; margin: 0;">Generar pase</h3>
-            <p style="font-size: 11.5px; color: #6B7A72; margin: 2px 0 0;">Los datos del cliente para el pase digital</p>
+            <h3 style="font-size: 15px; font-weight: 700; color: var(--text-ink); margin: 0;">Generar pase</h3>
+            <p style="font-size: 11.5px; color: var(--text-muted); margin: 2px 0 0;">Los datos del cliente para el pase digital</p>
           </div>
           <button
-            style="width: 28px; height: 28px; border-radius: 8px; border: 1px solid #ECEFEB; background: #F7F4EF; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #6B7A72; font-size: 16px; line-height: 1;"
+            style="width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-page); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-muted); font-size: 16px; line-height: 1;"
             @click="close"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -100,7 +100,7 @@ async function handleGenerate() {
           <!-- Nombre + Apellido -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <div>
-              <label style="display: block; font-size: 11px; font-weight: 700; color: #6B7A72; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
+              <label style="display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
                 Nombre *
               </label>
               <input
@@ -112,7 +112,7 @@ async function handleGenerate() {
               />
             </div>
             <div>
-              <label style="display: block; font-size: 11px; font-weight: 700; color: #6B7A72; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
+              <label style="display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
                 Apellido *
               </label>
               <input
@@ -127,24 +127,24 @@ async function handleGenerate() {
 
           <!-- Email -->
           <div>
-            <label style="display: block; font-size: 11px; font-weight: 700; color: #6B7A72; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
-              Email <span style="font-weight: 400; text-transform: none; letter-spacing: 0; color: #A8B3AC;">(opcional)</span>
+            <label style="display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
+              Email <span style="font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-faint);">(opcional)</span>
             </label>
             <input
               v-model="form.email"
               type="email"
               placeholder="oscar@ejemplo.com"
-              style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #ECEFEB; background: #F7F4EF; color: #0F1B14; font-size: 13px; outline: none; box-sizing: border-box; font-family: inherit;"
-              @focus="(e) => { (e.target as HTMLInputElement).style.borderColor='#E8920A'; (e.target as HTMLInputElement).style.boxShadow='0 0 0 3px #FCEBC4'; }"
-              @blur="(e) => { (e.target as HTMLInputElement).style.borderColor='#ECEFEB'; (e.target as HTMLInputElement).style.boxShadow='none'; }"
+              style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg-field); color: var(--text-ink); font-size: 13px; outline: none; box-sizing: border-box; font-family: inherit;"
+              @focus="(e) => { (e.target as HTMLInputElement).style.borderColor='var(--amber)'; (e.target as HTMLInputElement).style.boxShadow='0 0 0 3px var(--amber-bg)'; }"
+              @blur="(e) => { (e.target as HTMLInputElement).style.borderColor='var(--border)'; (e.target as HTMLInputElement).style.boxShadow='none'; }"
               @keyup.enter="handleGenerate"
             />
           </div>
 
           <!-- Teléfono con selector de país -->
           <div>
-            <label style="display: block; font-size: 11px; font-weight: 700; color: #6B7A72; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
-              Teléfono <span style="font-weight: 400; text-transform: none; letter-spacing: 0; color: #A8B3AC;">(opcional)</span>
+            <label style="display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
+              Teléfono <span style="font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-faint);">(opcional)</span>
             </label>
             <div style="display: flex; gap: 8px;">
               <!-- Country dial selector -->
@@ -161,16 +161,16 @@ async function handleGenerate() {
                 v-model="form.phone"
                 type="tel"
                 placeholder="33 1234 5678"
-                style="flex: 1; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #ECEFEB; background: #F7F4EF; color: #0F1B14; font-size: 13px; outline: none; box-sizing: border-box; font-family: inherit;"
-                @focus="(e) => { (e.target as HTMLInputElement).style.borderColor='#E8920A'; (e.target as HTMLInputElement).style.boxShadow='0 0 0 3px #FCEBC4'; }"
-                @blur="(e) => { (e.target as HTMLInputElement).style.borderColor='#ECEFEB'; (e.target as HTMLInputElement).style.boxShadow='none'; }"
+                style="flex: 1; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg-field); color: var(--text-ink); font-size: 13px; outline: none; box-sizing: border-box; font-family: inherit;"
+                @focus="(e) => { (e.target as HTMLInputElement).style.borderColor='var(--amber)'; (e.target as HTMLInputElement).style.boxShadow='0 0 0 3px var(--amber-bg)'; }"
+                @blur="(e) => { (e.target as HTMLInputElement).style.borderColor='var(--border)'; (e.target as HTMLInputElement).style.boxShadow='none'; }"
                 @keyup.enter="handleGenerate"
               />
             </div>
           </div>
 
           <!-- Error -->
-          <p v-if="error" style="font-size: 12px; color: #DC2626; padding: 8px 12px; background: #FEE2E2; border-radius: 8px; margin: 0;">
+          <p v-if="error" style="font-size: 12px; color: var(--danger); padding: 8px 12px; background: var(--danger-bg); border-radius: 8px; margin: 0;">
             {{ error }}
           </p>
         </div>
@@ -197,9 +197,9 @@ async function handleGenerate() {
   width: 100%;
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1.5px solid #ECEFEB;
-  background: #F7F4EF;
-  color: #0F1B14;
+  border: 1.5px solid var(--border);
+  background: var(--bg-field);
+  color: var(--text-ink);
   font-size: 13px;
   outline: none;
   box-sizing: border-box;
@@ -207,10 +207,10 @@ async function handleGenerate() {
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .form-input:focus {
-  border-color: #E8920A;
-  box-shadow: 0 0 0 3px #FCEBC4;
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px var(--amber-bg);
 }
-.form-input::placeholder { color: #A8B3AC; }
+.form-input::placeholder { color: var(--text-faint); }
 
 .form-select {
   width: auto;
@@ -222,24 +222,24 @@ async function handleGenerate() {
   flex: 1;
   padding: 10px;
   border-radius: 8px;
-  border: 1.5px solid #ECEFEB;
-  background: #F7F4EF;
-  color: #3A4A41;
+  border: 1.5px solid var(--border);
+  background: var(--bg-field);
+  color: var(--text-medium);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
   transition: background 0.12s;
 }
-.btn-cancel:hover { background: #EFEAE0; }
+.btn-cancel:hover { background: var(--bg-subtle); }
 
 .btn-submit {
   flex: 2;
   padding: 10px;
   border-radius: 8px;
   border: none;
-  background: #E8920A;
-  color: #13301F;
+  background: var(--amber);
+  color: var(--primary);
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;

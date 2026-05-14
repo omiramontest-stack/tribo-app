@@ -2,6 +2,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/app/stores/auth/AuthStore'
+import { ApiError } from '@/infrastructure/http/ApiClient'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -26,9 +27,11 @@ async function handleLogin() {
     await authStore.login(loginForm.email, loginForm.password)
     await router.push({ name: 'Dashboard' })
   } catch (e) {
-    error.value = e instanceof ApiError
-      ? 'Credenciales incorrectas'
-      : 'No se pudo conectar al servidor. Verifica tu conexión.'
+    if (e instanceof ApiError && e.status === 429) {
+      error.value = 'Demasiados intentos. Espera unos minutos e intenta de nuevo.'
+    } else {
+      error.value = 'Credenciales incorrectas'
+    }
   } finally {
     loading.value = false
   }
@@ -73,15 +76,15 @@ const features = [
         <!-- Logo -->
         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 52px;">
           <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
-            <line x1="10" y1="28" x2="30" y2="28" stroke="#E8920A" stroke-width="2"/>
-            <line x1="10" y1="28" x2="20" y2="10" stroke="#E8920A" stroke-width="2"/>
-            <line x1="20" y1="10" x2="30" y2="28" stroke="#E8920A" stroke-width="2"/>
-            <circle cx="20" cy="10" r="3.5" fill="#E8920A"/>
-            <circle cx="10" cy="28" r="3.5" fill="#E8920A"/>
-            <circle cx="30" cy="28" r="3.5" fill="#E8920A"/>
+            <line x1="10" y1="28" x2="30" y2="28" stroke="var(--amber)" stroke-width="2"/>
+            <line x1="10" y1="28" x2="20" y2="10" stroke="var(--amber)" stroke-width="2"/>
+            <line x1="20" y1="10" x2="30" y2="28" stroke="var(--amber)" stroke-width="2"/>
+            <circle cx="20" cy="10" r="3.5" fill="var(--amber)"/>
+            <circle cx="10" cy="28" r="3.5" fill="var(--amber)"/>
+            <circle cx="30" cy="28" r="3.5" fill="var(--amber)"/>
           </svg>
           <span style="font-size: 18px; font-weight: 800; letter-spacing: -0.02em; color: #fff;">
-            trib<span style="color: #E8920A;">o</span>
+            trib<span style="color: var(--amber);">o</span>
           </span>
         </div>
 
@@ -112,7 +115,7 @@ const features = [
         <!-- Testimonial -->
         <div style="font-size: 12px; color: rgba(255,255,255,0.8);">
           <div style="font-weight: 700; margin-bottom: 7px;">☕ Café Luna</div>
-          <blockquote style="font-style: italic; border-left: 3px solid #E8920A; padding-left: 12px; line-height: 1.55; margin: 0;">
+          <blockquote style="font-style: italic; border-left: 3px solid var(--amber); padding-left: 12px; line-height: 1.55; margin: 0;">
             "Pasamos de 100 a 312 clientes activos en 2 meses. El equipo Tribo es increíble."
           </blockquote>
         </div>
@@ -125,29 +128,29 @@ const features = [
       <!-- Mobile-only logo -->
       <div class="mobile-logo">
         <svg width="24" height="24" viewBox="0 0 40 40" fill="none">
-          <line x1="10" y1="28" x2="30" y2="28" stroke="#E8920A" stroke-width="2"/>
-          <line x1="10" y1="28" x2="20" y2="10" stroke="#E8920A" stroke-width="2"/>
-          <line x1="20" y1="10" x2="30" y2="28" stroke="#E8920A" stroke-width="2"/>
-          <circle cx="20" cy="10" r="3.5" fill="#E8920A"/>
-          <circle cx="10" cy="28" r="3.5" fill="#E8920A"/>
-          <circle cx="30" cy="28" r="3.5" fill="#E8920A"/>
+          <line x1="10" y1="28" x2="30" y2="28" stroke="var(--amber)" stroke-width="2"/>
+          <line x1="10" y1="28" x2="20" y2="10" stroke="var(--amber)" stroke-width="2"/>
+          <line x1="20" y1="10" x2="30" y2="28" stroke="var(--amber)" stroke-width="2"/>
+          <circle cx="20" cy="10" r="3.5" fill="var(--amber)"/>
+          <circle cx="10" cy="28" r="3.5" fill="var(--amber)"/>
+          <circle cx="30" cy="28" r="3.5" fill="var(--amber)"/>
         </svg>
-        <span style="font-size: 17px; font-weight: 800; letter-spacing: -0.02em; color: #0F1B14;">
-          trib<span style="color: #E8920A;">o</span>
+        <span style="font-size: 17px; font-weight: 800; letter-spacing: -0.02em; color: var(--text-ink);">
+          trib<span style="color: var(--amber);">o</span>
         </span>
       </div>
 
       <div class="login-form-card">
 
         <!-- Tabs -->
-        <div style="display: flex; gap: 2px; padding: 4px; background: #fff; border-radius: 10px; margin-bottom: 28px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <div style="display: flex; gap: 2px; padding: 4px; background: var(--bg-surface); border-radius: 10px; margin-bottom: 28px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
           <button
             v-for="t in [{ id: 'login', label: 'Iniciar sesión' }, { id: 'register', label: 'Crear cuenta' }]"
             :key="t.id"
             class="tab-btn"
             :style="tab === t.id
-              ? 'background: #1B4332; color: #fff;'
-              : 'background: transparent; color: #6B7A72;'"
+              ? 'background: var(--primary); color: #fff;'
+              : 'background: transparent; color: var(--text-muted);'"
             @click="switchTab(t.id as Tab)"
           >
             {{ t.label }}
@@ -168,8 +171,8 @@ const features = [
               autocorrect="off"
               spellcheck="false"
               class="field-input"
-              @focus="(e) => { (e.target as HTMLInputElement).style.borderColor = '#E8920A'; (e.target as HTMLInputElement).style.boxShadow = '0 0 0 3px #FCEBC4'; }"
-              @blur="(e) => { (e.target as HTMLInputElement).style.borderColor = '#ECEFEB'; (e.target as HTMLInputElement).style.boxShadow = 'none'; }"
+              @focus="(e) => { (e.target as HTMLInputElement).style.borderColor = 'var(--amber)'; (e.target as HTMLInputElement).style.boxShadow = '0 0 0 3px var(--amber-bg)'; }"
+              @blur="(e) => { (e.target as HTMLInputElement).style.borderColor = 'var(--border)'; (e.target as HTMLInputElement).style.boxShadow = 'none'; }"
             />
           </div>
           <div>
@@ -181,12 +184,12 @@ const features = [
               placeholder="••••••••"
               autocomplete="current-password"
               class="field-input"
-              @focus="(e) => { (e.target as HTMLInputElement).style.borderColor = '#E8920A'; (e.target as HTMLInputElement).style.boxShadow = '0 0 0 3px #FCEBC4'; }"
-              @blur="(e) => { (e.target as HTMLInputElement).style.borderColor = '#ECEFEB'; (e.target as HTMLInputElement).style.boxShadow = 'none'; }"
+              @focus="(e) => { (e.target as HTMLInputElement).style.borderColor = 'var(--amber)'; (e.target as HTMLInputElement).style.boxShadow = '0 0 0 3px var(--amber-bg)'; }"
+              @blur="(e) => { (e.target as HTMLInputElement).style.borderColor = 'var(--border)'; (e.target as HTMLInputElement).style.boxShadow = 'none'; }"
             />
           </div>
 
-          <div v-if="error" style="font-size: 12px; color: #DC2626; padding: 8px 12px; background: #FEE2E2; border-radius: 8px;">
+          <div v-if="error" style="font-size: 12px; color: var(--danger); padding: 8px 12px; background: var(--danger-bg); border-radius: 8px;">
             {{ error }}
           </div>
 
@@ -197,10 +200,10 @@ const features = [
           <div style="text-align: center;">
             <button
               type="button"
-              style="background: none; border: none; cursor: pointer; font-size: 12.5px; color: #6B7A72; font-family: inherit; padding: 0; transition: color 0.15s;"
+              style="background: none; border: none; cursor: pointer; font-size: 12.5px; color: var(--text-muted); font-family: inherit; padding: 0; transition: color 0.15s;"
               @click="router.push({ name: 'ForgotPassword' })"
-              @mouseenter="($event.target as HTMLElement).style.color = '#1B4332'"
-              @mouseleave="($event.target as HTMLElement).style.color = '#6B7A72'"
+              @mouseenter="($event.target as HTMLElement).style.color = 'var(--primary)'"
+              @mouseleave="($event.target as HTMLElement).style.color = 'var(--text-muted)'"
             >
               ¿Olvidaste tu contraseña?
             </button>
@@ -221,8 +224,8 @@ const features = [
               autocorrect="off"
               spellcheck="false"
               class="field-input"
-              @focus="(e) => { (e.target as HTMLInputElement).style.borderColor = '#E8920A'; (e.target as HTMLInputElement).style.boxShadow = '0 0 0 3px #FCEBC4'; }"
-              @blur="(e) => { (e.target as HTMLInputElement).style.borderColor = '#ECEFEB'; (e.target as HTMLInputElement).style.boxShadow = 'none'; }"
+              @focus="(e) => { (e.target as HTMLInputElement).style.borderColor = 'var(--amber)'; (e.target as HTMLInputElement).style.boxShadow = '0 0 0 3px var(--amber-bg)'; }"
+              @blur="(e) => { (e.target as HTMLInputElement).style.borderColor = 'var(--border)'; (e.target as HTMLInputElement).style.boxShadow = 'none'; }"
             />
           </div>
           <div>
@@ -235,12 +238,12 @@ const features = [
               placeholder="Mínimo 8 caracteres"
               autocomplete="new-password"
               class="field-input"
-              @focus="(e) => { (e.target as HTMLInputElement).style.borderColor = '#E8920A'; (e.target as HTMLInputElement).style.boxShadow = '0 0 0 3px #FCEBC4'; }"
-              @blur="(e) => { (e.target as HTMLInputElement).style.borderColor = '#ECEFEB'; (e.target as HTMLInputElement).style.boxShadow = 'none'; }"
+              @focus="(e) => { (e.target as HTMLInputElement).style.borderColor = 'var(--amber)'; (e.target as HTMLInputElement).style.boxShadow = '0 0 0 3px var(--amber-bg)'; }"
+              @blur="(e) => { (e.target as HTMLInputElement).style.borderColor = 'var(--border)'; (e.target as HTMLInputElement).style.boxShadow = 'none'; }"
             />
           </div>
 
-          <div v-if="error" style="font-size: 12px; color: #DC2626; padding: 8px 12px; background: #FEE2E2; border-radius: 8px;">
+          <div v-if="error" style="font-size: 12px; color: var(--danger); padding: 8px 12px; background: var(--danger-bg); border-radius: 8px;">
             {{ error }}
           </div>
 
@@ -251,9 +254,9 @@ const features = [
 
         <!-- Divider -->
         <div style="display: flex; align-items: center; gap: 12px; margin: 24px 0; opacity: 0.5;">
-          <div style="flex: 1; height: 1px; background: #ECEFEB;" />
-          <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #6B7A72;">o continúa con</span>
-          <div style="flex: 1; height: 1px; background: #ECEFEB;" />
+          <div style="flex: 1; height: 1px; background: var(--border);" />
+          <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted);">o continúa con</span>
+          <div style="flex: 1; height: 1px; background: var(--border);" />
         </div>
 
         <!-- Google -->
@@ -268,11 +271,11 @@ const features = [
         </button>
 
         <!-- Terms -->
-        <p style="margin-top: 24px; font-size: 11px; color: #A8B3AC; text-align: center; line-height: 1.5;">
+        <p style="margin-top: 24px; font-size: 11px; color: var(--text-faint); text-align: center; line-height: 1.5;">
           Al continuar aceptas nuestros
-          <a href="#" style="color: #1B4332; font-weight: 600; text-decoration: none;">Términos</a>
+          <a href="#" style="color: var(--primary-text); font-weight: 600; text-decoration: none;">Términos</a>
           y
-          <a href="#" style="color: #1B4332; font-weight: 600; text-decoration: none;">Privacidad</a>
+          <a href="#" style="color: var(--primary-text); font-weight: 600; text-decoration: none;">Privacidad</a>
         </p>
       </div>
     </div>
@@ -284,13 +287,13 @@ const features = [
   display: flex;
   min-height: 100vh;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  background: #fff;
+  background: var(--bg-surface);
 }
 
 /* ── Hero ── */
 .login-hero {
   flex: 1;
-  background: linear-gradient(135deg, #1B4332 0%, #2D6A4F 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-mid) 100%);
   padding: 40px;
   display: flex;
   flex-direction: column;
@@ -314,7 +317,7 @@ const features = [
   align-items: center;
   justify-content: center;
   padding: 48px 24px;
-  background: #F7F4EF;
+  background: var(--bg-page);
 }
 .mobile-logo {
   display: none;
@@ -347,7 +350,7 @@ const features = [
   display: block;
   font-size: 11px;
   font-weight: 700;
-  color: #6B7A72;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin-bottom: 7px;
@@ -356,17 +359,17 @@ const features = [
   width: 100%;
   padding: 12px 14px;
   border-radius: 10px;
-  border: 1.5px solid #ECEFEB;
-  background: #fff;
+  border: 1.5px solid var(--border);
+  background: var(--bg-surface);
   font-size: 13px;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  color: #0F1B14;
+  color: var(--text-ink);
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
   box-sizing: border-box;
 }
 .field-input::placeholder {
-  color: #A8B3AC;
+  color: var(--text-faint);
 }
 
 /* ── Buttons ── */
@@ -374,7 +377,7 @@ const features = [
   width: 100%;
   padding: 13px 16px;
   border-radius: 10px;
-  background: #1B4332;
+  background: var(--primary);
   color: #fff;
   font-size: 14px;
   font-weight: 700;
@@ -384,7 +387,7 @@ const features = [
   transition: background 0.2s, opacity 0.2s;
 }
 .btn-primary:hover:not(:disabled) {
-  background: #2D6A4F;
+  background: var(--primary-mid);
 }
 .btn-primary:disabled,
 .btn-loading {
@@ -399,18 +402,18 @@ const features = [
   gap: 10px;
   padding: 12px 16px;
   border-radius: 10px;
-  background: #fff;
-  border: 1.5px solid #ECEFEB;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border);
   font-size: 13px;
   font-weight: 600;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  color: #0F1B14;
+  color: var(--text-ink);
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
 .btn-google:hover {
-  background: #F7F4EF;
-  border-color: #E8920A;
+  background: var(--bg-page);
+  border-color: var(--amber);
 }
 
 /* ── Form card ── */
@@ -427,7 +430,7 @@ const features = [
   .login-form-side {
     justify-content: flex-start;
     padding: 0;
-    background: #F7F4EF;
+    background: var(--bg-page);
   }
   .mobile-logo {
     display: flex;
@@ -436,7 +439,7 @@ const features = [
     width: 100%;
     max-width: 100%;
     padding: 28px 20px 40px;
-    background: #F7F4EF;
+    background: var(--bg-page);
     min-height: 100vh;
     display: flex;
     flex-direction: column;

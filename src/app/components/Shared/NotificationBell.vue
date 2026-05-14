@@ -17,9 +17,9 @@ const resent = ref(false)
 onClickOutside(panel, () => { open.value = false })
 
 const TYPE_STYLES: Record<AppNotification['type'], { bg: string; color: string }> = {
-  info:    { bg: '#EFF6FF', color: '#1E40AF' },
-  warning: { bg: '#FFFBEB', color: '#D97706' },
-  error:   { bg: '#FEE2E2', color: '#DC2626' },
+  info:    { bg: 'var(--info-bg)', color: 'var(--info)' },
+  warning: { bg: 'var(--warning-bg)', color: 'var(--warning)' },
+  error:   { bg: 'var(--danger-bg)', color: 'var(--danger)' },
 }
 
 async function handleResend() {
@@ -43,13 +43,13 @@ async function handleResend() {
     <!-- Bell button -->
     <button
       class="grid place-items-center"
-      style="width: 36px; height: 36px; border-radius: 8px; border: 1px solid #D8DDD7; background: #fff; cursor: pointer; position: relative;"
+      style="width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-surface); cursor: pointer; position: relative;"
       @click="open = !open"
     >
       <svg
         width="16" height="16" viewBox="0 0 24 24"
         fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
-        :stroke="open ? '#E8920A' : '#3A4A41'"
+        :stroke="open ? 'var(--amber)' : 'var(--text-medium)'"
         style="transition: stroke 0.15s;"
       >
         <path d="M6 8a6 6 0 1112 0c0 7 3 7 3 9H3c0-2 3-2 3-9z"/>
@@ -121,7 +121,7 @@ async function handleResend() {
 
         <!-- Empty state -->
         <div v-else class="notif-empty">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#D8DDD7" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
             <path d="M6 8a6 6 0 1112 0c0 7 3 7 3 9H3c0-2 3-2 3-9z"/>
             <path d="M10 21a2 2 0 004 0"/>
           </svg>
@@ -151,15 +151,15 @@ async function handleResend() {
   position: absolute;
   inset: 0;
   border-radius: 999px;
-  background: #E8920A;
-  border: 1.5px solid #fff;
+  background: var(--amber);
+  border: 1.5px solid var(--bg-surface);
 }
 
 .bell-badge__ping {
   position: absolute;
   inset: -3px;
   border-radius: 999px;
-  background: #E8920A;
+  background: var(--amber);
   opacity: 0.5;
   animation: ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
@@ -176,9 +176,9 @@ async function handleResend() {
   top: calc(100% + 10px);
   right: 0;
   width: min(360px, calc(100vw - 24px));
-  background: #fff;
+  background: var(--bg-surface);
   border-radius: 16px;
-  border: 1px solid #ECEFEB;
+  border: 1px solid var(--border);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
   z-index: 200;
   overflow: hidden;
@@ -186,7 +186,7 @@ async function handleResend() {
 
 .notif-panel__header {
   padding: 16px 20px 12px;
-  border-bottom: 1px solid #F0F2EF;
+  border-bottom: 1px solid var(--bg-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -195,7 +195,7 @@ async function handleResend() {
 .notif-panel__title {
   font-size: 14px;
   font-weight: 700;
-  color: #0F1B14;
+  color: var(--text-ink);
   letter-spacing: -0.01em;
 }
 
@@ -204,14 +204,14 @@ async function handleResend() {
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 999px;
-  background: #E8920A;
-  color: #fff;
+  background: var(--amber);
+  color: var(--bg-surface);
 }
 
 /* ── Notification item ── */
 .notif-item {
   padding: 16px 20px;
-  border-bottom: 1px solid #F7F4EF;
+  border-bottom: 1px solid var(--bg-page);
   display: flex;
   gap: 14px;
   align-items: flex-start;
@@ -234,14 +234,14 @@ async function handleResend() {
 .notif-item__title {
   font-size: 13.5px;
   font-weight: 600;
-  color: #0F1B14;
+  color: var(--text-ink);
   margin-bottom: 4px;
   line-height: 1.3;
 }
 
 .notif-item__body {
   font-size: 12.5px;
-  color: #6B7A72;
+  color: var(--text-muted);
   line-height: 1.55;
 }
 
@@ -253,14 +253,14 @@ async function handleResend() {
   border: none;
   cursor: pointer;
   font-family: inherit;
-  background: #1B4332;
-  color: #fff;
+  background: var(--primary);
+  color: var(--bg-surface);
   transition: opacity 0.15s, background 0.2s;
 }
 
 .notif-item__action--sent {
-  background: #D1FAE5;
-  color: #16A34A;
+  background: var(--success-bg);
+  color: var(--success);
   cursor: default;
 }
 
@@ -277,12 +277,12 @@ async function handleResend() {
 .notif-empty__title {
   font-size: 14px;
   font-weight: 600;
-  color: #3A4A41;
+  color: var(--text-medium);
 }
 
 .notif-empty__sub {
   font-size: 12.5px;
-  color: #A8B3AC;
+  color: var(--text-faint);
 }
 
 /* ── Transitions ── */

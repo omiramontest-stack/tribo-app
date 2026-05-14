@@ -48,12 +48,12 @@ const dayNamesFull = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Vie
 const kpis = computed(() => {
   const s = data.value?.summary
   if (!s) return []
-  const redemptionColor = s.redemptionRate >= 30 ? '#1B4332' : s.redemptionRate >= 10 ? '#E8920A' : '#DC2626'
-  const inactiveColor   = s.inactiveCount > 0 ? '#F97316' : '#1B4332'
+  const redemptionColor = s.redemptionRate >= 30 ? 'var(--primary-text)' : s.redemptionRate >= 10 ? 'var(--amber)' : 'var(--danger)'
+  const inactiveColor   = s.inactiveCount > 0 ? '#F97316' : 'var(--primary-text)'
   return [
-    { label: 'Pases emitidos',  value: s.totalIssued.toLocaleString(),      icon: 'issued',   color: '#E8920A' },
-    { label: 'Pases activos',   value: s.activeCount.toLocaleString(),       icon: 'active',   color: '#1B4332' },
-    { label: 'Escaneos',        value: s.totalScans.toLocaleString(),        icon: 'scan',     color: '#2D6A4F' },
+    { label: 'Pases emitidos',  value: s.totalIssued.toLocaleString(),      icon: 'issued',   color: 'var(--amber)' },
+    { label: 'Pases activos',   value: s.activeCount.toLocaleString(),       icon: 'active',   color: 'var(--primary-text)' },
+    { label: 'Escaneos',        value: s.totalScans.toLocaleString(),        icon: 'scan',     color: 'var(--primary-mid)' },
     { label: 'Canjes',          value: s.totalRedemptions.toLocaleString(),  icon: 'redeem',   color: '#8B5CF6' },
     {
       label: 'Tasa de canje',
@@ -127,17 +127,17 @@ onMounted(load)
     <!-- Header -->
     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
       <button
-        style="font-size: 13px; color: #6B7A72; background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 4px; font-family: inherit;"
+        style="font-size: 13px; color: var(--text-muted); background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 4px; font-family: inherit;"
         @click="router.back()"
       >
         ← Volver
       </button>
-      <div style="display: flex; gap: 6px; background: #fff; border: 1px solid #ECEFEB; border-radius: 10px; padding: 4px;">
+      <div style="display: flex; gap: 6px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 10px; padding: 4px;">
         <button
           v-for="p in periods"
           :key="p.key"
           style="padding: 6px 14px; border-radius: 7px; font-size: 12.5px; font-weight: 600; border: none; cursor: pointer; transition: background 0.12s, color 0.12s; font-family: inherit;"
-          :style="period === p.key ? { background: '#1B4332', color: '#fff' } : { background: 'transparent', color: '#6B7A72' }"
+          :style="period === p.key ? { background: 'var(--primary)', color: 'var(--bg-surface)' } : { background: 'transparent', color: 'var(--text-muted)' }"
           @click="period = p.key"
         >{{ p.label }}</button>
       </div>
@@ -145,7 +145,7 @@ onMounted(load)
 
     <!-- Loading skeleton -->
     <div v-if="loading" class="kpi-grid">
-      <div v-for="i in 6" :key="i" style="height: 104px; background: #fff; border-radius: 12px; border: 1px solid #ECEFEB; animation: pulse 1.5s ease-in-out infinite;" />
+      <div v-for="i in 6" :key="i" style="height: 104px; background: var(--bg-surface); border-radius: 12px; border: 1px solid var(--border); animation: pulse 1.5s ease-in-out infinite;" />
     </div>
 
     <!-- KPI Cards -->
@@ -153,22 +153,22 @@ onMounted(load)
       <div
         v-for="kpi in kpis"
         :key="kpi.label"
-        style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px; cursor: default;"
+        style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px; cursor: default;"
         :title="kpi.tooltip ?? ''"
       >
         <div style="width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center;" :style="{ background: kpi.color + '18' }">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" :stroke="kpi.color" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" v-html="kpiIconPaths[kpi.icon]" />
         </div>
         <div>
-          <div style="font-size: 26px; font-weight: 800; letter-spacing: -0.03em; line-height: 1;" :style="{ color: kpi.valueColor ?? '#0F1B14' }">{{ kpi.value }}</div>
-          <div style="font-size: 12px; color: #6B7A72; margin-top: 3px; font-weight: 500;">{{ kpi.label }}</div>
-          <div v-if="kpi.subtext" style="font-size: 10.5px; color: #A8B3AC; margin-top: 2px;">{{ kpi.subtext }}</div>
+          <div style="font-size: 26px; font-weight: 800; letter-spacing: -0.03em; line-height: 1;" :style="{ color: kpi.valueColor ?? 'var(--text-ink)' }">{{ kpi.value }}</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 3px; font-weight: 500;">{{ kpi.label }}</div>
+          <div v-if="kpi.subtext" style="font-size: 10.5px; color: var(--text-faint); margin-top: 2px;">{{ kpi.subtext }}</div>
         </div>
       </div>
     </div>
 
     <!-- Empty -->
-    <div v-else-if="!loading" style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 48px; text-align: center; color: #6B7A72;">
+    <div v-else-if="!loading" style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 48px; text-align: center; color: var(--text-muted);">
       <p style="font-size: 14px; font-weight: 600; margin: 0 0 4px;">Sin datos para este período</p>
       <p style="font-size: 12px; margin: 0;">Prueba con un rango diferente</p>
     </div>
@@ -177,69 +177,69 @@ onMounted(load)
     <div v-if="data" class="insights-grid">
 
       <!-- Redemption gauge -->
-      <div style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 12px;">
-        <p style="font-size: 11px; font-weight: 700; color: #A8B3AC; text-transform: uppercase; letter-spacing: 0.06em; margin: 0; align-self: flex-start;">Tasa de canje</p>
+      <div style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+        <p style="font-size: 11px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; margin: 0; align-self: flex-start;">Tasa de canje</p>
         <div style="position: relative; width: 120px; height: 64px; overflow: hidden;">
           <svg width="120" height="64" viewBox="0 0 80 44" style="overflow: visible;">
             <!-- Track -->
-            <path d="M8,40 A32,32 0 0,1 72,40" fill="none" stroke="#F3F5F2" stroke-width="7" stroke-linecap="round"/>
+            <path d="M8,40 A32,32 0 0,1 72,40" fill="none" stroke="var(--bg-subtle)" stroke-width="7" stroke-linecap="round"/>
             <!-- Fill -->
             <path
               d="M8,40 A32,32 0 0,1 72,40"
               fill="none"
-              :stroke="data.summary.redemptionRate >= 30 ? '#1B4332' : data.summary.redemptionRate >= 10 ? '#E8920A' : '#DC2626'"
+              :stroke="data.summary.redemptionRate >= 30 ? 'var(--primary)' : data.summary.redemptionRate >= 10 ? 'var(--amber)' : 'var(--danger)'"
               stroke-width="7"
               stroke-linecap="round"
               :stroke-dasharray="`${(data.summary.redemptionRate / 100) * 100.5} 100.5`"
             />
           </svg>
           <div style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); text-align: center;">
-            <div style="font-size: 20px; font-weight: 800; line-height: 1;" :style="{ color: data.summary.redemptionRate >= 30 ? '#1B4332' : data.summary.redemptionRate >= 10 ? '#E8920A' : '#DC2626' }">
+            <div style="font-size: 20px; font-weight: 800; line-height: 1;" :style="{ color: data.summary.redemptionRate >= 30 ? 'var(--primary)' : data.summary.redemptionRate >= 10 ? 'var(--amber)' : 'var(--danger)' }">
               {{ data.summary.redemptionRate }}%
             </div>
           </div>
         </div>
-        <p style="font-size: 11px; color: #6B7A72; margin: 0; text-align: center; line-height: 1.4;">de interacciones terminan en canje</p>
+        <p style="font-size: 11px; color: var(--text-muted); margin: 0; text-align: center; line-height: 1.4;">de interacciones terminan en canje</p>
       </div>
 
       <!-- Day-of-week grid -->
-      <div class="insights-day-card" style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 20px;">
-        <p style="font-size: 11px; font-weight: 700; color: #A8B3AC; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 14px;">Mejor día de la semana</p>
+      <div class="insights-day-card" style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px;">
+        <p style="font-size: 11px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 14px;">Mejor día de la semana</p>
         <div style="display: flex; gap: 6px;">
           <div
             v-for="(day, i) in dayNames"
             :key="i"
             style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px; border-radius: 10px; transition: all 0.2s; cursor: default;"
             :style="bestDayIndex === i
-              ? { background: '#1B4332', color: '#fff' }
-              : { background: '#F7F4EF', color: '#6B7A72' }"
+              ? { background: 'var(--primary)', color: 'var(--bg-surface)' }
+              : { background: 'var(--bg-field)', color: 'var(--text-muted)' }"
           >
             <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">{{ day }}</span>
-            <div style="width: 5px; height: 5px; border-radius: 999px;" :style="bestDayIndex === i ? { background: 'rgba(255,255,255,0.6)' } : { background: '#D8DDD7' }" />
+            <div style="width: 5px; height: 5px; border-radius: 999px;" :style="bestDayIndex === i ? { background: 'rgba(255,255,255,0.6)' } : { background: 'var(--border)' }" />
           </div>
         </div>
-        <p style="font-size: 11px; color: #6B7A72; margin: 12px 0 0; text-align: center;">
+        <p style="font-size: 11px; color: var(--text-muted); margin: 12px 0 0; text-align: center;">
           {{ bestDayIndex != null ? `${dayNamesFull[bestDayIndex]} tiene mayor actividad histórica` : 'Sin datos suficientes' }}
         </p>
       </div>
 
       <!-- Best hour -->
-      <div style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 8px;">
-        <p style="font-size: 11px; font-weight: 700; color: #A8B3AC; text-transform: uppercase; letter-spacing: 0.06em; margin: 0;">Mejor horario</p>
+      <div style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 8px;">
+        <p style="font-size: 11px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; margin: 0;">Mejor horario</p>
         <div style="margin-top: auto;">
-          <div style="font-size: 32px; font-weight: 800; color: #0F1B14; letter-spacing: -0.03em; line-height: 1;">
+          <div style="font-size: 32px; font-weight: 800; color: var(--text-ink); letter-spacing: -0.03em; line-height: 1;">
             {{ bestHourLabel ?? '—' }}
           </div>
-          <p style="font-size: 11px; color: #6B7A72; margin: 6px 0 0;">Mayor actividad del día</p>
+          <p style="font-size: 11px; color: var(--text-muted); margin: 6px 0 0;">Mayor actividad del día</p>
         </div>
       </div>
     </div>
 
     <!-- Top clientes — horizontal bar chart -->
-    <div v-if="data" style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; overflow: hidden;">
-      <div style="padding: 18px 20px 14px; border-bottom: 1px solid #F3F5F2;">
-        <h3 style="font-size: 14px; font-weight: 700; color: #0F1B14; margin: 0;">Top clientes</h3>
-        <p style="font-size: 12px; color: #6B7A72; margin: 2px 0 0;">Clientes con más interacciones en el período</p>
+    <div v-if="data" style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden;">
+      <div style="padding: 18px 20px 14px; border-bottom: 1px solid var(--bg-subtle);">
+        <h3 style="font-size: 14px; font-weight: 700; color: var(--text-ink); margin: 0;">Top clientes</h3>
+        <p style="font-size: 12px; color: var(--text-muted); margin: 2px 0 0;">Clientes con más interacciones en el período</p>
       </div>
 
       <div v-if="topCustomers.length" style="padding: 16px 20px; display: flex; flex-direction: column; gap: 10px;">
@@ -251,30 +251,30 @@ onMounted(load)
           <!-- Rank/crown -->
           <div style="width: 22px; text-align: center; flex-shrink: 0;">
             <span v-if="i === 0" style="font-size: 14px;" title="Top cliente">👑</span>
-            <span v-else style="font-size: 11px; font-weight: 700; color: #A8B3AC;">{{ i + 1 }}</span>
+            <span v-else style="font-size: 11px; font-weight: 700; color: var(--text-faint);">{{ i + 1 }}</span>
           </div>
 
           <!-- Name -->
-          <div class="customer-name" style="font-size: 12.5px; font-weight: 600; color: #0F1B14; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          <div class="customer-name" style="font-size: 12.5px; font-weight: 600; color: var(--text-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
             {{ c.firstName }} {{ c.lastName }}
           </div>
 
           <!-- Bar -->
-          <div style="flex: 1; height: 8px; background: #F3F5F2; border-radius: 999px; overflow: hidden;">
+          <div style="flex: 1; height: 8px; background: var(--bg-subtle); border-radius: 999px; overflow: hidden;">
             <div
-              style="height: 100%; border-radius: 999px; background: linear-gradient(to right, #1B4332, #2D6A4F); transition: width 0.5s ease;"
+              style="height: 100%; border-radius: 999px; background: linear-gradient(to right, var(--primary-text), var(--primary-mid)); transition: width 0.5s ease;"
               :style="{ width: `${(c.eventCount / customerBarMax) * 100}%` }"
             />
           </div>
 
           <!-- Count -->
-          <span style="font-size: 12.5px; font-weight: 700; color: #1B4332; min-width: 32px; text-align: right; flex-shrink: 0;">
+          <span style="font-size: 12.5px; font-weight: 700; color: var(--primary-text); min-width: 32px; text-align: right; flex-shrink: 0;">
             {{ c.eventCount }}
           </span>
         </div>
       </div>
 
-      <p v-else style="font-size: 13px; color: #A8B3AC; text-align: center; padding: 32px 20px; margin: 0;">
+      <p v-else style="font-size: 13px; color: var(--text-faint); text-align: center; padding: 32px 20px; margin: 0;">
         Sin datos suficientes
       </p>
     </div>

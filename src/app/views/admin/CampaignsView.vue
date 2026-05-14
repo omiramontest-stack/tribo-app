@@ -90,11 +90,11 @@ onMounted(async () => {
 
 // ── Status config ──
 const statusConfig: Record<CampaignStatus, { label: string; bg: string; color: string }> = {
-  draft:     { label: 'Borrador',   bg: '#F3F5F2', color: '#6B7A72' },
-  scheduled: { label: 'Programada', bg: '#EFF6FF', color: '#1D4ED8' },
-  sending:   { label: 'Enviando',   bg: '#FEF9C3', color: '#854D0E' },
-  sent:      { label: 'Enviada',    bg: '#D1FAE5', color: '#065F46' },
-  cancelled: { label: 'Cancelada',  bg: '#FEE2E2', color: '#991B1B' },
+  draft:     { label: 'Borrador',   bg: 'var(--bg-subtle)', color: 'var(--text-muted)' },
+  scheduled: { label: 'Programada', bg: 'var(--info-bg)',   color: 'var(--info)' },
+  sending:   { label: 'Enviando',   bg: 'var(--warning-bg)', color: 'var(--warning)' },
+  sent:      { label: 'Enviada',    bg: 'var(--success-bg)', color: 'var(--success)' },
+  cancelled: { label: 'Cancelada',  bg: 'var(--danger-bg)', color: 'var(--danger)' },
 }
 
 const channelLabels: Record<Channel, string> = {
@@ -344,62 +344,60 @@ function closeDetail() { detailCampaign.value = null }
 </script>
 
 <template>
-  <div style="display: flex; flex-direction: column; gap: 20px; max-width: 1200px;">
+  <div class="campaigns-page">
 
-    <!-- Header row -->
-    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-      <!-- Filter pills -->
-      <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-        <button
-          v-for="f in filters"
-          :key="f.key"
-          style="padding: 6px 14px; border-radius: 20px; font-size: 12.5px; font-weight: 600; border: 1.5px solid; cursor: pointer; transition: all 0.12s; font-family: inherit;"
-          :style="activeFilter === f.key
-            ? { background: '#1B4332', color: '#fff', borderColor: '#1B4332' }
-            : { background: '#fff', color: '#6B7A72', borderColor: '#ECEFEB' }"
-          @click="activeFilter = f.key"
-        >
-          {{ f.label }}
-          <span
-            v-if="f.key !== 'all'"
-            style="margin-left: 4px; font-size: 11px; opacity: 0.7;"
-          >{{ campaigns.filter(c => c.status === f.key).length }}</span>
-        </button>
+    <!-- Page header -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Campañas</h1>
+        <p class="page-subtitle">
+          {{ loading ? 'Cargando…' : `${campaigns.length} campaña${campaigns.length !== 1 ? 's' : ''}` }}
+        </p>
       </div>
-
-      <!-- Nueva campaña -->
-      <button
-        style="display: flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 9px; background: #E8920A; color: #fff; font-size: 13px; font-weight: 700; border: none; cursor: pointer; font-family: inherit; transition: background 0.12s;"
-        @mouseenter="(e) => (e.currentTarget as HTMLButtonElement).style.background='#D17D09'"
-        @mouseleave="(e) => (e.currentTarget as HTMLButtonElement).style.background='#E8920A'"
-        @click="openModal"
-      >
+      <button class="btn-new" @click="openModal">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         Nueva campaña
       </button>
     </div>
 
-    <!-- Loading -->
-    <div v-if="loading" class="campaign-grid">
-      <div v-for="i in 4" :key="i" style="height: 160px; background: #fff; border-radius: 14px; border: 1px solid #ECEFEB; animation: pulse 1.5s ease-in-out infinite;" />
+    <!-- Filter pills -->
+    <div class="filter-pills">
+      <button
+        v-for="f in filters"
+        :key="f.key"
+        class="filter-pill"
+        :class="{ 'filter-pill--active': activeFilter === f.key }"
+        @click="activeFilter = f.key"
+      >
+        {{ f.label }}
+        <span class="pill-count">{{ f.key === 'all' ? campaigns.length : campaigns.filter(c => c.status === f.key).length }}</span>
+      </button>
     </div>
 
-    <!-- Empty -->
-    <div
-      v-else-if="!filtered.length"
-      style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 64px 32px; text-align: center;"
-    >
-      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#D8DDD7" stroke-width="1.5" stroke-linecap="round" style="margin: 0 auto 14px;">
+    <!-- Loading skeleton -->
+    <div v-if="loading" class="campaign-grid">
+      <div v-for="i in 6" :key="i" class="skeleton-card">
+        <div class="sk-row">
+          <div class="sk-block sk-title" />
+          <div class="sk-block sk-badge" />
+        </div>
+        <div class="sk-block sk-text" />
+        <div class="sk-chips">
+          <div class="sk-block sk-chip" />
+          <div class="sk-block sk-chip" />
+        </div>
+        <div class="sk-block sk-footer" />
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div v-else-if="!filtered.length" class="empty-state">
+      <svg class="empty-icon" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.5" stroke-linecap="round">
         <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
       </svg>
-      <p style="font-size: 15px; font-weight: 700; color: #0F1B14; margin: 0 0 6px;">No hay campañas</p>
-      <p style="font-size: 13px; color: #6B7A72; margin: 0 0 20px;">Crea tu primera campaña para llegar a tus clientes</p>
-      <button
-        style="padding: 9px 20px; border-radius: 9px; background: #E8920A; color: #fff; font-size: 13px; font-weight: 700; border: none; cursor: pointer; font-family: inherit;"
-        @click="openModal"
-      >
-        Nueva campaña
-      </button>
+      <p class="empty-title">No hay campañas</p>
+      <p class="empty-sub">Crea tu primera campaña para llegar a tus clientes</p>
+      <button class="btn-new" @click="openModal">Nueva campaña</button>
     </div>
 
     <!-- Campaign cards -->
@@ -407,81 +405,68 @@ function closeDetail() { detailCampaign.value = null }
       <div
         v-for="c in filtered"
         :key="c.id"
-        style="background: #fff; border: 1.5px solid #ECEFEB; border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 0; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s;"
-        @mouseenter="(e) => { (e.currentTarget as HTMLElement).style.borderColor='#1B4332'; (e.currentTarget as HTMLElement).style.boxShadow='0 4px 16px rgba(27,67,50,0.08)'; }"
-        @mouseleave="(e) => { (e.currentTarget as HTMLElement).style.borderColor='#ECEFEB'; (e.currentTarget as HTMLElement).style.boxShadow='none'; }"
+        class="campaign-card"
         @click="openDetail(c)"
       >
-        <!-- Top -->
-        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 10px;">
-          <div style="flex: 1; min-width: 0;">
-            <h3 style="font-size: 14px; font-weight: 700; color: #0F1B14; margin: 0 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ c.name }}</h3>
-            <p style="font-size: 12px; color: #6B7A72; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">{{ campaignMessage(c) }}</p>
+        <!-- Top: name + status -->
+        <div class="card-top">
+          <div class="card-name-wrap">
+            <h3 class="card-name">{{ c.name }}</h3>
+            <p class="card-msg">{{ campaignMessage(c) }}</p>
           </div>
-          <span
-            style="display: inline-flex; align-items: center; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; flex-shrink: 0;"
-            :style="{ background: statusConfig[c.status].bg, color: statusConfig[c.status].color }"
-          >
+          <span class="status-badge" :style="{ background: statusConfig[c.status].bg, color: statusConfig[c.status].color }">
             {{ statusConfig[c.status].label }}
           </span>
         </div>
 
-        <!-- Channel + Segment -->
-        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
-          <div style="display: flex; align-items: center; gap: 5px; padding: 4px 10px; background: #F7F4EF; border-radius: 6px;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1B4332" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="channelIcons[c.channel]" />
-            <span style="font-size: 11.5px; font-weight: 600; color: #3A4A41;">{{ channelLabels[c.channel] }}</span>
+        <!-- Channel + Segment chips -->
+        <div class="card-chips">
+          <div class="chip">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="channelIcons[c.channel]" />
+            <span class="chip-label">{{ channelLabels[c.channel] }}</span>
           </div>
-          <div style="display: flex; align-items: center; gap: 5px; padding: 4px 10px; background: #F7F4EF; border-radius: 6px; min-width: 0; overflow: hidden;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1B4332" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+          <div class="chip chip--wide">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
               <circle cx="9" cy="8" r="3.5"/><path d="M2 21c0-3.5 3-6 7-6s7 2.5 7 6"/>
             </svg>
-            <span style="font-size: 11.5px; font-weight: 600; color: #3A4A41; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ segmentLabels[campaignSegmentType(c)] }}</span>
+            <span class="chip-label chip-label--ellipsis">{{ segmentLabels[campaignSegmentType(c)] }}</span>
           </div>
         </div>
 
         <!-- Progress bar (sending / sent) -->
-        <div v-if="c.status === 'sending' || c.status === 'sent'" style="margin-bottom: 12px;">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-            <span style="font-size: 11.5px; color: #6B7A72;">Entregados {{ deliveredCount(c)?.toLocaleString() ?? 0 }} / {{ audienceCount(c)?.toLocaleString() ?? '—' }}</span>
-            <span style="font-size: 11.5px; font-weight: 700; color: #1B4332;">{{ progressPct(c) }}%</span>
+        <div v-if="c.status === 'sending' || c.status === 'sent'" class="progress-wrap">
+          <div class="progress-meta">
+            <span class="progress-label">Entregados {{ deliveredCount(c)?.toLocaleString() ?? 0 }} / {{ audienceCount(c)?.toLocaleString() ?? '—' }}</span>
+            <span class="progress-pct">{{ progressPct(c) }}%</span>
           </div>
-          <div style="height: 6px; background: #ECEFEB; border-radius: 3px; overflow: hidden;">
-            <div style="height: 100%; background: #1B4332; border-radius: 3px; transition: width 0.4s;" :style="{ width: `${progressPct(c)}%` }" />
+          <div class="progress-bar">
+            <div class="progress-fill" :style="{ width: `${progressPct(c)}%` }" />
           </div>
-          <div v-if="c.opened" style="margin-top: 6px; font-size: 11px; color: #A8B3AC;">
+          <div v-if="c.opened" class="progress-opens">
             {{ c.opened!.toLocaleString() }} aperturas · {{ audienceCount(c) ? Math.round((c.opened! / audienceCount(c)!) * 100) : 0 }}% tasa
           </div>
         </div>
 
-        <!-- Footer meta -->
-        <div style="padding-top: 10px; border-top: 1px solid #F3F5F2; margin-top: auto; display: flex; flex-direction: column; gap: 6px;">
-          <div style="display: flex; align-items: center; justify-content: space-between;">
-            <span style="font-size: 11px; color: #A8B3AC;">
-              {{ audienceCount(c) != null ? audienceCount(c)!.toLocaleString() + ' contactos' : '—' }}
-            </span>
-            <span style="font-size: 11px; color: #A8B3AC;">
-              {{ c.scheduledAt ? formatDate(c.scheduledAt) : formatDate(c.createdAt) }}
-            </span>
+        <!-- Card footer -->
+        <div class="card-footer">
+          <div class="card-footer-row">
+            <span class="card-meta">{{ audienceCount(c) != null ? audienceCount(c)!.toLocaleString() + ' contactos' : '—' }}</span>
+            <span class="card-meta">{{ c.scheduledAt ? formatDate(c.scheduledAt) : formatDate(c.createdAt) }}</span>
           </div>
-          <div v-if="c.smsCost && c.channel === 'sms'" style="display: flex; align-items: center; justify-content: space-between;">
-            <span style="font-size: 11px; display: flex; align-items: center; gap: 4px;"
-              :style="{ color: c.smsCost.hasEnough ? '#6B7A72' : '#DC2626' }"
-            >
+          <div v-if="c.smsCost && c.channel === 'sms'" class="card-footer-row">
+            <span class="sms-credits" :class="{ 'sms--warn': !c.smsCost.hasEnough }">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
               </svg>
               {{ c.smsCost.creditsNeeded }} créditos SMS
             </span>
-            <span style="font-size: 11px; font-weight: 600;"
-              :style="{ color: c.smsCost.hasEnough ? '#1B4332' : '#DC2626' }"
-            >
+            <span class="sms-avail" :class="{ 'sms--warn': !c.smsCost.hasEnough }">
               {{ c.smsCost.hasEnough ? c.smsCost.creditsAvailable + ' disponibles' : 'Créditos insuficientes' }}
             </span>
           </div>
           <button
             v-if="c.status === 'sent' || c.status === 'sending'"
-            style="display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 7px; background: #F0F5F2; border: 1px solid #D1E8DA; color: #1B4332; font-size: 11.5px; font-weight: 600; cursor: pointer; font-family: inherit; align-self: flex-start;"
+            class="btn-analytics"
             @click.stop="router.push({ name: 'CampaignAnalytics', params: { id: c.id } })"
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -494,366 +479,255 @@ function closeDetail() { detailCampaign.value = null }
     </div>
 
     <!-- Paginator -->
-    <div
-      v-if="campaignsMeta.totalPages > 1"
-      style="display: flex; align-items: center; justify-content: center; gap: 8px;"
-    >
-      <button
-        :disabled="campaignsPage <= 1"
-        style="padding: 5px 12px; border-radius: 7px; border: 1px solid #ECEFEB; background: #fff; font-size: 12px; cursor: pointer; color: #3A4A41; font-family: inherit;"
-        :style="campaignsPage <= 1 ? 'opacity:0.4;cursor:default;' : ''"
-        @click="goToCampaignsPage(campaignsPage - 1)"
-      >← Anterior</button>
-      <span style="font-size: 12px; color: #6B7A72;">
-        Página {{ campaignsPage }} de {{ campaignsMeta.totalPages }}
-      </span>
-      <button
-        :disabled="campaignsPage >= campaignsMeta.totalPages"
-        style="padding: 5px 12px; border-radius: 7px; border: 1px solid #ECEFEB; background: #fff; font-size: 12px; cursor: pointer; color: #3A4A41; font-family: inherit;"
-        :style="campaignsPage >= campaignsMeta.totalPages ? 'opacity:0.4;cursor:default;' : ''"
-        @click="goToCampaignsPage(campaignsPage + 1)"
-      >Siguiente →</button>
+    <div v-if="campaignsMeta.totalPages > 1" class="paginator">
+      <button class="page-btn" :disabled="campaignsPage <= 1" @click="goToCampaignsPage(campaignsPage - 1)">← Anterior</button>
+      <span class="page-info">Página {{ campaignsPage }} de {{ campaignsMeta.totalPages }}</span>
+      <button class="page-btn" :disabled="campaignsPage >= campaignsMeta.totalPages" @click="goToCampaignsPage(campaignsPage + 1)">Siguiente →</button>
     </div>
 
   </div>
 
   <!-- ── Create campaign modal ── -->
   <Teleport to="body">
-    <div
-      v-if="showModal"
-      style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(15,27,20,0.5);"
-      @click.self="closeModal"
-    >
-      <div style="background: #fff; border-radius: 18px; box-shadow: 0 24px 64px rgba(15,27,20,0.18); width: 100%; max-width: 520px; overflow: hidden; display: flex; flex-direction: column; max-height: 90vh;">
+    <div v-if="showModal" class="modal-backdrop" @click.self="closeModal">
+      <div class="modal-card modal-card--tall">
 
         <!-- Modal header -->
-        <div style="padding: 20px 22px 16px; border-bottom: 1px solid #ECEFEB; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
+        <div class="modal-header">
           <div>
-            <h3 style="font-size: 15px; font-weight: 700; color: #0F1B14; margin: 0;">Nueva campaña</h3>
-            <p style="font-size: 12px; color: #6B7A72; margin: 3px 0 0;">Paso {{ step }} de 3 — {{ ['Configuración', 'Mensaje', 'Audiencia'][step - 1] }}</p>
+            <h3 class="modal-title">Nueva campaña</h3>
+            <p class="modal-sub">Paso {{ step }} de 3 — {{ ['Configuración', 'Mensaje', 'Audiencia'][step - 1] }}</p>
           </div>
-          <button
-            style="width: 30px; height: 30px; border-radius: 8px; border: 1px solid #ECEFEB; background: #F7F4EF; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #6B7A72;"
-            @click="closeModal"
-          >
+          <button class="modal-close" @click="closeModal">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
         </div>
 
         <!-- Step indicator -->
-        <div style="display: flex; padding: 0 22px; gap: 0; flex-shrink: 0;">
-          <div v-for="s in 3" :key="s" style="flex: 1; height: 3px; margin-top: 0;" :style="{ background: s <= step ? '#1B4332' : '#ECEFEB' }" />
+        <div class="step-track">
+          <div v-for="s in 3" :key="s" class="step-seg" :class="{ 'step-seg--active': s <= step }" />
         </div>
 
         <!-- Modal body -->
-        <div style="padding: 22px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px;">
+        <div class="modal-body">
 
           <!-- Step 1: Config -->
           <template v-if="step === 1">
-            <div>
-              <label style="display: block; font-size: 11px; font-weight: 700; color: #6B7A72; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">Nombre de la campaña *</label>
-              <input
-                v-model="form.name"
-                type="text"
-                placeholder="Ej: Promo fin de semana"
-                style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #ECEFEB; background: #F7F4EF; color: #0F1B14; font-size: 13px; outline: none; box-sizing: border-box; font-family: inherit;"
-                @focus="(e) => { (e.target as HTMLInputElement).style.borderColor='#E8920A'; (e.target as HTMLInputElement).style.boxShadow='0 0 0 3px #FCEBC4'; }"
-                @blur="(e) => { (e.target as HTMLInputElement).style.borderColor='#ECEFEB'; (e.target as HTMLInputElement).style.boxShadow='none'; }"
-              />
+            <div class="field">
+              <label class="field-label">Nombre de la campaña <span class="required">*</span></label>
+              <input v-model="form.name" type="text" class="field-input" placeholder="Ej: Promo fin de semana" />
             </div>
 
-            <div>
-              <label style="display: block; font-size: 11px; font-weight: 700; color: #6B7A72; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">Canal</label>
-              <div style="display: flex; gap: 8px;">
+            <div class="field">
+              <label class="field-label">Canal</label>
+              <div class="channel-grid">
                 <button
                   v-for="ch in (['sms', 'email', 'wallet_push'] as Channel[])"
                   :key="ch"
                   :disabled="ch === 'wallet_push'"
-                  style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 8px; border-radius: 10px; border: 2px solid; font-family: inherit; transition: all 0.12s; position: relative;"
-                  :style="ch === 'wallet_push'
-                    ? { borderColor: '#ECEFEB', background: '#F7F4EF', cursor: 'not-allowed', opacity: '0.55' }
-                    : form.channel === ch
-                      ? { borderColor: '#1B4332', background: '#F0F5F2', cursor: 'pointer' }
-                      : { borderColor: '#ECEFEB', background: '#fff', cursor: 'pointer' }"
+                  class="channel-btn"
+                  :class="{ 'channel-btn--selected': form.channel === ch, 'channel-btn--disabled': ch === 'wallet_push' }"
                   @click="ch !== 'wallet_push' && (form.channel = ch)"
                 >
                   <svg
                     width="18" height="18" viewBox="0 0 24 24"
                     :fill="ch === 'wallet_push' ? 'currentColor' : 'none'"
-                    :stroke="ch === 'wallet_push' ? 'none' : (form.channel === ch ? '#1B4332' : '#A8B3AC')"
+                    :stroke="ch === 'wallet_push' ? 'none' : (form.channel === ch ? 'var(--primary)' : 'var(--text-faint)')"
                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                    :style="{ color: ch === 'wallet_push' ? '#A8B3AC' : 'inherit' }"
+                    :style="{ color: ch === 'wallet_push' ? 'var(--text-faint)' : 'inherit' }"
                     v-html="channelIcons[ch]"
                   />
-                  <span style="font-size: 11.5px; font-weight: 600;" :style="{ color: ch === 'wallet_push' ? '#A8B3AC' : form.channel === ch ? '#1B4332' : '#6B7A72' }">{{ channelLabels[ch] }}</span>
+                  <span
+                    class="channel-label"
+                    :class="{ 'channel-label--selected': form.channel === ch, 'channel-label--disabled': ch === 'wallet_push' }"
+                  >{{ channelLabels[ch] }}</span>
                 </button>
               </div>
             </div>
 
-            <div>
-              <label style="display: block; font-size: 11px; font-weight: 700; color: #6B7A72; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">Segmento</label>
-              <select
-                v-model="form.segmentType"
-                style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #ECEFEB; background: #F7F4EF; color: #0F1B14; font-size: 13px; outline: none; cursor: pointer; font-family: inherit;"
-                @focus="(e) => (e.target as HTMLSelectElement).style.borderColor='#E8920A'"
-                @blur="(e) => (e.target as HTMLSelectElement).style.borderColor='#ECEFEB'"
-              >
+            <div class="field">
+              <label class="field-label">Segmento</label>
+              <select v-model="form.segmentType" class="field-input field-select">
                 <option v-for="s in segments" :key="s.key" :value="s.key">{{ s.label }}</option>
               </select>
             </div>
 
-            <div v-if="needsWallet">
-              <label style="display: block; font-size: 11px; font-weight: 700; color: #6B7A72; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">Wallet</label>
-              <select
-                v-model="form.walletId"
-                style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #ECEFEB; background: #F7F4EF; color: #0F1B14; font-size: 13px; outline: none; cursor: pointer; font-family: inherit;"
-                @focus="(e) => (e.target as HTMLSelectElement).style.borderColor='#E8920A'"
-                @blur="(e) => (e.target as HTMLSelectElement).style.borderColor='#ECEFEB'"
-              >
+            <div v-if="needsWallet" class="field">
+              <label class="field-label">Wallet</label>
+              <select v-model="form.walletId" class="field-input field-select">
                 <option value="">Seleccionar wallet…</option>
                 <option v-for="w in walletStore.wallets" :key="w.id" :value="w.id">{{ w.businessName }}</option>
               </select>
             </div>
 
-            <!-- near_completion -->
-            <div v-if="form.segmentType === 'near_completion'">
-              <label style="display: block; font-size: 11px; font-weight: 700; color: #6B7A72; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">Umbral de completado (%) *</label>
-              <input v-model.number="form.thresholdPercent" type="number" min="1" max="100"
-                style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #ECEFEB; background: #F7F4EF; color: #0F1B14; font-size: 13px; outline: none; box-sizing: border-box; font-family: inherit;"
-                @focus="(e) => (e.target as HTMLInputElement).style.borderColor='#E8920A'"
-                @blur="(e) => (e.target as HTMLInputElement).style.borderColor='#ECEFEB'"
-              />
+            <div v-if="form.segmentType === 'near_completion'" class="field">
+              <label class="field-label">Umbral de completado (%) <span class="required">*</span></label>
+              <input v-model.number="form.thresholdPercent" type="number" min="1" max="100" class="field-input" />
             </div>
 
-            <!-- inactive -->
-            <div v-if="form.segmentType === 'inactive'">
-              <label style="display: block; font-size: 11px; font-weight: 700; color: #6B7A72; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">Días sin visitar *</label>
-              <input v-model.number="form.inactiveDays" type="number" min="1"
-                style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #ECEFEB; background: #F7F4EF; color: #0F1B14; font-size: 13px; outline: none; box-sizing: border-box; font-family: inherit;"
-                @focus="(e) => (e.target as HTMLInputElement).style.borderColor='#E8920A'"
-                @blur="(e) => (e.target as HTMLInputElement).style.borderColor='#ECEFEB'"
-              />
+            <div v-if="form.segmentType === 'inactive'" class="field">
+              <label class="field-label">Días sin visitar <span class="required">*</span></label>
+              <input v-model.number="form.inactiveDays" type="number" min="1" class="field-input" />
             </div>
 
-            <!-- cashback_balance_gte -->
-            <div v-if="form.segmentType === 'cashback_balance_gte'">
-              <label style="display: block; font-size: 11px; font-weight: 700; color: #6B7A72; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">Saldo mínimo *</label>
-              <input v-model.number="form.minBalance" type="number" min="0" step="0.01"
-                style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #ECEFEB; background: #F7F4EF; color: #0F1B14; font-size: 13px; outline: none; box-sizing: border-box; font-family: inherit;"
-                @focus="(e) => (e.target as HTMLInputElement).style.borderColor='#E8920A'"
-                @blur="(e) => (e.target as HTMLInputElement).style.borderColor='#ECEFEB'"
-              />
+            <div v-if="form.segmentType === 'cashback_balance_gte'" class="field">
+              <label class="field-label">Saldo mínimo <span class="required">*</span></label>
+              <input v-model.number="form.minBalance" type="number" min="0" step="0.01" class="field-input" />
             </div>
 
-            <!-- frequent_visitors -->
             <template v-if="form.segmentType === 'frequent_visitors'">
-              <div>
-                <label style="display: block; font-size: 11px; font-weight: 700; color: #6B7A72; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">Mínimo de visitas *</label>
-                <input v-model.number="form.minEvents" type="number" min="1"
-                  style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #ECEFEB; background: #F7F4EF; color: #0F1B14; font-size: 13px; outline: none; box-sizing: border-box; font-family: inherit;"
-                  @focus="(e) => (e.target as HTMLInputElement).style.borderColor='#E8920A'"
-                  @blur="(e) => (e.target as HTMLInputElement).style.borderColor='#ECEFEB'"
-                />
+              <div class="field">
+                <label class="field-label">Mínimo de visitas <span class="required">*</span></label>
+                <input v-model.number="form.minEvents" type="number" min="1" class="field-input" />
               </div>
-              <div>
-                <label style="display: block; font-size: 11px; font-weight: 700; color: #6B7A72; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">En los últimos N días <span style="font-weight: 400; text-transform: none; letter-spacing: 0; color: #A8B3AC;">(opcional)</span></label>
-                <input v-model="form.withinDays" type="number" min="1" placeholder="Ej: 30"
-                  style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #ECEFEB; background: #F7F4EF; color: #0F1B14; font-size: 13px; outline: none; box-sizing: border-box; font-family: inherit;"
-                  @focus="(e) => (e.target as HTMLInputElement).style.borderColor='#E8920A'"
-                  @blur="(e) => (e.target as HTMLInputElement).style.borderColor='#ECEFEB'"
-                />
+              <div class="field">
+                <label class="field-label">En los últimos N días <span class="field-optional">(opcional)</span></label>
+                <input v-model="form.withinDays" type="number" min="1" placeholder="Ej: 30" class="field-input" />
               </div>
             </template>
 
-            <div>
-              <label style="display: block; font-size: 11px; font-weight: 700; color: #6B7A72; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">Programar envío <span style="font-weight: 400; text-transform: none; letter-spacing: 0; color: #A8B3AC;">(opcional)</span></label>
-              <input
-                v-model="form.scheduledAt"
-                type="datetime-local"
-                style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #ECEFEB; background: #F7F4EF; color: #0F1B14; font-size: 13px; outline: none; box-sizing: border-box; font-family: inherit;"
-                @focus="(e) => (e.target as HTMLInputElement).style.borderColor='#E8920A'"
-                @blur="(e) => (e.target as HTMLInputElement).style.borderColor='#ECEFEB'"
-              />
+            <div class="field">
+              <label class="field-label">Programar envío <span class="field-optional">(opcional)</span></label>
+              <input v-model="form.scheduledAt" type="datetime-local" class="field-input" />
             </div>
           </template>
 
           <!-- Step 2: Message -->
           <template v-else-if="step === 2">
-            <div>
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                <label style="display: block; font-size: 11px; font-weight: 700; color: #6B7A72; text-transform: uppercase; letter-spacing: 0.06em;">Mensaje *</label>
-                <span style="font-size: 11px; font-weight: 600;" :style="{ color: msgTooLong ? '#DC2626' : '#A8B3AC' }">{{ form.messageTemplate.length }} / {{ MSG_MAX }}</span>
+            <div class="field">
+              <div class="field-header-row">
+                <label class="field-label">Mensaje <span class="required">*</span></label>
+                <span class="char-count" :class="{ 'char-count--warn': msgTooLong }">{{ form.messageTemplate.length }} / {{ MSG_MAX }}</span>
               </div>
               <textarea
                 ref="textareaRef"
                 v-model="form.messageTemplate"
+                class="field-input field-textarea"
                 placeholder="Hola {{firstName}}, tienes una oferta especial esperándote en {{businessName}}…"
                 maxlength="320"
                 rows="5"
-                style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #ECEFEB; background: #F7F4EF; color: #0F1B14; font-size: 13px; outline: none; resize: vertical; box-sizing: border-box; font-family: inherit; line-height: 1.5;"
-                @focus="(e) => { (e.target as HTMLTextAreaElement).style.borderColor='#E8920A'; (e.target as HTMLTextAreaElement).style.boxShadow='0 0 0 3px #FCEBC4'; }"
-                @blur="(e) => { (e.target as HTMLTextAreaElement).style.borderColor='#ECEFEB'; (e.target as HTMLTextAreaElement).style.boxShadow='none'; }"
               />
             </div>
 
             <!-- Variable chips -->
-            <div>
-              <p style="font-size: 11px; font-weight: 700; color: #6B7A72; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 8px;">Variables disponibles</p>
-              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <div class="field">
+              <p class="field-label" style="margin: 0 0 8px;">Variables disponibles</p>
+              <div class="var-chips">
                 <button
                   v-for="v in messageVars"
                   :key="v.label"
                   :title="v.desc"
-                  style="padding: 4px 10px; border-radius: 6px; background: #F7F4EF; border: 1px solid #ECEFEB; font-size: 12px; font-weight: 600; color: #1B4332; cursor: pointer; font-family: monospace; transition: background 0.1s, border-color 0.1s;"
-                  @mouseenter="(e) => { (e.currentTarget as HTMLButtonElement).style.background='#E6EFE9'; (e.currentTarget as HTMLButtonElement).style.borderColor='#1B4332'; }"
-                  @mouseleave="(e) => { (e.currentTarget as HTMLButtonElement).style.background='#F7F4EF'; (e.currentTarget as HTMLButtonElement).style.borderColor='#ECEFEB'; }"
+                  class="var-chip"
                   @click="insertVar(v.label)"
                 >{{ v.label }}</button>
               </div>
             </div>
 
             <!-- Preview card -->
-            <div v-if="form.messageTemplate" style="border: 1.5px solid #ECEFEB; border-radius: 12px; overflow: hidden;">
-              <div style="padding: 10px 14px; background: #F7F4EF; border-bottom: 1px solid #ECEFEB; font-size: 11px; font-weight: 700; color: #6B7A72; text-transform: uppercase; letter-spacing: 0.06em; display: flex; align-items: center; gap: 6px;">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" :stroke="'#6B7A72'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="channelIcons[form.channel]" />
+            <div v-if="form.messageTemplate" class="preview-card">
+              <div class="preview-header">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="channelIcons[form.channel]" />
                 Preview — {{ channelLabels[form.channel] }}
               </div>
-              <div style="padding: 16px; background: #fff;">
-                <div style="background: #E8F5E9; border-radius: 12px 12px 12px 2px; padding: 12px 14px; max-width: 80%; font-size: 13px; color: #0F1B14; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">
-                  {{ messagePreview }}
-                </div>
+              <div class="preview-body">
+                <div class="preview-bubble">{{ messagePreview }}</div>
               </div>
             </div>
           </template>
 
           <!-- Step 3: Audience -->
           <template v-else>
-            <div v-if="loadingPreview" style="text-align: center; padding: 32px; color: #6B7A72; font-size: 13px;">Calculando audiencia…</div>
+            <div v-if="loadingPreview" class="loading-preview">Calculando audiencia…</div>
             <template v-else>
-              <div style="background: #F0F5F2; border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 16px;">
-                <div style="width: 52px; height: 52px; border-radius: 14px; background: #1B4332; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <div class="audience-hero">
+                <div class="audience-icon">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="9" cy="8" r="3.5"/><path d="M2 21c0-3.5 3-6 7-6s7 2.5 7 6"/><circle cx="17" cy="7" r="2.5"/><path d="M16 14c3.5 0 6 2.5 6 6"/>
                   </svg>
                 </div>
                 <div>
-                  <div style="font-size: 28px; font-weight: 800; color: #0F1B14; line-height: 1; letter-spacing: -0.03em;">
-                    {{ audiencePreview?.count?.toLocaleString() ?? '—' }}
-                  </div>
-                  <div style="font-size: 13px; color: #6B7A72; margin-top: 3px; font-weight: 500;">contactos recibirán esta campaña</div>
+                  <div class="audience-count">{{ audiencePreview?.count?.toLocaleString() ?? '—' }}</div>
+                  <div class="audience-label">contactos recibirán esta campaña</div>
                 </div>
               </div>
 
-              <div v-if="audiencePreview?.sample?.length" style="background: #fff; border: 1px solid #ECEFEB; border-radius: 12px; overflow: hidden;">
-                <div style="padding: 12px 14px; background: #F7F4EF; border-bottom: 1px solid #ECEFEB; font-size: 11px; font-weight: 700; color: #6B7A72; text-transform: uppercase; letter-spacing: 0.06em;">
-                  Muestra de audiencia
-                </div>
-                <div style="display: flex; flex-direction: column;">
+              <div v-if="audiencePreview?.sample?.length" class="audience-sample">
+                <div class="sample-header">Muestra de audiencia</div>
+                <div class="sample-list">
                   <div
                     v-for="(person, i) in audiencePreview.sample.slice(0, 5)"
                     :key="i"
-                    style="display: flex; align-items: center; gap: 10px; padding: 10px 14px;"
-                    :style="i > 0 ? { borderTop: '1px solid #F3F5F2' } : {}"
+                    class="sample-row"
+                    :class="{ 'sample-row--border': i > 0 }"
                   >
-                    <div style="width: 28px; height: 28px; border-radius: 8px; background: #1B4332; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0;">
-                      {{ (person.firstName || '?')[0].toUpperCase() }}
-                    </div>
-                    <div style="flex: 1; min-width: 0;">
-                      <div style="font-size: 13px; color: #0F1B14; font-weight: 500;">{{ person.firstName }} {{ person.lastName }}</div>
-                      <div v-if="person.phone" style="font-size: 11px; color: #6B7A72; margin-top: 1px;">{{ person.phone }}</div>
+                    <div class="sample-avatar">{{ (person.firstName || '?')[0].toUpperCase() }}</div>
+                    <div class="sample-info">
+                      <div class="sample-name">{{ person.firstName }} {{ person.lastName }}</div>
+                      <div v-if="person.phone" class="sample-phone">{{ person.phone }}</div>
                     </div>
                   </div>
                 </div>
               </div>
 
               <!-- SMS cost -->
-              <div v-if="audiencePreview?.smsCost"
-                style="border-radius: 10px; overflow: hidden;"
-                :style="audiencePreview.smsCost.hasEnough ? 'border: 1px solid #A7C8B4;' : 'border: 1px solid #FECACA;'"
+              <div
+                v-if="audiencePreview?.smsCost"
+                class="sms-cost-card"
+                :class="audiencePreview.smsCost.hasEnough ? 'sms-cost-card--ok' : 'sms-cost-card--err'"
               >
-                <div style="padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px;"
-                  :style="audiencePreview.smsCost.hasEnough ? 'background: #F0F5F2;' : 'background: #FEE2E2;'"
-                >
-                  <span style="font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 7px;"
-                    :style="{ color: audiencePreview.smsCost.hasEnough ? '#1B4332' : '#DC2626' }"
-                  >
+                <div class="sms-cost-row">
+                  <span class="sms-cost-main" :class="audiencePreview.smsCost.hasEnough ? 'sms-ok' : 'sms-err'">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
                     </svg>
                     {{ audiencePreview.smsCost.creditsNeeded }} créditos
                   </span>
-                  <span style="font-size: 12px; font-weight: 600;"
-                    :style="{ color: audiencePreview.smsCost.hasEnough ? '#2D6A4F' : '#DC2626' }"
-                  >
+                  <span class="sms-cost-avail" :class="audiencePreview.smsCost.hasEnough ? 'sms-ok' : 'sms-err'">
                     {{ audiencePreview.smsCost.hasEnough ? audiencePreview.smsCost.creditsAvailable + ' disponibles' : 'Créditos insuficientes' }}
                   </span>
                 </div>
-                <div style="padding: 8px 16px; background: rgba(0,0,0,0.03); display: flex; gap: 16px;">
-                  <span style="font-size: 11px; color: #6B7A72;">
-                    <strong style="color: #3A4A41;">{{ audiencePreview.smsCost.segmentsPerMessage }}</strong> {{ audiencePreview.smsCost.segmentsPerMessage === 1 ? 'segmento' : 'segmentos' }} por mensaje
-                  </span>
-                  <span style="font-size: 11px; color: #6B7A72;">
-                    <strong style="color: #3A4A41;">{{ audiencePreview.count }}</strong> contactos × <strong style="color: #3A4A41;">{{ audiencePreview.smsCost.segmentsPerMessage }}</strong> = <strong style="color: #3A4A41;">{{ audiencePreview.smsCost.creditsNeeded }}</strong> créditos
-                  </span>
+                <div class="sms-cost-detail">
+                  <span><strong>{{ audiencePreview.smsCost.segmentsPerMessage }}</strong> {{ audiencePreview.smsCost.segmentsPerMessage === 1 ? 'segmento' : 'segmentos' }} por mensaje</span>
+                  <span><strong>{{ audiencePreview.count }}</strong> contactos × <strong>{{ audiencePreview.smsCost.segmentsPerMessage }}</strong> = <strong>{{ audiencePreview.smsCost.creditsNeeded }}</strong> créditos</span>
                 </div>
               </div>
 
               <!-- exceedsLimit warning -->
-              <div
-                v-if="audiencePreview?.smsCost?.exceedsLimit"
-                style="background: #FEE2E2; border: 1px solid #FECACA; border-radius: 10px; padding: 12px 14px; font-size: 12.5px; color: #DC2626; line-height: 1.5; display: flex; align-items: flex-start; gap: 8px;"
-              >
+              <div v-if="audiencePreview?.smsCost?.exceedsLimit" class="warn-card warn-card--red">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink: 0; margin-top: 1px;">
                   <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                 </svg>
                 <span>Tu mensaje es demasiado largo una vez que se sustituyen las variables. Reduce el texto a máximo 3 segmentos SMS ({{ MSG_MAX }} caracteres).</span>
               </div>
 
-              <div style="background: #FEF9C3; border: 1px solid #FDE68A; border-radius: 10px; padding: 12px 14px; font-size: 12.5px; color: #854D0E; line-height: 1.5;">
+              <div class="warn-card warn-card--yellow">
                 Al confirmar, la campaña se creará en estado <strong>borrador</strong> y podrás programar o enviar manualmente desde el panel.
               </div>
             </template>
           </template>
 
           <!-- Error -->
-          <p v-if="createError" style="font-size: 12px; color: #DC2626; padding: 8px 12px; background: #FEE2E2; border-radius: 8px; margin: 0;">{{ createError }}</p>
+          <p v-if="createError" class="form-error">{{ createError }}</p>
         </div>
 
         <!-- Modal footer -->
-        <div style="padding: 16px 22px; border-top: 1px solid #ECEFEB; display: flex; gap: 10px; flex-shrink: 0;">
-          <button
-            v-if="step > 1"
-            style="padding: 10px 18px; border-radius: 9px; background: #fff; color: #6B7A72; font-size: 13px; font-weight: 600; border: 1.5px solid #ECEFEB; cursor: pointer; font-family: inherit;"
-            @click="step--"
-          >
-            Atrás
-          </button>
-          <button
-            style="flex: 1; padding: 10px 18px; border-radius: 9px; background: #fff; color: #6B7A72; font-size: 13px; font-weight: 600; border: 1.5px solid #ECEFEB; cursor: pointer; font-family: inherit;"
-            @click="closeModal"
-          >
-            Cancelar
-          </button>
+        <div class="modal-footer">
+          <button v-if="step > 1" class="btn-back" @click="step--">Atrás</button>
+          <button class="btn-cancel" @click="closeModal">Cancelar</button>
           <button
             v-if="step < 3"
+            class="btn-continue"
+            :class="{ 'btn--disabled': step === 2 && msgTooLong }"
             :disabled="step === 2 && msgTooLong"
-            style="flex: 1; padding: 10px 18px; border-radius: 9px; background: #1B4332; color: #fff; font-size: 13px; font-weight: 700; border: none; font-family: inherit; transition: background 0.12s;"
-            :style="(step === 2 && msgTooLong) ? 'opacity: 0.45; cursor: not-allowed;' : 'cursor: pointer;'"
-            @mouseenter="(e) => { if (!(step === 2 && msgTooLong)) (e.currentTarget as HTMLButtonElement).style.background='#2D6A4F' }"
-            @mouseleave="(e) => (e.currentTarget as HTMLButtonElement).style.background='#1B4332'"
             @click="nextStep"
-          >
-            Continuar →
-          </button>
+          >Continuar →</button>
           <button
             v-else
+            class="btn-submit"
+            :class="{ 'btn--disabled': creating || audiencePreview?.smsCost?.hasEnough === false || audiencePreview?.smsCost?.exceedsLimit === true }"
             :disabled="creating || audiencePreview?.smsCost?.hasEnough === false || audiencePreview?.smsCost?.exceedsLimit === true"
-            style="flex: 1; padding: 10px 18px; border-radius: 9px; background: #E8920A; color: #fff; font-size: 13px; font-weight: 700; border: none; font-family: inherit; transition: background 0.12s;"
-            :style="(creating || audiencePreview?.smsCost?.hasEnough === false || audiencePreview?.smsCost?.exceedsLimit === true) ? 'opacity: 0.5; cursor: not-allowed;' : 'cursor: pointer;'"
             @click="submit"
-          >
-            {{ creating ? 'Creando…' : 'Crear campaña' }}
-          </button>
+          >{{ creating ? 'Creando…' : 'Crear campaña' }}</button>
         </div>
       </div>
     </div>
@@ -861,86 +735,70 @@ function closeDetail() { detailCampaign.value = null }
 
   <!-- ── Detail modal ── -->
   <Teleport to="body">
-    <div
-      v-if="detailCampaign"
-      style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(15,27,20,0.5);"
-      @click.self="closeDetail"
-    >
-      <div style="background: #fff; border-radius: 18px; box-shadow: 0 24px 64px rgba(15,27,20,0.18); width: 100%; max-width: 480px; overflow: hidden;">
+    <div v-if="detailCampaign" class="modal-backdrop" @click.self="closeDetail">
+      <div class="modal-card">
         <!-- Header -->
-        <div style="padding: 20px 22px 16px; border-bottom: 1px solid #ECEFEB; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+        <div class="modal-header">
           <div>
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-              <h3 style="font-size: 15px; font-weight: 700; color: #0F1B14; margin: 0;">{{ detailCampaign.name }}</h3>
+            <div class="detail-title-row">
+              <h3 class="modal-title">{{ detailCampaign.name }}</h3>
               <span
-                style="font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px;"
+                class="status-badge"
                 :style="{ background: statusConfig[detailCampaign.status].bg, color: statusConfig[detailCampaign.status].color }"
               >{{ statusConfig[detailCampaign.status].label }}</span>
             </div>
-            <p style="font-size: 12px; color: #6B7A72; margin: 0;">
-              {{ channelLabels[detailCampaign.channel] }} · {{ segmentLabels[campaignSegmentType(detailCampaign)] }}
-            </p>
+            <p class="modal-sub">{{ channelLabels[detailCampaign.channel] }} · {{ segmentLabels[campaignSegmentType(detailCampaign)] }}</p>
           </div>
-          <button
-            style="width: 30px; height: 30px; border-radius: 8px; border: 1px solid #ECEFEB; background: #F7F4EF; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;"
-            @click="closeDetail"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7A72" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          <button class="modal-close" @click="closeDetail">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
         </div>
         <!-- Body -->
-        <div style="padding: 20px 22px; display: flex; flex-direction: column; gap: 16px;">
-          <div style="background: #F7F4EF; border-radius: 10px; padding: 14px; font-size: 13px; color: #0F1B14; line-height: 1.6; white-space: pre-wrap; word-break: break-word;">
-            {{ campaignMessage(detailCampaign) }}
-          </div>
+        <div class="modal-body">
+          <div class="detail-msg">{{ campaignMessage(detailCampaign) }}</div>
           <div class="detail-grid">
             <div>
-              <p style="font-size: 11px; font-weight: 700; color: #A8B3AC; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 3px;">Audiencia</p>
-              <p style="font-size: 16px; font-weight: 800; color: #0F1B14; margin: 0;">{{ audienceCount(detailCampaign)?.toLocaleString() ?? '—' }}</p>
+              <p class="stat-label">Audiencia</p>
+              <p class="stat-value">{{ audienceCount(detailCampaign)?.toLocaleString() ?? '—' }}</p>
             </div>
             <div v-if="deliveredCount(detailCampaign)">
-              <p style="font-size: 11px; font-weight: 700; color: #A8B3AC; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 3px;">Entregados</p>
-              <p style="font-size: 16px; font-weight: 800; color: #0F1B14; margin: 0;">{{ deliveredCount(detailCampaign)!.toLocaleString() }}</p>
+              <p class="stat-label">Entregados</p>
+              <p class="stat-value">{{ deliveredCount(detailCampaign)!.toLocaleString() }}</p>
             </div>
             <div v-if="detailCampaign.opened">
-              <p style="font-size: 11px; font-weight: 700; color: #A8B3AC; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 3px;">Aperturas</p>
-              <p style="font-size: 16px; font-weight: 800; color: #0F1B14; margin: 0;">{{ detailCampaign.opened.toLocaleString() }}</p>
+              <p class="stat-label">Aperturas</p>
+              <p class="stat-value">{{ detailCampaign.opened.toLocaleString() }}</p>
             </div>
             <div v-if="detailCampaign.scheduledAt">
-              <p style="font-size: 11px; font-weight: 700; color: #A8B3AC; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 3px;">Programada</p>
-              <p style="font-size: 13px; font-weight: 600; color: #0F1B14; margin: 0;">{{ formatDate(detailCampaign.scheduledAt) }}</p>
+              <p class="stat-label">Programada</p>
+              <p class="stat-value stat-value--sm">{{ formatDate(detailCampaign.scheduledAt) }}</p>
             </div>
           </div>
 
           <!-- SMS cost detail -->
-          <div v-if="detailCampaign.smsCost && detailCampaign.channel === 'sms'"
-            style="border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px;"
-            :style="detailCampaign.smsCost.hasEnough
-              ? 'background: #F0F5F2; border: 1px solid #A7C8B4;'
-              : 'background: #FEE2E2; border: 1px solid #FECACA;'"
+          <div
+            v-if="detailCampaign.smsCost && detailCampaign.channel === 'sms'"
+            class="sms-detail-cost"
+            :class="detailCampaign.smsCost.hasEnough ? 'sms-cost-card--ok' : 'sms-cost-card--err'"
           >
-            <span style="font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px;"
-              :style="{ color: detailCampaign.smsCost.hasEnough ? '#1B4332' : '#DC2626' }"
-            >
+            <span class="sms-cost-main" :class="detailCampaign.smsCost.hasEnough ? 'sms-ok' : 'sms-err'">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
               </svg>
               <span>Esta campaña usa <strong>{{ detailCampaign.smsCost.creditsNeeded }} créditos SMS</strong></span>
             </span>
-            <span style="font-size: 12px; font-weight: 700;"
-              :style="{ color: detailCampaign.smsCost.hasEnough ? '#1B4332' : '#DC2626' }"
-            >
+            <span class="sms-cost-avail" :class="detailCampaign.smsCost.hasEnough ? 'sms-ok' : 'sms-err'">
               {{ detailCampaign.smsCost.creditsAvailable }} disponibles
             </span>
           </div>
 
           <div v-if="detailCampaign.status === 'sending' || detailCampaign.status === 'sent'">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-              <span style="font-size: 12px; color: #6B7A72;">Progreso de entrega</span>
-              <span style="font-size: 12px; font-weight: 700; color: #1B4332;">{{ progressPct(detailCampaign) }}%</span>
+            <div class="progress-meta" style="margin-bottom: 6px;">
+              <span style="font-size: 12px; color: var(--text-muted);">Progreso de entrega</span>
+              <span class="progress-pct">{{ progressPct(detailCampaign) }}%</span>
             </div>
-            <div style="height: 8px; background: #ECEFEB; border-radius: 4px; overflow: hidden;">
-              <div style="height: 100%; background: #1B4332; border-radius: 4px;" :style="{ width: `${progressPct(detailCampaign)}%` }" />
+            <div class="progress-bar progress-bar--lg">
+              <div class="progress-fill" :style="{ width: `${progressPct(detailCampaign)}%` }" />
             </div>
           </div>
         </div>
@@ -950,6 +808,625 @@ function closeDetail() { detailCampaign.value = null }
 </template>
 
 <style scoped>
+/* ── Layout ── */
+.campaigns-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1200px;
+}
+
+/* ── Page header ── */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.page-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-ink);
+  margin: 0 0 3px;
+  letter-spacing: -0.02em;
+}
+.page-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+  font-weight: 500;
+}
+
+/* ── Buttons ── */
+.btn-new {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: 9px;
+  background: var(--amber);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, transform 0.1s;
+}
+.btn-new:hover { background: #D17D09; transform: translateY(-1px); }
+
+/* ── Filter pills ── */
+.filter-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.filter-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.12s;
+  font-family: inherit;
+  background: var(--bg-surface);
+  color: var(--text-muted);
+}
+.filter-pill:hover { border-color: var(--primary); color: var(--primary); }
+.filter-pill--active { background: var(--primary); color: var(--bg-surface); border-color: var(--primary); }
+.filter-pill--active:hover { background: var(--primary-mid); }
+.pill-count { font-size: 11px; opacity: 0.75; }
+
+/* ── Skeleton ── */
+.skeleton-card {
+  background: var(--bg-surface);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+.sk-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.sk-block { background: var(--bg-subtle); border-radius: 6px; }
+.sk-title  { height: 14px; width: 55%; }
+.sk-badge  { height: 20px; width: 22%; border-radius: 999px; }
+.sk-text   { height: 12px; width: 80%; }
+.sk-chips  { display: flex; gap: 8px; }
+.sk-chip   { height: 24px; width: 80px; border-radius: 6px; }
+.sk-footer { height: 12px; width: 100%; margin-top: 4px; }
+
+/* ── Empty state ── */
+.empty-state {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 64px 32px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.empty-icon  { margin-bottom: 14px; }
+.empty-title { font-size: 15px; font-weight: 700; color: var(--text-ink); margin: 0 0 6px; }
+.empty-sub   { font-size: 13px; color: var(--text-muted); margin: 0 0 20px; }
+
+/* ── Campaign card ── */
+.campaign-card {
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+.campaign-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 16px rgba(27, 58, 45, 0.08);
+  transform: translateY(-1px);
+}
+
+/* Card top */
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.card-name-wrap { flex: 1; min-width: 0; }
+.card-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-ink);
+  margin: 0 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-msg {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Status badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Card chips */
+.card-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: var(--bg-page);
+  border-radius: 6px;
+}
+.chip--wide { min-width: 0; overflow: hidden; }
+.chip-label { font-size: 11.5px; font-weight: 600; color: var(--text-medium); }
+.chip-label--ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Progress */
+.progress-wrap { margin-bottom: 12px; }
+.progress-meta { display: flex; justify-content: space-between; }
+.progress-label { font-size: 11.5px; color: var(--text-muted); }
+.progress-pct   { font-size: 11.5px; font-weight: 700; color: var(--primary); }
+.progress-bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+.progress-bar--lg { height: 8px; border-radius: 4px; margin-top: 6px; }
+.progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: inherit;
+  transition: width 0.4s;
+}
+.progress-opens { margin-top: 6px; font-size: 11px; color: var(--text-faint); }
+
+/* Card footer */
+.card-footer {
+  padding-top: 10px;
+  border-top: 1px solid var(--bg-subtle);
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.card-footer-row { display: flex; align-items: center; justify-content: space-between; }
+.card-meta { font-size: 11px; color: var(--text-faint); }
+
+/* SMS credits on card */
+.sms-credits { font-size: 11px; display: flex; align-items: center; gap: 4px; color: var(--text-muted); }
+.sms-avail   { font-size: 11px; font-weight: 600; color: var(--primary); }
+.sms--warn   { color: var(--danger) !important; }
+
+/* Analytics button */
+.btn-analytics {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  background: var(--bg-green);
+  border: 1px solid var(--primary-light);
+  color: var(--primary);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  align-self: flex-start;
+  transition: background 0.12s;
+}
+.btn-analytics:hover { background: var(--primary-light); }
+
+/* ── Paginator ── */
+.paginator { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.page-btn {
+  padding: 5px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text-medium);
+  font-family: inherit;
+  transition: background 0.12s, border-color 0.12s;
+}
+.page-btn:hover:not(:disabled) { background: var(--bg-green); border-color: var(--primary); }
+.page-btn:disabled { opacity: 0.4; cursor: default; }
+.page-info { font-size: 12px; color: var(--text-muted); }
+
+/* ── Modal ── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--overlay);
+  backdrop-filter: blur(2px);
+}
+.modal-card {
+  background: var(--bg-surface);
+  border-radius: 18px;
+  box-shadow: 0 24px 64px rgba(15, 27, 20, 0.18);
+  width: 100%;
+  max-width: 480px;
+  overflow: hidden;
+}
+.modal-card--tall {
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+.modal-header {
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.modal-title { font-size: 15px; font-weight: 700; color: var(--text-ink); margin: 0; }
+.modal-sub   { font-size: 12px; color: var(--text-muted); margin: 3px 0 0; }
+.modal-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-page);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: background 0.12s;
+}
+.modal-close:hover { background: var(--border); }
+
+/* Step track */
+.step-track { display: flex; padding: 0 22px; flex-shrink: 0; }
+.step-seg { flex: 1; height: 3px; background: var(--border); }
+.step-seg--active { background: var(--primary); }
+
+/* Modal body & footer */
+.modal-body {
+  padding: 22px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.modal-footer {
+  padding: 16px 22px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* ── Form fields ── */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.field-optional { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-faint); }
+.required { color: var(--danger); }
+.field-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-field);
+  color: var(--text-ink);
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+  font-family: inherit;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.field-input:focus { border-color: var(--amber); box-shadow: 0 0 0 3px var(--amber-bg); }
+.field-select  { cursor: pointer; }
+.field-textarea { resize: vertical; line-height: 1.5; }
+.field-header-row { display: flex; align-items: center; justify-content: space-between; }
+.char-count { font-size: 11px; font-weight: 600; color: var(--text-faint); }
+.char-count--warn { color: var(--danger); }
+
+/* Channel selector */
+.channel-grid { display: flex; gap: 8px; }
+.channel-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  background: var(--bg-surface);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s;
+}
+.channel-btn:hover:not(.channel-btn--disabled) { border-color: var(--primary-light); background: var(--bg-green); }
+.channel-btn--selected { border-color: var(--primary); background: var(--bg-green); }
+.channel-btn--disabled { opacity: 0.55; cursor: not-allowed; }
+.channel-label { font-size: 11.5px; font-weight: 600; color: var(--text-muted); }
+.channel-label--selected { color: var(--primary); }
+.channel-label--disabled { color: var(--text-faint); }
+
+/* Variable chips */
+.var-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.var-chip {
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  cursor: pointer;
+  font-family: monospace;
+  transition: background 0.1s, border-color 0.1s;
+}
+.var-chip:hover { background: var(--primary-light); border-color: var(--primary); }
+
+/* Preview */
+.preview-card { border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+.preview-header {
+  padding: 10px 14px;
+  background: var(--bg-page);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.preview-body { padding: 16px; background: var(--bg-surface); }
+.preview-bubble {
+  background: var(--primary-light);
+  border-radius: 12px 12px 12px 2px;
+  padding: 12px 14px;
+  max-width: 80%;
+  font-size: 13px;
+  color: var(--text-ink);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Audience step */
+.loading-preview { text-align: center; padding: 32px; color: var(--text-muted); font-size: 13px; }
+.audience-hero {
+  background: var(--bg-green);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.audience-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.audience-count { font-size: 28px; font-weight: 800; color: var(--text-ink); line-height: 1; letter-spacing: -0.03em; }
+.audience-label { font-size: 13px; color: var(--text-muted); margin-top: 3px; font-weight: 500; }
+
+.audience-sample { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.sample-header {
+  padding: 12px 14px;
+  background: var(--bg-page);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.sample-list  { display: flex; flex-direction: column; }
+.sample-row   { display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
+.sample-row--border { border-top: 1px solid var(--bg-subtle); }
+.sample-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.sample-info  { flex: 1; min-width: 0; }
+.sample-name  { font-size: 13px; color: var(--text-ink); font-weight: 500; }
+.sample-phone { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+/* SMS cost */
+.sms-cost-card { border-radius: 10px; overflow: hidden; }
+.sms-cost-card--ok { border: 1px solid var(--primary-light); }
+.sms-cost-card--err { border: 1px solid var(--danger-bg); }
+.sms-cost-row {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sms-cost-card--ok .sms-cost-row { background: var(--bg-green); }
+.sms-cost-card--err .sms-cost-row { background: var(--danger-bg); }
+.sms-cost-main {
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.sms-cost-avail { font-size: 12px; font-weight: 600; }
+.sms-ok  { color: var(--primary); }
+.sms-err { color: var(--danger); }
+.sms-cost-detail {
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.03);
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+.sms-cost-detail strong { color: var(--text-medium); }
+
+/* Detail modal SMS cost */
+.sms-detail-cost {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 10px;
+}
+
+/* Warning cards */
+.warn-card {
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.warn-card--red    { background: var(--danger-bg); border: 1px solid var(--danger-bg); color: var(--danger); }
+.warn-card--yellow { background: var(--warning-bg); border: 1px solid var(--warning-bg); color: var(--warning); }
+
+/* Form error */
+.form-error {
+  font-size: 12px;
+  color: var(--danger);
+  padding: 8px 12px;
+  background: var(--danger-bg);
+  border-radius: 8px;
+  margin: 0;
+}
+
+/* Modal footer buttons */
+.btn-back {
+  padding: 10px 18px;
+  border-radius: 9px;
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.btn-back:hover { background: var(--bg-page); }
+.btn-cancel {
+  flex: 1;
+  padding: 10px 18px;
+  border-radius: 9px;
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.btn-cancel:hover { background: var(--bg-page); }
+.btn-continue {
+  flex: 1;
+  padding: 10px 18px;
+  border-radius: 9px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.btn-continue:hover:not(:disabled) { background: var(--primary-mid); }
+.btn-submit {
+  flex: 1;
+  padding: 10px 18px;
+  border-radius: 9px;
+  background: var(--amber);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.btn-submit:hover:not(:disabled) { background: #D17D09; }
+.btn--disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ── Detail modal ── */
+.detail-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.detail-msg {
+  background: var(--bg-page);
+  border-radius: 10px;
+  padding: 14px;
+  font-size: 13px;
+  color: var(--text-ink);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.stat-label { font-size: 11px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 3px; }
+.stat-value { font-size: 16px; font-weight: 800; color: var(--text-ink); margin: 0; }
+.stat-value--sm { font-size: 13px; font-weight: 600; }
+
+/* ── Grids ── */
 .campaign-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -960,15 +1437,21 @@ function closeDetail() { detailCampaign.value = null }
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
+
+/* ── Animations ── */
 @keyframes pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  50%       { opacity: 0.4; }
 }
+
+/* ── Responsive ── */
 @media (max-width: 1024px) {
   .campaign-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px) {
   .campaign-grid { grid-template-columns: 1fr; }
-  .detail-grid { grid-template-columns: repeat(2, 1fr); }
+  .detail-grid   { grid-template-columns: repeat(2, 1fr); }
+  .page-title    { font-size: 20px; }
+  .sms-cost-detail { flex-direction: column; gap: 4px; }
 }
 </style>

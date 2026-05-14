@@ -144,7 +144,7 @@ function highlight(text: string): Array<{ text: string; match: boolean }> {
 
               <!-- Empty state -->
               <div v-else class="cp-empty">
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#D8DDD7" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
                 </svg>
                 <p class="cp-empty__title">Sin resultados para "<strong>{{ query }}</strong>"</p>
@@ -173,7 +173,7 @@ function highlight(text: string): Array<{ text: string; match: boolean }> {
 .cp-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 27, 20, 0.45);
+  background: var(--overlay);
   backdrop-filter: blur(4px);
   z-index: 9000;
   display: grid;
@@ -185,9 +185,9 @@ function highlight(text: string): Array<{ text: string; match: boolean }> {
 .cp-modal {
   width: 100%;
   max-width: 580px;
-  background: #fff;
+  background: var(--bg-surface);
   border-radius: 18px;
-  border: 1px solid #E4E8E3;
+  border: 1px solid var(--border);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18);
   overflow: hidden;
   display: flex;
@@ -201,12 +201,12 @@ function highlight(text: string): Array<{ text: string; match: boolean }> {
   align-items: center;
   gap: 10px;
   padding: 16px 20px;
-  border-bottom: 1px solid #F0F2EF;
+  border-bottom: 1px solid var(--bg-subtle);
   flex-shrink: 0;
 }
 
 .cp-input-icon {
-  color: #9DB7A8;
+  color: var(--text-nav-icon);
   flex-shrink: 0;
 }
 
@@ -216,22 +216,22 @@ function highlight(text: string): Array<{ text: string; match: boolean }> {
   outline: none;
   font-size: 15px;
   font-weight: 500;
-  color: #0F1B14;
+  color: var(--text-ink);
   background: transparent;
   font-family: inherit;
 }
 
 .cp-input::placeholder {
-  color: #B0BDB6;
+  color: var(--text-faint);
   font-weight: 400;
 }
 
 .cp-esc-key {
   font-size: 10px;
   font-weight: 600;
-  color: #9DB7A8;
-  background: #F7F4EF;
-  border: 1px solid #E4E8E3;
+  color: var(--text-nav-icon);
+  background: var(--bg-page);
+  border: 1px solid var(--border);
   border-radius: 5px;
   padding: 2px 6px;
   cursor: pointer;
@@ -257,7 +257,7 @@ function highlight(text: string): Array<{ text: string; match: boolean }> {
   font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.07em;
-  color: #9DB7A8;
+  color: var(--text-nav-icon);
   text-transform: uppercase;
   padding: 8px 10px 4px;
 }
@@ -279,24 +279,24 @@ function highlight(text: string): Array<{ text: string; match: boolean }> {
 }
 
 .cp-item--focused {
-  background: #F0F5F2;
+  background: var(--bg-green);
 }
 
 .cp-item__icon {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: #F7F4EF;
+  background: var(--bg-page);
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  color: #3A4A41;
+  color: var(--text-medium);
   transition: background 0.25s ease, color 0.25s ease;
 }
 
 .cp-item--focused .cp-item__icon {
-  background: #2D6A4F;
-  color: #fff;
+  background: var(--primary-mid);
+  color: var(--bg-surface);
 }
 
 .cp-item__text {
@@ -310,22 +310,22 @@ function highlight(text: string): Array<{ text: string; match: boolean }> {
 .cp-item__label {
   font-size: 13.5px;
   font-weight: 500;
-  color: #0F1B14;
+  color: var(--text-ink);
   line-height: 1.3;
 }
 
 .cp-item__sublabel {
   font-size: 12px;
-  color: #9DB7A8;
+  color: var(--text-nav-icon);
   line-height: 1.3;
 }
 
 .cp-item__enter {
   font-size: 11px;
   font-weight: 600;
-  color: #9DB7A8;
-  background: #F0F5F2;
-  border: 1px solid #D8DDD7;
+  color: var(--text-nav-icon);
+  background: var(--bg-green);
+  border: 1px solid var(--border);
   border-radius: 5px;
   padding: 2px 6px;
   font-family: inherit;
@@ -335,12 +335,12 @@ function highlight(text: string): Array<{ text: string; match: boolean }> {
 /* ── Highlight mark ── */
 .cp-mark {
   background: transparent;
-  color: #E8920A;
+  color: var(--amber);
   font-weight: 700;
 }
 
 .cp-mark--sub {
-  color: #D97706;
+  color: var(--warning);
 }
 
 /* ── Empty state ── */
@@ -355,13 +355,13 @@ function highlight(text: string): Array<{ text: string; match: boolean }> {
 
 .cp-empty__title {
   font-size: 14px;
-  color: #3A4A41;
+  color: var(--text-medium);
   font-weight: 500;
 }
 
 .cp-empty__sub {
   font-size: 12.5px;
-  color: #A8B3AC;
+  color: var(--text-faint);
 }
 
 /* ── Footer ── */
@@ -370,14 +370,14 @@ function highlight(text: string): Array<{ text: string; match: boolean }> {
   align-items: center;
   gap: 16px;
   padding: 10px 20px;
-  border-top: 1px solid #F0F2EF;
-  background: #FAFAF9;
+  border-top: 1px solid var(--bg-subtle);
+  background: var(--bg-page);
   flex-shrink: 0;
 }
 
 .cp-footer__hint {
   font-size: 11px;
-  color: #A8B3AC;
+  color: var(--text-faint);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -387,9 +387,9 @@ function highlight(text: string): Array<{ text: string; match: boolean }> {
 .cp-footer__shortcut kbd {
   font-size: 10px;
   font-weight: 600;
-  color: #6B7A72;
-  background: #fff;
-  border: 1px solid #E4E8E3;
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
   border-radius: 4px;
   padding: 1px 5px;
   font-family: inherit;
@@ -399,7 +399,7 @@ function highlight(text: string): Array<{ text: string; match: boolean }> {
 
 .cp-footer__shortcut {
   font-size: 11px;
-  color: #A8B3AC;
+  color: var(--text-faint);
 }
 
 /* ── Transitions ── */

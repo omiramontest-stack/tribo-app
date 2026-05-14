@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { reactive, ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWalletStore } from '@/app/stores/wallet/WalletStore'
 import { walletTypeConfig, findWalletTypeConfig } from '@/app/config/walletTypeConfig'
@@ -31,8 +31,8 @@ const form = reactive<CreateWalletDto>({
   type: 'stamps',
   businessName: '',
   logoUrl: '',
-  primaryColor: '#1B4332',
-  accentColor: '#E8920A',
+  primaryColor: '#1B3A2D',
+  accentColor: '#F5A623',
   description: '',
   rules: findWalletTypeConfig('stamps').defaultRules(),
 })
@@ -41,6 +41,8 @@ watch(
   () => form.type,
   (type: WalletType) => { form.rules = findWalletTypeConfig(type).defaultRules() },
 )
+
+const selectedWt = computed(() => findWalletTypeConfig(form.type))
 
 const previewPass: Pass = {
   id: 'preview',
@@ -72,10 +74,6 @@ function fileToBase64(file: File): Promise<string> {
     reader.onerror = reject
     reader.readAsDataURL(file)
   })
-}
-
-function triggerUpload() {
-  fileInput.value?.click()
 }
 
 async function handleLogoFile(file: File) {
@@ -121,51 +119,63 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div style="display: flex; flex-direction: column; gap: 20px;">
+  <div class="create-page">
 
-    <!-- Header -->
-    <div style="display: flex; align-items: center; gap: 12px;">
-      <button class="btn-back-nav" @click="router.back()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-        Volver
-      </button>
-    </div>
+    <!-- Back nav -->
+    <button class="btn-back-nav" @click="router.back()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+      Volver
+    </button>
 
     <!-- Step indicator -->
-    <div style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 18px 20px;">
-      <div style="display: flex; align-items: center;">
-        <template v-for="(s, i) in steps" :key="s.n">
-          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0;">
-            <div
-              class="step-bubble"
-              :class="{
-                'step-bubble--done': step > s.n,
-                'step-bubble--active': step === s.n,
-              }"
-            >
-              <svg v-if="step > s.n" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
-              <span v-else>{{ s.n }}</span>
-            </div>
-            <span
-              class="step-label"
-              :class="step === s.n ? 'step-label--active' : 'step-label--inactive'"
-            >
-              {{ s.label }}
-            </span>
-          </div>
+    <div class="step-bar">
+      <template v-for="(s, i) in steps" :key="s.n">
+        <div class="step-item">
           <div
-            v-if="i < steps.length - 1"
-            class="step-connector"
-            :class="{ 'step-connector--done': step > s.n }"
-          />
-        </template>
-      </div>
+            class="step-bubble"
+            :class="{
+              'step-bubble--done': step > s.n,
+              'step-bubble--active': step === s.n,
+            }"
+          >
+            <svg v-if="step > s.n" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+              <path d="M20 6L9 17l-5-5"/>
+            </svg>
+            <span v-else>{{ s.n }}</span>
+          </div>
+          <span class="step-label" :class="step === s.n ? 'step-label--active' : 'step-label--idle'">
+            {{ s.label }}
+          </span>
+        </div>
+        <div
+          v-if="i < steps.length - 1"
+          class="step-connector"
+          :class="{ 'step-connector--done': step > s.n }"
+        />
+      </template>
     </div>
 
+    <!-- Selected type context chip (steps 2-4) -->
+    <Transition name="chip">
+      <div v-if="step > 1" class="type-context-chip">
+        <div class="chip-icon" :style="{ background: selectedWt.iconBg }">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round" :stroke="selectedWt.iconColor">
+            <path :d="selectedWt.iconPath" />
+          </svg>
+        </div>
+        <span class="chip-label">{{ selectedWt.label }}</span>
+        <button class="chip-change" @click="step = 1">Cambiar</button>
+      </div>
+    </Transition>
+
     <!-- ── Step 1: Tipo ─────────────────────────────────────── -->
-    <div v-if="step === 1" style="display: flex; flex-direction: column; gap: 14px;">
-      <div style="font-size: 13px; font-weight: 700; color: #0F1B14;">
-        ¿Qué tipo de wallet quieres crear?
+    <div v-if="step === 1" class="step-content">
+      <div class="step-heading">
+        <h2 class="step-title">¿Qué tipo de wallet quieres crear?</h2>
+        <p class="step-subtitle">Cada tipo genera un pase digital distinto para tus clientes.</p>
       </div>
 
       <div class="type-grid">
@@ -177,183 +187,244 @@ async function handleSubmit() {
           @click="form.type = wt.value"
         >
           <div class="type-icon" :style="{ background: wt.iconBg }">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" :stroke="wt.iconColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="1.7"
+                 stroke-linecap="round" stroke-linejoin="round" :stroke="wt.iconColor">
               <path :d="wt.iconPath"/>
             </svg>
           </div>
-          <div style="font-size: 13px; font-weight: 700; color: #0F1B14; margin-bottom: 3px; text-align: left;">{{ wt.label }}</div>
-          <div style="font-size: 11.5px; color: #6B7A72; line-height: 1.4; text-align: left;">{{ wt.desc }}</div>
+          <p class="type-name">{{ wt.label }}</p>
+          <p class="type-desc">{{ wt.desc }}</p>
 
-          <div v-if="form.type === wt.value" class="type-check">
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
-          </div>
+          <span v-if="form.type === wt.value" class="type-check">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round">
+              <path d="M20 6L9 17l-5-5"/>
+            </svg>
+          </span>
         </button>
       </div>
 
-      <button class="btn-primary" @click="step = 2">
-        Continuar
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      </button>
+      <div class="step-actions">
+        <button class="btn-primary" @click="step = 2">
+          Continuar
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <!-- ── Step 2: Branding ────────────────────────────────── -->
-    <div v-if="step === 2" style="display: flex; flex-direction: column; gap: 14px;">
-      <div style="font-size: 13px; font-weight: 700; color: #0F1B14;">Personaliza tu wallet</div>
+    <div v-if="step === 2" class="step-content">
+      <div class="step-heading">
+        <h2 class="step-title">Personaliza tu wallet</h2>
+        <p class="step-subtitle">Nombre, logo y colores que aparecerán en el pase del cliente.</p>
+      </div>
 
-      <div style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;" class="form-grid">
-        <div style="grid-column: 1 / -1;">
-          <label class="field-label">Nombre del negocio *</label>
-          <input
-            v-model="form.businessName"
-            type="text"
-            placeholder="Ej. Cucara Macara Espresso"
-            class="field-input"
-          />
-        </div>
-
-        <!-- Logo upload -->
-        <div style="grid-column: 1 / -1;">
-          <label class="field-label">Logo <span class="field-label-hint">(opcional)</span></label>
-
-          <input ref="fileInput" type="file" accept="image/*" style="display: none;" @change="onFileChange" />
-
-          <!-- Preview state -->
-          <div v-if="form.logoUrl && !uploadingLogo" style="display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 10px; border: 1.5px solid #ECEFEB; background: #fff;">
-            <img :src="form.logoUrl" alt="Logo" style="width: 48px; height: 48px; border-radius: 8px; object-fit: contain; background: #F7F4EF; padding: 4px;" />
-            <div style="flex: 1; min-width: 0;">
-              <p style="font-size: 12px; font-weight: 600; color: #0F1B14; margin-bottom: 2px;">Logo cargado</p>
-              <p style="font-size: 11px; color: #A8B3AC; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ form.logoUrl }}</p>
-            </div>
-            <button
-              type="button"
-              style="font-size: 11px; font-weight: 600; color: #6B7A72; background: #F7F4EF; border: 1px solid #ECEFEB; border-radius: 7px; padding: 5px 10px; cursor: pointer; white-space: nowrap; flex-shrink: 0;"
-              @click="form.logoUrl = ''"
-            >
-              Cambiar
-            </button>
+      <div class="form-card">
+        <div class="form-grid">
+          <!-- Business name -->
+          <div class="field full-span">
+            <label class="field-label">Nombre del negocio <span class="required">*</span></label>
+            <input
+              v-model="form.businessName"
+              type="text"
+              placeholder="Ej. Cucara Macara Espresso"
+              class="field-input"
+            />
           </div>
 
-          <!-- Upload zone -->
-          <div
-            v-else
-            class="upload-zone"
-            :class="{ 'upload-zone--disabled': uploadingLogo }"
-            @click="triggerUpload"
-            @dragover.prevent
-            @drop.prevent="onDrop"
-          >
-            <div v-if="uploadingLogo" style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A8B3AC" stroke-width="1.8" stroke-linecap="round">
-                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-              </svg>
-              <p style="font-size: 12px; color: #A8B3AC; font-weight: 500;">Subiendo imagen...</p>
-            </div>
-            <div v-else style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
-              <div style="width: 36px; height: 36px; border-radius: 10px; background: #EFEAE0; display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B7A72" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
-                </svg>
+          <!-- Logo upload -->
+          <div class="field full-span">
+            <label class="field-label">Logo <span class="field-label-hint">(opcional)</span></label>
+            <input ref="fileInput" type="file" accept="image/*" style="display: none;" @change="onFileChange" />
+
+            <div v-if="form.logoUrl && !uploadingLogo" class="image-preview-row">
+              <img :src="form.logoUrl" alt="Logo" class="image-thumb-square" />
+              <div class="image-preview-info">
+                <p class="image-preview-title">Logo cargado</p>
+                <p class="image-preview-url">{{ form.logoUrl }}</p>
               </div>
-              <p style="font-size: 13px; font-weight: 600; color: #3A4A41;">Haz clic o arrastra una imagen</p>
-              <p style="font-size: 11px; color: #A8B3AC;">PNG, JPG, SVG · Máx. 4 MB</p>
+              <button type="button" class="btn-change" @click="form.logoUrl = ''">Cambiar</button>
             </div>
+
+            <div
+              v-else
+              class="upload-zone"
+              :class="{ 'upload-zone--disabled': uploadingLogo }"
+              @click="fileInput?.click()"
+              @dragover.prevent
+              @drop.prevent="onDrop"
+            >
+              <div v-if="uploadingLogo" class="upload-state">
+                <svg class="spin" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="1.8" stroke-linecap="round">
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                </svg>
+                <p class="upload-label">Subiendo imagen...</p>
+              </div>
+              <div v-else class="upload-state">
+                <div class="upload-icon-wrap">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                  </svg>
+                </div>
+                <p class="upload-title">Haz clic o arrastra una imagen</p>
+                <p class="upload-label">PNG, JPG, SVG · Máx. 4 MB</p>
+              </div>
+            </div>
+
+            <p v-if="uploadError" class="field-error">{{ uploadError }}</p>
           </div>
 
-          <p v-if="uploadError" style="font-size: 11px; color: #DC2626; margin-top: 5px;">{{ uploadError }}</p>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; grid-column: 1 / -1;">
-          <div>
+          <!-- Colors -->
+          <div class="field">
             <label class="field-label">Color principal</label>
             <div class="color-picker-row">
               <input v-model="form.primaryColor" type="color" class="color-swatch" />
               <span class="color-hex">{{ form.primaryColor }}</span>
+              <span class="color-preview" :style="{ background: form.primaryColor }" />
             </div>
           </div>
-          <div>
+          <div class="field">
             <label class="field-label">Color acento</label>
             <div class="color-picker-row">
               <input v-model="form.accentColor" type="color" class="color-swatch" />
               <span class="color-hex">{{ form.accentColor }}</span>
+              <span class="color-preview accent" :style="{ background: form.accentColor }" />
             </div>
+          </div>
+
+          <!-- Description -->
+          <div class="field full-span">
+            <label class="field-label">Descripción <span class="field-label-hint">(opcional)</span></label>
+            <textarea
+              v-model="form.description"
+              rows="2"
+              placeholder="Descripción breve del programa de lealtad..."
+              class="field-input"
+              style="resize: none;"
+            />
           </div>
         </div>
 
-        <div style="grid-column: 1 / -1;">
-          <label class="field-label">Descripción <span class="field-label-hint">(opcional)</span></label>
-          <textarea
-            v-model="form.description"
-            rows="2"
-            placeholder="Descripción breve del programa..."
-            class="field-input"
-            style="resize: none;"
-          />
+        <!-- Color preview strip -->
+        <div class="color-preview-strip">
+          <div class="strip-fill" :style="{ background: `linear-gradient(135deg, ${form.primaryColor}, ${form.accentColor})` }" />
+          <div class="strip-info">
+            <div class="strip-dot" :style="{ background: form.primaryColor }" />
+            <span class="strip-label">Vista previa de colores</span>
+            <div class="strip-dot accent" :style="{ background: form.accentColor }" />
+          </div>
         </div>
       </div>
 
-      <div style="display: flex; gap: 10px;">
+      <div class="step-actions">
         <button class="btn-back" @click="step = 1">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M19 12H5M12 5l-7 7 7 7"/>
+          </svg>
           Atrás
         </button>
         <button class="btn-primary" :disabled="!form.businessName" @click="step = 3">
           Continuar
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
         </button>
       </div>
     </div>
 
     <!-- ── Step 3: Reglas ──────────────────────────────────── -->
-    <div v-if="step === 3" style="display: flex; flex-direction: column; gap: 14px;">
-      <div style="font-size: 13px; font-weight: 700; color: #0F1B14;">Configura las reglas</div>
-
-      <div style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
-        <WalletRulesForm :type="form.type" :rules="form.rules" />
+    <div v-if="step === 3" class="step-content">
+      <div class="step-heading">
+        <h2 class="step-title">Configura las reglas</h2>
+        <p class="step-subtitle">Define cómo funciona este tipo de wallet para tus clientes.</p>
       </div>
 
-      <div style="display: flex; gap: 10px;">
+      <div class="form-card">
+        <div style="display: flex; flex-direction: column; gap: 18px;">
+          <WalletRulesForm :type="form.type" :rules="form.rules" />
+        </div>
+      </div>
+
+      <div class="step-actions">
         <button class="btn-back" @click="step = 2">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M19 12H5M12 5l-7 7 7 7"/>
+          </svg>
           Atrás
         </button>
         <button class="btn-primary" @click="step = 4">
-          Vista previa
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          Ver vista previa
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
         </button>
       </div>
     </div>
 
     <!-- ── Step 4: Vista previa ────────────────────────────── -->
-    <div v-if="step === 4" style="display: flex; flex-direction: column; gap: 14px;">
-      <div style="font-size: 13px; font-weight: 700; color: #0F1B14;">Vista previa del pase</div>
-
-      <div style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 28px; display: flex; justify-content: center;">
-        <StampsCard     v-if="form.type === 'stamps'"     :pass="getPreviewPass()" :wallet="(form as any)" />
-        <MembershipCard v-else-if="form.type === 'membership'" :pass="getPreviewPass()" :wallet="(form as any)" />
-        <PointsCard     v-else-if="form.type === 'points'"    :pass="getPreviewPass()" :wallet="(form as any)" />
-        <CashbackCard   v-else-if="form.type === 'cashback'"  :pass="getPreviewPass()" :wallet="(form as any)" />
-        <DaypassCard    v-else-if="form.type === 'daypass'"   :pass="getPreviewPass()" :wallet="(form as any)" />
-        <BundleCard     v-else-if="form.type === 'bundle'"    :pass="getPreviewPass()" :wallet="(form as any)" />
-        <GiftcardCard   v-else-if="form.type === 'giftcard'"  :pass="getPreviewPass()" :wallet="(form as any)" />
-        <CouponCard     v-else-if="form.type === 'coupon'"    :pass="getPreviewPass()" :wallet="(form as any)" />
+    <div v-if="step === 4" class="step-content">
+      <div class="step-heading">
+        <h2 class="step-title">Vista previa del pase</h2>
+        <p class="step-subtitle">Así verá el cliente su pase digital antes de descargarlo.</p>
       </div>
 
-      <!-- Summary pill -->
-      <div style="display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #E6EFE9; border-radius: 10px; border: 1px solid #C6D9CC;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
-        <span style="font-size: 12px; color: #2D6A4F; font-weight: 600;">
-          {{ form.businessName }} · {{ findWalletTypeConfig(form.type).label }}
-        </span>
+      <!-- Phone frame -->
+      <div class="phone-frame-wrap">
+        <div class="phone-frame">
+          <div class="phone-notch" />
+          <div class="phone-screen">
+            <StampsCard     v-if="form.type === 'stamps'"     :pass="getPreviewPass()" :wallet="(form as any)" />
+            <MembershipCard v-else-if="form.type === 'membership'" :pass="getPreviewPass()" :wallet="(form as any)" />
+            <PointsCard     v-else-if="form.type === 'points'"    :pass="getPreviewPass()" :wallet="(form as any)" />
+            <CashbackCard   v-else-if="form.type === 'cashback'"  :pass="getPreviewPass()" :wallet="(form as any)" />
+            <DaypassCard    v-else-if="form.type === 'daypass'"   :pass="getPreviewPass()" :wallet="(form as any)" />
+            <BundleCard     v-else-if="form.type === 'bundle'"    :pass="getPreviewPass()" :wallet="(form as any)" />
+            <GiftcardCard   v-else-if="form.type === 'giftcard'"  :pass="getPreviewPass()" :wallet="(form as any)" />
+            <CouponCard     v-else-if="form.type === 'coupon'"    :pass="getPreviewPass()" :wallet="(form as any)" />
+          </div>
+          <div class="phone-home" />
+        </div>
+        <p class="phone-caption">Vista previa · No representa el diseño final exacto</p>
       </div>
 
-      <div style="display: flex; gap: 10px;">
+      <!-- Summary -->
+      <div class="summary-card">
+        <div class="summary-row">
+          <span class="summary-key">Negocio</span>
+          <span class="summary-val">{{ form.businessName }}</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-key">Tipo</span>
+          <span class="summary-val" :style="{ color: selectedWt.iconColor }">{{ selectedWt.label }}</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-key">Colores</span>
+          <span class="summary-val summary-colors">
+            <span class="color-dot" :style="{ background: form.primaryColor }" :title="form.primaryColor" />
+            <span class="color-dot" :style="{ background: form.accentColor }" :title="form.accentColor" />
+            <span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">
+              {{ form.primaryColor }} · {{ form.accentColor }}
+            </span>
+          </span>
+        </div>
+      </div>
+
+      <div class="step-actions">
         <button class="btn-back" @click="step = 3">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M19 12H5M12 5l-7 7 7 7"/>
+          </svg>
           Atrás
         </button>
         <button class="btn-primary" :disabled="loading" @click="handleSubmit">
-          <svg v-if="!loading" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
-          {{ loading ? 'Guardando...' : 'Crear wallet' }}
+          <svg v-if="loading" class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
+          </svg>
+          <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+          {{ loading ? 'Guardando…' : 'Crear wallet' }}
         </button>
       </div>
     </div>
@@ -362,27 +433,182 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
+.create-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 640px;
+}
+
+/* Back nav */
+.btn-back-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+  transition: color 0.15s;
+}
+.btn-back-nav:hover { color: var(--text-ink); }
+
+/* Step bar */
+.step-bar {
+  display: flex;
+  align-items: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 20px;
+}
+
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.step-bubble {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  transition: background 0.2s, color 0.2s;
+  background: var(--border);
+  color: var(--text-muted);
+}
+.step-bubble--done   { background: var(--primary); color: var(--bg-surface); }
+.step-bubble--active { background: var(--amber); color: var(--bg-surface); }
+
+.step-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.step-label--active { color: var(--text-ink); }
+.step-label--idle   { color: var(--text-faint); }
+
+.step-connector {
+  flex: 1;
+  height: 2px;
+  margin: 0 6px;
+  margin-bottom: 22px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.2s;
+}
+.step-connector--done { background: var(--primary); }
+
+@media (max-width: 480px) { .step-label { display: none; } }
+
+/* Type context chip */
+.type-context-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px 7px 8px;
+  background: var(--bg-field);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.chip-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chip-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-ink);
+}
+
+.chip-change {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary-mid);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+  transition: color 0.12s;
+}
+.chip-change:hover { color: var(--primary-text); text-decoration: underline; }
+
+.chip-enter-active, .chip-leave-active { transition: opacity 0.2s, transform 0.2s; }
+.chip-enter-from, .chip-leave-to { opacity: 0; transform: translateY(-6px); }
+
+/* Step content */
+.step-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.step-heading { display: flex; flex-direction: column; gap: 4px; }
+
+.step-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-ink);
+  margin: 0;
+}
+
+.step-subtitle {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Type selector grid */
 .type-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
 }
-@media (max-width: 900px) { .type-grid { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 560px) { .type-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .type-grid { grid-template-columns: repeat(2, 1fr); } }
 
 .type-card {
   position: relative;
-  padding: 16px;
+  padding: 14px;
   border-radius: 12px;
   cursor: pointer;
   text-align: left;
-  border: 1.5px solid #ECEFEB;
-  background: #fff;
-  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  border: 1.5px solid var(--border);
+  background: var(--bg-surface);
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.12s;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
 }
-.type-card:hover { box-shadow: 0 2px 8px rgba(15,27,20,0.06); }
-.type-card--selected { border: 2px solid #1B4332; background: #E6EFE9; }
+.type-card:hover {
+  box-shadow: 0 2px 10px var(--shadow-card);
+  transform: translateY(-1px);
+}
+.type-card--selected {
+  border-color: var(--primary-text);
+  border-width: 2px;
+  background: var(--primary-light);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(27, 58, 45, 0.12);
+}
 
 .type-icon {
   width: 36px;
@@ -395,6 +621,20 @@ async function handleSubmit() {
   margin-bottom: 10px;
 }
 
+.type-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-ink);
+  margin: 0 0 3px;
+}
+
+.type-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin: 0;
+}
+
 .type-check {
   position: absolute;
   top: 10px;
@@ -402,101 +642,85 @@ async function handleSubmit() {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #1B4332;
+  background: var(--primary-text);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.step-bubble {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  transition: all 0.2s;
-  background: #ECEFEB;
-  color: #6B7A72;
+/* Form card */
+.form-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  overflow: hidden;
 }
-.step-bubble--done    { background: #1B4332; color: #fff; }
-.step-bubble--active  { background: #E8920A; color: #fff; }
 
-.step-label {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
 }
-.step-label--active   { color: #0F1B14; }
-.step-label--inactive { color: #A8B3AC; }
+@media (max-width: 520px) { .form-grid { grid-template-columns: 1fr; } }
 
-.step-connector {
-  flex: 1;
-  height: 2px;
-  margin: 0 6px;
-  margin-bottom: 22px;
-  border-radius: 2px;
-  background: #ECEFEB;
-  transition: background 0.2s;
-}
-.step-connector--done { background: #1B4332; }
-
-@media (max-width: 480px) { .step-label { display: none; } }
-
-.form-grid { grid-template-columns: 1fr 1fr; }
-@media (max-width: 640px) {
-  .form-grid { grid-template-columns: 1fr !important; }
-  .form-grid > * { grid-column: 1 / -1 !important; }
-}
+.field { display: flex; flex-direction: column; gap: 6px; }
+.full-span { grid-column: 1 / -1; }
 
 .field-label {
-  display: block;
   font-size: 11px;
   font-weight: 700;
-  color: #6B7A72;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin-bottom: 7px;
 }
+
 .field-label-hint {
   font-weight: 400;
   text-transform: none;
   letter-spacing: 0;
-  color: #A8B3AC;
+  color: var(--text-faint);
 }
+
+.required { color: var(--danger); }
 
 .field-input {
   width: 100%;
   padding: 11px 13px;
   border-radius: 9px;
-  border: 1.5px solid #ECEFEB;
-  background: #fff;
+  border: 1.5px solid var(--border);
+  background: var(--bg-surface);
   font-size: 13px;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  color: #0F1B14;
+  color: var(--text-ink);
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
   box-sizing: border-box;
 }
-.field-input::placeholder { color: #A8B3AC; }
+.field-input::placeholder { color: var(--text-faint); }
 .field-input:focus {
-  border-color: #E8920A;
-  box-shadow: 0 0 0 3px #FCEBC4;
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px var(--amber-bg);
 }
 
+.field-error { font-size: 11px; color: var(--danger); }
+
+/* Color picker */
 .color-picker-row {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
   border-radius: 9px;
-  border: 1.5px solid #ECEFEB;
-  background: #fff;
+  border: 1.5px solid var(--border);
+  background: var(--bg-surface);
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
+.color-picker-row:focus-within {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px var(--amber-bg);
+}
+
 .color-swatch {
   width: 28px;
   height: 28px;
@@ -505,13 +729,121 @@ async function handleSubmit() {
   cursor: pointer;
   padding: 0;
   background: none;
+  flex-shrink: 0;
 }
+
 .color-hex {
+  flex: 1;
   font-size: 12px;
-  color: #3A4A41;
+  color: var(--text-medium);
   font-family: monospace;
   font-weight: 600;
 }
+
+.color-preview {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+.color-preview.accent { opacity: 0.75; }
+
+/* Color strip preview */
+.color-preview-strip {
+  margin-top: 16px;
+  margin-left: -20px;
+  margin-right: -20px;
+  margin-bottom: -20px;
+  overflow: hidden;
+}
+
+.strip-fill {
+  height: 6px;
+}
+
+.strip-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  background: var(--bg-field);
+  border-top: 1px solid var(--border);
+}
+
+.strip-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+.strip-dot.accent { opacity: 0.75; }
+
+.strip-label {
+  flex: 1;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Image upload */
+.image-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-surface);
+}
+
+.image-thumb-square {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: contain;
+  background: var(--bg-field);
+  padding: 4px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+
+.image-preview-info {
+  flex: 1;
+  min-width: 0;
+}
+.image-preview-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-ink);
+  margin: 0 0 2px;
+}
+.image-preview-url {
+  font-size: 11px;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.btn-change {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-field);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 5px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.btn-change:hover { background: var(--bg-subtle); }
 
 .upload-zone {
   display: flex;
@@ -519,23 +851,136 @@ async function handleSubmit() {
   justify-content: center;
   padding: 28px 20px;
   border-radius: 10px;
-  border: 1.5px dashed #D8DDD7;
-  background: #F7F4EF;
+  border: 1.5px dashed var(--border);
+  background: var(--bg-field);
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }
-.upload-zone:hover    { border-color: #E8920A; background: #FCEBC4; }
+.upload-zone:hover { border-color: var(--amber); background: var(--amber-bg); }
 .upload-zone--disabled { pointer-events: none; opacity: 0.6; }
 
-.btn-back-nav {
+.upload-state { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.upload-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--bg-subtle);
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.upload-title { font-size: 13px; font-weight: 600; color: var(--text-medium); margin: 0; }
+.upload-label { font-size: 11px; color: var(--text-faint); margin: 0; }
+
+/* Phone frame (step 4) */
+.phone-frame-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.phone-frame {
+  position: relative;
+  width: 280px;
+  background: var(--text-ink);
+  border-radius: 36px;
+  padding: 14px 10px 20px;
+  box-shadow:
+    0 0 0 2px #2D3D34,
+    0 24px 60px rgba(15, 27, 20, 0.4),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.phone-notch {
+  width: 80px;
+  height: 22px;
+  background: var(--text-ink);
+  border-radius: 0 0 14px 14px;
+  margin: 0 auto 10px;
+  position: relative;
+  z-index: 2;
+  box-shadow: inset 0 -2px 0 #1a2e20;
+}
+
+.phone-screen {
+  background: var(--primary-text);
+  border-radius: 24px;
+  overflow: hidden;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+}
+
+.phone-home {
+  width: 80px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+  margin: 14px auto 0;
+}
+
+.phone-caption {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin: 0;
+  text-align: center;
+}
+
+/* Summary card */
+.summary-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.summary-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.summary-row:last-child { border-bottom: none; }
+
+.summary-key {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  width: 72px;
+  flex-shrink: 0;
+}
+
+.summary-val {
   font-size: 13px;
-  color: #6B7A72;
-  background: none;
-  border: none;
-  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-ink);
+}
+
+.summary-colors {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.color-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Step actions */
+.step-actions {
+  display: flex;
+  gap: 10px;
 }
 
 .btn-primary {
@@ -546,8 +991,8 @@ async function handleSubmit() {
   gap: 7px;
   padding: 12px 18px;
   border-radius: 10px;
-  background: #1B4332;
-  color: #fff;
+  background: var(--primary-text);
+  color: var(--bg-surface);
   font-size: 13px;
   font-weight: 700;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
@@ -555,7 +1000,7 @@ async function handleSubmit() {
   cursor: pointer;
   transition: background 0.15s, opacity 0.15s;
 }
-.btn-primary:hover:not(:disabled) { background: #2D6A4F; }
+.btn-primary:hover:not(:disabled) { background: var(--primary-mid); }
 .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .btn-back {
@@ -565,14 +1010,18 @@ async function handleSubmit() {
   gap: 6px;
   padding: 12px 18px;
   border-radius: 10px;
-  background: #fff;
-  color: #6B7A72;
+  background: var(--bg-surface);
+  color: var(--text-muted);
   font-size: 13px;
   font-weight: 600;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  border: 1.5px solid #ECEFEB;
+  border: 1.5px solid var(--border);
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
+  white-space: nowrap;
 }
-.btn-back:hover { background: #F7F4EF; color: #0F1B14; }
+.btn-back:hover { background: var(--bg-field); color: var(--text-ink); }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.8s linear infinite; }
 </style>

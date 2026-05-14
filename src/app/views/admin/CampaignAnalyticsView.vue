@@ -63,9 +63,9 @@ const convRate      = computed(() => stats.value?.conversionRate ?? 0)
 const conversions   = computed(() => stats.value?.conversions ?? 0)
 const avgHours      = computed(() => stats.value?.avgHoursToConvert ?? null)
 
-const deliveryColor    = computed(() => deliveryRate.value >= 90 ? '#1B4332' : deliveryRate.value >= 70 ? '#E8920A' : '#DC2626')
-const openColor        = computed(() => openRate.value >= 30 ? '#1B4332' : openRate.value >= 15 ? '#E8920A' : '#6B7A72')
-const conversionColor  = computed(() => convRate.value >= 30 ? '#8B5CF6' : convRate.value >= 15 ? '#E8920A' : '#6B7A72')
+const deliveryColor    = computed(() => deliveryRate.value >= 90 ? 'var(--primary-text)' : deliveryRate.value >= 70 ? 'var(--amber)' : 'var(--danger)')
+const openColor        = computed(() => openRate.value >= 30 ? 'var(--primary-text)' : openRate.value >= 15 ? 'var(--amber)' : 'var(--text-muted)')
+const conversionColor  = computed(() => convRate.value >= 30 ? '#8B5CF6' : convRate.value >= 15 ? 'var(--amber)' : 'var(--text-muted)')
 
 const hasStats = computed(() => campaign.value?.status === 'sent' || campaign.value?.status === 'sending')
 
@@ -98,21 +98,21 @@ const kpiIconPaths: Record<string, string> = {
 const kpis = computed(() => {
   if (!campaign.value) return []
   return [
-    { label: 'Audiencia',       value: audience.value.toLocaleString(),       icon: 'audience',   color: '#2D6A4F' },
-    { label: 'Entregados',      value: delivered.value.toLocaleString(),      icon: 'check',      color: '#1B4332',           valueColor: '#1B4332' },
-    { label: 'Omitidos',        value: skipped.value.toLocaleString(),        icon: 'skip',       color: '#A8B3AC',           valueColor: skipped.value > 0 ? '#6B7A72' : '#A8B3AC' },
+    { label: 'Audiencia',       value: audience.value.toLocaleString(),       icon: 'audience',   color: 'var(--primary-mid)' },
+    { label: 'Entregados',      value: delivered.value.toLocaleString(),      icon: 'check',      color: 'var(--primary-text)',           valueColor: 'var(--primary-text)' },
+    { label: 'Omitidos',        value: skipped.value.toLocaleString(),        icon: 'skip',       color: 'var(--text-faint)',           valueColor: skipped.value > 0 ? 'var(--text-muted)' : 'var(--text-faint)' },
     { label: 'Tasa de entrega', value: `${deliveryRate.value}%`,              icon: 'rate',       color: deliveryColor.value, valueColor: deliveryColor.value },
-    { label: 'Aperturas',       value: opened.value > 0 ? opened.value.toLocaleString() : '—', icon: 'eye', color: '#0EA5E9', valueColor: opened.value > 0 ? '#0EA5E9' : '#A8B3AC' },
-    { label: 'Fallidos',        value: failed.value.toLocaleString(),         icon: 'fail',       color: failed.value > 0 ? '#F97316' : '#A8B3AC', valueColor: failed.value > 0 ? '#F97316' : '#A8B3AC' },
+    { label: 'Aperturas',       value: opened.value > 0 ? opened.value.toLocaleString() : '—', icon: 'eye', color: '#0EA5E9', valueColor: opened.value > 0 ? '#0EA5E9' : 'var(--text-faint)' },
+    { label: 'Fallidos',        value: failed.value.toLocaleString(),         icon: 'fail',       color: failed.value > 0 ? '#F97316' : 'var(--text-faint)', valueColor: failed.value > 0 ? '#F97316' : 'var(--text-faint)' },
   ]
 })
 
 const statusConfig: Record<CampaignStatus, { label: string; bg: string; color: string }> = {
-  draft:     { label: 'Borrador',   bg: '#F3F5F2', color: '#6B7A72' },
-  scheduled: { label: 'Programada', bg: '#EFF6FF', color: '#1D4ED8' },
-  sending:   { label: 'Enviando',   bg: '#FEF9C3', color: '#854D0E' },
-  sent:      { label: 'Enviada',    bg: '#D1FAE5', color: '#065F46' },
-  cancelled: { label: 'Cancelada',  bg: '#FEE2E2', color: '#991B1B' },
+  draft:     { label: 'Borrador',   bg: 'var(--bg-subtle)', color: 'var(--text-muted)' },
+  scheduled: { label: 'Programada', bg: 'var(--info-bg)', color: 'var(--info)' },
+  sending:   { label: 'Enviando',   bg: 'var(--warning-bg)', color: 'var(--warning)' },
+  sent:      { label: 'Enviada',    bg: 'var(--success-bg)', color: 'var(--success)' },
+  cancelled: { label: 'Cancelada',  bg: 'var(--danger-bg)', color: 'var(--danger)' },
 }
 
 const channelLabels: Record<Channel, string>   = { sms: 'SMS', email: 'Email', wallet_push: 'WhatsApp' }
@@ -173,11 +173,11 @@ onMounted(async () => {
     <!-- Header -->
     <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
       <button
-        style="font-size: 13px; color: #6B7A72; background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 4px; font-family: inherit; flex-shrink: 0;"
+        style="font-size: 13px; color: var(--text-muted); background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 4px; font-family: inherit; flex-shrink: 0;"
         @click="router.back()"
       >← Volver</button>
       <template v-if="campaign">
-        <h2 style="font-size: 16px; font-weight: 700; color: #0F1B14; margin: 0; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+        <h2 style="font-size: 16px; font-weight: 700; color: var(--text-ink); margin: 0; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
           {{ campaign.name }}
         </h2>
         <span
@@ -189,52 +189,52 @@ onMounted(async () => {
 
     <!-- Skeleton loading -->
     <div v-if="loading" class="kpi-grid">
-      <div v-for="i in 6" :key="i" style="height: 104px; background: #fff; border-radius: 14px; border: 1px solid #ECEFEB; animation: pulse 1.5s ease-in-out infinite;" />
+      <div v-for="i in 6" :key="i" style="height: 104px; background: var(--bg-surface); border-radius: 14px; border: 1px solid var(--border); animation: pulse 1.5s ease-in-out infinite;" />
     </div>
 
     <!-- Not found -->
-    <div v-else-if="!campaign" style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 48px; text-align: center; color: #6B7A72;">
+    <div v-else-if="!campaign" style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 48px; text-align: center; color: var(--text-muted);">
       <p style="font-size: 14px; font-weight: 600; margin: 0 0 4px;">Campaña no encontrada</p>
     </div>
 
     <template v-else>
 
       <!-- Campaign info banner -->
-      <div style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 16px 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start;">
+      <div style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start;">
         <div style="display: flex; gap: 8px; flex-wrap: wrap; flex: 1; align-items: center;">
-          <span style="display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; background: #F7F4EF; border-radius: 7px; font-size: 12px; font-weight: 600; color: #3A4A41;">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1B4332" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <span style="display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; background: var(--bg-field); border-radius: 7px; font-size: 12px; font-weight: 600; color: var(--text-medium);">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--primary-text)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
             </svg>
             {{ channelLabels[campaign.channel] }}
           </span>
-          <span style="display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; background: #F7F4EF; border-radius: 7px; font-size: 12px; font-weight: 600; color: #3A4A41;">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1B4332" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <span style="display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; background: var(--bg-field); border-radius: 7px; font-size: 12px; font-weight: 600; color: var(--text-medium);">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--primary-text)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="9" cy="8" r="3.5"/><path d="M2 21c0-3.5 3-6 7-6s7 2.5 7 6"/>
             </svg>
             {{ segmentLabels[segmentType(campaign)] }}
           </span>
-          <span v-if="campaign.sentAt" style="font-size: 12px; color: #6B7A72;">Enviado {{ formatDate(campaign.sentAt) }}</span>
-          <span v-else-if="campaign.scheduledAt" style="display: inline-flex; padding: 4px 11px; background: #EFF6FF; border-radius: 7px; font-size: 12px; color: #1D4ED8; font-weight: 600;">
+          <span v-if="campaign.sentAt" style="font-size: 12px; color: var(--text-muted);">Enviado {{ formatDate(campaign.sentAt) }}</span>
+          <span v-else-if="campaign.scheduledAt" style="display: inline-flex; padding: 4px 11px; background: var(--info-bg); border-radius: 7px; font-size: 12px; color: var(--info); font-weight: 600;">
             Programado {{ formatDate(campaign.scheduledAt) }}
           </span>
         </div>
         <div
           v-if="campaign.messageTemplate || campaign.message"
-          style="width: 100%; background: #F7F4EF; border-radius: 10px; padding: 11px 14px; font-size: 12.5px; color: #3A4A41; line-height: 1.6; white-space: pre-wrap; word-break: break-word; max-height: 72px; overflow: hidden; mask-image: linear-gradient(to bottom, black 55%, transparent 100%);"
+          style="width: 100%; background: var(--bg-field); border-radius: 10px; padding: 11px 14px; font-size: 12.5px; color: var(--text-medium); line-height: 1.6; white-space: pre-wrap; word-break: break-word; max-height: 72px; overflow: hidden; mask-image: linear-gradient(to bottom, black 55%, transparent 100%);"
         >{{ campaign.messageTemplate ?? campaign.message }}</div>
       </div>
 
       <!-- No stats yet -->
       <div
         v-if="!hasStats"
-        style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 40px; text-align: center;"
+        style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 40px; text-align: center;"
       >
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#D8DDD7" stroke-width="1.5" stroke-linecap="round" style="margin: 0 auto 12px; display: block;">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.5" stroke-linecap="round" style="margin: 0 auto 12px; display: block;">
           <path d="M3 21V5M3 21h18"/><path d="M7 17v-5M11 17V9M15 17v-3M19 17V7"/>
         </svg>
-        <p style="font-size: 14px; font-weight: 600; color: #0F1B14; margin: 0 0 4px;">Sin métricas aún</p>
-        <p style="font-size: 12px; color: #6B7A72; margin: 0;">
+        <p style="font-size: 14px; font-weight: 600; color: var(--text-ink); margin: 0 0 4px;">Sin métricas aún</p>
+        <p style="font-size: 12px; color: var(--text-muted); margin: 0;">
           Las métricas estarán disponibles cuando la campaña esté en estado <strong>Enviando</strong> o <strong>Enviada</strong>.
         </p>
       </div>
@@ -246,7 +246,7 @@ onMounted(async () => {
           <div
             v-for="kpi in kpis"
             :key="kpi.label"
-            style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px;"
+            style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px;"
           >
             <div
               style="width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center;"
@@ -255,8 +255,8 @@ onMounted(async () => {
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" :stroke="kpi.color" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" v-html="kpiIconPaths[kpi.icon]" />
             </div>
             <div>
-              <div style="font-size: 26px; font-weight: 800; letter-spacing: -0.03em; line-height: 1;" :style="{ color: kpi.valueColor ?? '#0F1B14' }">{{ kpi.value }}</div>
-              <div style="font-size: 12px; color: #6B7A72; margin-top: 3px; font-weight: 500;">{{ kpi.label }}</div>
+              <div style="font-size: 26px; font-weight: 800; letter-spacing: -0.03em; line-height: 1;" :style="{ color: kpi.valueColor ?? 'var(--text-ink)' }">{{ kpi.value }}</div>
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 3px; font-weight: 500;">{{ kpi.label }}</div>
             </div>
           </div>
         </div>
@@ -265,11 +265,11 @@ onMounted(async () => {
         <div class="gauges-grid">
 
           <!-- Delivery gauge -->
-          <div style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 22px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-            <p style="font-size: 11px; font-weight: 700; color: #A8B3AC; text-transform: uppercase; letter-spacing: 0.06em; margin: 0; align-self: flex-start;">Tasa de entrega</p>
+          <div style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+            <p style="font-size: 11px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; margin: 0; align-self: flex-start;">Tasa de entrega</p>
             <div style="position: relative; width: 140px; height: 76px; overflow: hidden; flex-shrink: 0;">
               <svg width="140" height="76" viewBox="0 0 90 48" style="overflow: visible;">
-                <path d="M9,45 A36,36 0 0,1 81,45" fill="none" stroke="#F3F5F2" stroke-width="8" stroke-linecap="round"/>
+                <path d="M9,45 A36,36 0 0,1 81,45" fill="none" stroke="var(--bg-subtle)" stroke-width="8" stroke-linecap="round"/>
                 <path d="M9,45 A36,36 0 0,1 81,45" fill="none" :stroke="deliveryColor" stroke-width="8" stroke-linecap="round"
                   :stroke-dasharray="gaugeArc(deliveryRate)" stroke-dashoffset="0"/>
               </svg>
@@ -277,17 +277,17 @@ onMounted(async () => {
                 <div style="font-size: 22px; font-weight: 800; line-height: 1; letter-spacing: -0.03em;" :style="{ color: deliveryColor }">{{ deliveryRate }}%</div>
               </div>
             </div>
-            <p style="font-size: 11px; color: #6B7A72; margin: 0; text-align: center;">
+            <p style="font-size: 11px; color: var(--text-muted); margin: 0; text-align: center;">
               {{ delivered.toLocaleString() }} de {{ audience.toLocaleString() }}
             </p>
           </div>
 
           <!-- Open rate gauge (shown only if has opens) -->
-          <div style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 22px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-            <p style="font-size: 11px; font-weight: 700; color: #A8B3AC; text-transform: uppercase; letter-spacing: 0.06em; margin: 0; align-self: flex-start;">Tasa de apertura</p>
+          <div style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+            <p style="font-size: 11px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; margin: 0; align-self: flex-start;">Tasa de apertura</p>
             <div style="position: relative; width: 140px; height: 76px; overflow: hidden; flex-shrink: 0;">
               <svg width="140" height="76" viewBox="0 0 90 48" style="overflow: visible;">
-                <path d="M9,45 A36,36 0 0,1 81,45" fill="none" stroke="#F3F5F2" stroke-width="8" stroke-linecap="round"/>
+                <path d="M9,45 A36,36 0 0,1 81,45" fill="none" stroke="var(--bg-subtle)" stroke-width="8" stroke-linecap="round"/>
                 <path d="M9,45 A36,36 0 0,1 81,45" fill="none" :stroke="openColor" stroke-width="8" stroke-linecap="round"
                   :stroke-dasharray="gaugeArc(openRate)" stroke-dashoffset="0"/>
               </svg>
@@ -297,19 +297,19 @@ onMounted(async () => {
                 </div>
               </div>
             </div>
-            <p style="font-size: 11px; color: #6B7A72; margin: 0; text-align: center;">
+            <p style="font-size: 11px; color: var(--text-muted); margin: 0; text-align: center;">
               {{ opened > 0 ? `${opened.toLocaleString()} de ${delivered.toLocaleString()} entregados` : 'Sin datos de apertura' }}
             </p>
           </div>
 
           <!-- Breakdown mini (fallidos + omitidos) -->
-          <div style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 14px;">
-            <p style="font-size: 11px; font-weight: 700; color: #A8B3AC; text-transform: uppercase; letter-spacing: 0.06em; margin: 0;">Problemas de entrega</p>
-            <div v-if="failed === 0 && skipped === 0" style="display: flex; align-items: center; gap: 8px; padding: 12px; background: #F0F7F4; border-radius: 10px;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B4332" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <div style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 14px;">
+            <p style="font-size: 11px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; margin: 0;">Problemas de entrega</p>
+            <div v-if="failed === 0 && skipped === 0" style="display: flex; align-items: center; gap: 8px; padding: 12px; background: var(--bg-green); border-radius: 10px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary-text)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
               </svg>
-              <span style="font-size: 12.5px; font-weight: 600; color: #1B4332;">Entrega perfecta</span>
+              <span style="font-size: 12.5px; font-weight: 600; color: var(--primary-text);">Entrega perfecta</span>
             </div>
             <template v-else>
               <!-- Fallidos -->
@@ -317,9 +317,9 @@ onMounted(async () => {
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px;">
                   <div style="display: flex; align-items: center; gap: 6px;">
                     <div style="width: 8px; height: 8px; border-radius: 2px; background: #F97316;" />
-                    <span style="font-size: 12px; color: #3A4A41; font-weight: 500;">Fallidos</span>
+                    <span style="font-size: 12px; color: var(--text-medium); font-weight: 500;">Fallidos</span>
                   </div>
-                  <span style="font-size: 12px; font-weight: 700; color: #F97316;">{{ failed.toLocaleString() }} <span style="font-weight: 400; color: #A8B3AC;">{{ failRate }}%</span></span>
+                  <span style="font-size: 12px; font-weight: 700; color: #F97316;">{{ failed.toLocaleString() }} <span style="font-weight: 400; color: var(--text-faint);">{{ failRate }}%</span></span>
                 </div>
                 <div style="height: 6px; background: #FEF3EA; border-radius: 999px; overflow: hidden;">
                   <div style="height: 100%; background: #F97316; border-radius: 999px;" :style="{ width: `${failRate}%` }" />
@@ -329,13 +329,13 @@ onMounted(async () => {
               <div v-if="skipped > 0">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px;">
                   <div style="display: flex; align-items: center; gap: 6px;">
-                    <div style="width: 8px; height: 8px; border-radius: 2px; background: #A8B3AC;" />
-                    <span style="font-size: 12px; color: #3A4A41; font-weight: 500;">Omitidos</span>
+                    <div style="width: 8px; height: 8px; border-radius: 2px; background: var(--text-faint);" />
+                    <span style="font-size: 12px; color: var(--text-medium); font-weight: 500;">Omitidos</span>
                   </div>
-                  <span style="font-size: 12px; font-weight: 700; color: #6B7A72;">{{ skipped.toLocaleString() }} <span style="font-weight: 400; color: #A8B3AC;">{{ skippedRate }}%</span></span>
+                  <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);">{{ skipped.toLocaleString() }} <span style="font-weight: 400; color: var(--text-faint);">{{ skippedRate }}%</span></span>
                 </div>
-                <div style="height: 6px; background: #F3F5F2; border-radius: 999px; overflow: hidden;">
-                  <div style="height: 100%; background: #A8B3AC; border-radius: 999px;" :style="{ width: `${skippedRate}%` }" />
+                <div style="height: 6px; background: var(--bg-subtle); border-radius: 999px; overflow: hidden;">
+                  <div style="height: 100%; background: var(--text-faint); border-radius: 999px;" :style="{ width: `${skippedRate}%` }" />
                 </div>
               </div>
             </template>
@@ -343,22 +343,22 @@ onMounted(async () => {
         </div>
 
         <!-- ── Conversiones section ── -->
-        <div style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; overflow: hidden;">
+        <div style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden;">
 
           <!-- Section header + window selector -->
-          <div style="padding: 16px 20px; border-bottom: 1px solid #ECEFEB; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+          <div style="padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
             <div>
-              <h3 style="font-size: 14px; font-weight: 700; color: #0F1B14; margin: 0 0 2px;">Conversiones</h3>
-              <p style="font-size: 12px; color: #6B7A72; margin: 0;">Clientes que recibieron la campaña y después escanearon su pase</p>
+              <h3 style="font-size: 14px; font-weight: 700; color: var(--text-ink); margin: 0 0 2px;">Conversiones</h3>
+              <p style="font-size: 12px; color: var(--text-muted); margin: 0;">Clientes que recibieron la campaña y después escanearon su pase</p>
             </div>
-            <div style="display: flex; gap: 2px; padding: 3px; background: #F3F5F2; border-radius: 9px; flex-shrink: 0;">
+            <div style="display: flex; gap: 2px; padding: 3px; background: var(--bg-subtle); border-radius: 9px; flex-shrink: 0;">
               <button
                 v-for="w in ([1, 7, 14, 30] as const)"
                 :key="w"
                 style="padding: 5px 14px; border-radius: 7px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; transition: all 0.12s; font-family: inherit;"
                 :style="windowDays === w
-                  ? { background: '#fff', color: '#0F1B14', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }
-                  : { background: 'transparent', color: '#6B7A72' }"
+                  ? { background: 'var(--bg-surface)', color: 'var(--text-ink)', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }
+                  : { background: 'transparent', color: 'var(--text-muted)' }"
                 @click="windowDays = w"
               >{{ w }}d</button>
             </div>
@@ -368,14 +368,14 @@ onMounted(async () => {
           <div style="padding: 20px;">
 
             <!-- Loading state -->
-            <div v-if="statsLoading" style="display: flex; align-items: center; justify-content: center; padding: 32px; gap: 10px; color: #6B7A72; font-size: 13px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A8B3AC" stroke-width="2" stroke-linecap="round" style="animation: spin 1s linear infinite;">
+            <div v-if="statsLoading" style="display: flex; align-items: center; justify-content: center; padding: 32px; gap: 10px; color: var(--text-muted); font-size: 13px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2" stroke-linecap="round" style="animation: spin 1s linear infinite;">
                 <path d="M21 12a9 9 0 11-6.219-8.56"/>
               </svg>
               Calculando…
             </div>
 
-            <div v-else-if="!stats" style="text-align: center; padding: 24px; color: #A8B3AC; font-size: 13px;">
+            <div v-else-if="!stats" style="text-align: center; padding: 24px; color: var(--text-faint); font-size: 13px;">
               No se pudieron cargar las estadísticas de conversión.
             </div>
 
@@ -385,7 +385,7 @@ onMounted(async () => {
               <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 8px;">
                 <div style="position: relative; width: 160px; height: 88px; overflow: hidden; flex-shrink: 0;">
                   <svg width="160" height="88" viewBox="0 0 90 48" style="overflow: visible;">
-                    <path d="M9,45 A36,36 0 0,1 81,45" fill="none" stroke="#F3F5F2" stroke-width="9" stroke-linecap="round"/>
+                    <path d="M9,45 A36,36 0 0,1 81,45" fill="none" stroke="var(--bg-subtle)" stroke-width="9" stroke-linecap="round"/>
                     <path d="M9,45 A36,36 0 0,1 81,45" fill="none" :stroke="conversionColor" stroke-width="9" stroke-linecap="round"
                       :stroke-dasharray="gaugeArc(convRate)" stroke-dashoffset="0"
                       style="transition: stroke-dasharray 0.5s ease;"
@@ -398,18 +398,18 @@ onMounted(async () => {
                   </div>
                 </div>
                 <div style="text-align: center;">
-                  <div style="font-size: 12px; font-weight: 600; color: #3A4A41;">Tasa de conversión</div>
-                  <div style="font-size: 11px; color: #A8B3AC; margin-top: 2px;">en {{ windowDays }} día{{ windowDays === 1 ? '' : 's' }}</div>
+                  <div style="font-size: 12px; font-weight: 600; color: var(--text-medium);">Tasa de conversión</div>
+                  <div style="font-size: 11px; color: var(--text-faint); margin-top: 2px;">en {{ windowDays }} día{{ windowDays === 1 ? '' : 's' }}</div>
                 </div>
               </div>
 
               <!-- Conversiones count -->
-              <div style="display: flex; flex-direction: column; justify-content: center; gap: 16px; padding: 8px 12px; border-left: 1px solid #F3F5F2; border-right: 1px solid #F3F5F2;">
+              <div style="display: flex; flex-direction: column; justify-content: center; gap: 16px; padding: 8px 12px; border-left: 1px solid var(--bg-subtle); border-right: 1px solid var(--bg-subtle);">
                 <div>
                   <div style="font-size: 48px; font-weight: 800; letter-spacing: -0.04em; line-height: 1;" :style="{ color: conversionColor }">
                     {{ conversions.toLocaleString() }}
                   </div>
-                  <div style="font-size: 13px; color: #6B7A72; margin-top: 4px; font-weight: 500;">
+                  <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px; font-weight: 500;">
                     conversiones en {{ windowDays }}d
                   </div>
                 </div>
@@ -417,10 +417,10 @@ onMounted(async () => {
                 <div
                   style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; align-self: flex-start;"
                   :style="convRate >= 30
-                    ? { background: '#F0F7F4', color: '#1B4332' }
+                    ? { background: 'var(--bg-green)', color: 'var(--primary-text)' }
                     : convRate >= 15
-                      ? { background: '#FEF9C3', color: '#854D0E' }
-                      : { background: '#F7F4EF', color: '#6B7A72' }"
+                      ? { background: 'var(--warning-bg)', color: 'var(--warning)' }
+                      : { background: 'var(--bg-field)', color: 'var(--text-muted)' }"
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                     <template v-if="convRate >= 15">
@@ -439,14 +439,14 @@ onMounted(async () => {
               <!-- Avg hours to convert -->
               <div style="display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 8px 8px 8px 16px;">
                 <div>
-                  <div style="font-size: 11px; font-weight: 700; color: #A8B3AC; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;">
+                  <div style="font-size: 11px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;">
                     Tiempo hasta conversión
                   </div>
                   <div v-if="avgHoursLabel" style="display: flex; align-items: baseline; gap: 6px;">
-                    <span style="font-size: 36px; font-weight: 800; color: #0F1B14; letter-spacing: -0.04em; line-height: 1;">{{ avgHoursLabel }}</span>
+                    <span style="font-size: 36px; font-weight: 800; color: var(--text-ink); letter-spacing: -0.04em; line-height: 1;">{{ avgHoursLabel }}</span>
                   </div>
-                  <div v-else style="font-size: 28px; font-weight: 800; color: #A8B3AC; letter-spacing: -0.04em; line-height: 1;">—</div>
-                  <div style="font-size: 12px; color: #6B7A72; margin-top: 5px;">
+                  <div v-else style="font-size: 28px; font-weight: 800; color: var(--text-faint); letter-spacing: -0.04em; line-height: 1;">—</div>
+                  <div style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">
                     {{ avgHoursLabel ? 'promedio entre envío y primera visita' : 'sin conversiones en esta ventana' }}
                   </div>
                 </div>
@@ -458,11 +458,11 @@ onMounted(async () => {
                       v-for="n in 5" :key="n"
                       style="flex: 1; height: 5px; border-radius: 2px; transition: background 0.3s;"
                       :style="{
-                        background: n <= (avgHours! < 2 ? 5 : avgHours! < 6 ? 4 : avgHours! < 12 ? 3 : avgHours! < 24 ? 2 : 1) ? '#8B5CF6' : '#F3F5F2'
+                        background: n <= (avgHours! < 2 ? 5 : avgHours! < 6 ? 4 : avgHours! < 12 ? 3 : avgHours! < 24 ? 2 : 1) ? '#8B5CF6' : 'var(--bg-subtle)'
                       }"
                     />
                   </div>
-                  <div style="font-size: 10px; color: #A8B3AC;">
+                  <div style="font-size: 10px; color: var(--text-faint);">
                     {{ avgHours! < 2 ? 'Muy rápido' : avgHours! < 6 ? 'Rápido' : avgHours! < 12 ? 'Moderado' : avgHours! < 24 ? 'Lento' : 'Muy lento' }}
                   </div>
                 </div>
@@ -473,74 +473,74 @@ onMounted(async () => {
         </div>
 
         <!-- ── Delivery funnel bars ── -->
-        <div style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 20px;">
-          <h3 style="font-size: 14px; font-weight: 700; color: #0F1B14; margin: 0 0 16px;">Embudo de entrega</h3>
+        <div style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px;">
+          <h3 style="font-size: 14px; font-weight: 700; color: var(--text-ink); margin: 0 0 16px;">Embudo de entrega</h3>
           <div style="display: flex; flex-direction: column; gap: 11px;">
 
             <!-- Audiencia -->
             <div style="display: flex; align-items: center; gap: 12px;">
-              <div style="width: 9px; height: 9px; border-radius: 2px; background: #2D6A4F; flex-shrink: 0;" />
-              <span style="font-size: 12px; color: #3A4A41; font-weight: 500; width: 110px; flex-shrink: 0;">Audiencia total</span>
-              <div style="flex: 1; height: 9px; background: #F3F5F2; border-radius: 999px; overflow: hidden;">
-                <div style="height: 100%; background: #2D6A4F; border-radius: 999px;" style2="width: 100%" :style="{ width: '100%' }" />
+              <div style="width: 9px; height: 9px; border-radius: 2px; background: var(--primary-mid); flex-shrink: 0;" />
+              <span style="font-size: 12px; color: var(--text-medium); font-weight: 500; width: 110px; flex-shrink: 0;">Audiencia total</span>
+              <div style="flex: 1; height: 9px; background: var(--bg-subtle); border-radius: 999px; overflow: hidden;">
+                <div style="height: 100%; background: var(--primary-mid); border-radius: 999px;" style2="width: 100%" :style="{ width: '100%' }" />
               </div>
-              <span style="font-size: 12px; font-weight: 700; color: #2D6A4F; min-width: 52px; text-align: right;">{{ audience.toLocaleString() }}</span>
-              <span style="font-size: 11px; color: #A8B3AC; min-width: 38px; text-align: right;">100%</span>
+              <span style="font-size: 12px; font-weight: 700; color: var(--primary-mid); min-width: 52px; text-align: right;">{{ audience.toLocaleString() }}</span>
+              <span style="font-size: 11px; color: var(--text-faint); min-width: 38px; text-align: right;">100%</span>
             </div>
 
             <!-- Entregados -->
             <div style="display: flex; align-items: center; gap: 12px;">
-              <div style="width: 9px; height: 9px; border-radius: 2px; background: #1B4332; flex-shrink: 0;" />
-              <span style="font-size: 12px; color: #3A4A41; font-weight: 500; width: 110px; flex-shrink: 0;">Entregados</span>
-              <div style="flex: 1; height: 9px; background: #F3F5F2; border-radius: 999px; overflow: hidden;">
-                <div style="height: 100%; background: #1B4332; border-radius: 999px; transition: width 0.5s;" :style="{ width: `${deliveryRate}%` }" />
+              <div style="width: 9px; height: 9px; border-radius: 2px; background: var(--primary-text); flex-shrink: 0;" />
+              <span style="font-size: 12px; color: var(--text-medium); font-weight: 500; width: 110px; flex-shrink: 0;">Entregados</span>
+              <div style="flex: 1; height: 9px; background: var(--bg-subtle); border-radius: 999px; overflow: hidden;">
+                <div style="height: 100%; background: var(--primary-text); border-radius: 999px; transition: width 0.5s;" :style="{ width: `${deliveryRate}%` }" />
               </div>
-              <span style="font-size: 12px; font-weight: 700; color: #1B4332; min-width: 52px; text-align: right;">{{ delivered.toLocaleString() }}</span>
-              <span style="font-size: 11px; color: #A8B3AC; min-width: 38px; text-align: right;">{{ deliveryRate }}%</span>
+              <span style="font-size: 12px; font-weight: 700; color: var(--primary-text); min-width: 52px; text-align: right;">{{ delivered.toLocaleString() }}</span>
+              <span style="font-size: 11px; color: var(--text-faint); min-width: 38px; text-align: right;">{{ deliveryRate }}%</span>
             </div>
 
             <!-- Aperturas -->
             <div v-if="opened > 0" style="display: flex; align-items: center; gap: 12px;">
               <div style="width: 9px; height: 9px; border-radius: 2px; background: #0EA5E9; flex-shrink: 0;" />
-              <span style="font-size: 12px; color: #3A4A41; font-weight: 500; width: 110px; flex-shrink: 0;">Aperturas</span>
-              <div style="flex: 1; height: 9px; background: #F3F5F2; border-radius: 999px; overflow: hidden;">
+              <span style="font-size: 12px; color: var(--text-medium); font-weight: 500; width: 110px; flex-shrink: 0;">Aperturas</span>
+              <div style="flex: 1; height: 9px; background: var(--bg-subtle); border-radius: 999px; overflow: hidden;">
                 <div style="height: 100%; background: #0EA5E9; border-radius: 999px; transition: width 0.5s;" :style="{ width: `${openRate}%` }" />
               </div>
               <span style="font-size: 12px; font-weight: 700; color: #0EA5E9; min-width: 52px; text-align: right;">{{ opened.toLocaleString() }}</span>
-              <span style="font-size: 11px; color: #A8B3AC; min-width: 38px; text-align: right;">{{ openRate }}%</span>
+              <span style="font-size: 11px; color: var(--text-faint); min-width: 38px; text-align: right;">{{ openRate }}%</span>
             </div>
 
             <!-- Conversiones (from stats) -->
             <div v-if="stats && conversions > 0" style="display: flex; align-items: center; gap: 12px;">
               <div style="width: 9px; height: 9px; border-radius: 2px; background: #8B5CF6; flex-shrink: 0;" />
-              <span style="font-size: 12px; color: #3A4A41; font-weight: 500; width: 110px; flex-shrink: 0;">Convirtieron</span>
-              <div style="flex: 1; height: 9px; background: #F3F5F2; border-radius: 999px; overflow: hidden;">
+              <span style="font-size: 12px; color: var(--text-medium); font-weight: 500; width: 110px; flex-shrink: 0;">Convirtieron</span>
+              <div style="flex: 1; height: 9px; background: var(--bg-subtle); border-radius: 999px; overflow: hidden;">
                 <div style="height: 100%; background: #8B5CF6; border-radius: 999px; transition: width 0.5s;" :style="{ width: `${convRate}%` }" />
               </div>
               <span style="font-size: 12px; font-weight: 700; color: #8B5CF6; min-width: 52px; text-align: right;">{{ conversions.toLocaleString() }}</span>
-              <span style="font-size: 11px; color: #A8B3AC; min-width: 38px; text-align: right;">{{ convRate.toFixed(1) }}%</span>
+              <span style="font-size: 11px; color: var(--text-faint); min-width: 38px; text-align: right;">{{ convRate.toFixed(1) }}%</span>
             </div>
 
             <!-- Fallidos -->
             <div v-if="failed > 0" style="display: flex; align-items: center; gap: 12px;">
               <div style="width: 9px; height: 9px; border-radius: 2px; background: #F97316; flex-shrink: 0;" />
-              <span style="font-size: 12px; color: #3A4A41; font-weight: 500; width: 110px; flex-shrink: 0;">Fallidos</span>
+              <span style="font-size: 12px; color: var(--text-medium); font-weight: 500; width: 110px; flex-shrink: 0;">Fallidos</span>
               <div style="flex: 1; height: 9px; background: #FEF3EA; border-radius: 999px; overflow: hidden;">
                 <div style="height: 100%; background: #F97316; border-radius: 999px; transition: width 0.5s;" :style="{ width: `${failRate}%` }" />
               </div>
               <span style="font-size: 12px; font-weight: 700; color: #F97316; min-width: 52px; text-align: right;">{{ failed.toLocaleString() }}</span>
-              <span style="font-size: 11px; color: #A8B3AC; min-width: 38px; text-align: right;">{{ failRate }}%</span>
+              <span style="font-size: 11px; color: var(--text-faint); min-width: 38px; text-align: right;">{{ failRate }}%</span>
             </div>
 
             <!-- Omitidos -->
             <div v-if="skipped > 0" style="display: flex; align-items: center; gap: 12px;">
-              <div style="width: 9px; height: 9px; border-radius: 2px; background: #D8DDD7; flex-shrink: 0;" />
-              <span style="font-size: 12px; color: #3A4A41; font-weight: 500; width: 110px; flex-shrink: 0;">Omitidos</span>
-              <div style="flex: 1; height: 9px; background: #F3F5F2; border-radius: 999px; overflow: hidden;">
-                <div style="height: 100%; background: #D8DDD7; border-radius: 999px; transition: width 0.5s;" :style="{ width: `${skippedRate}%` }" />
+              <div style="width: 9px; height: 9px; border-radius: 2px; background: var(--border); flex-shrink: 0;" />
+              <span style="font-size: 12px; color: var(--text-medium); font-weight: 500; width: 110px; flex-shrink: 0;">Omitidos</span>
+              <div style="flex: 1; height: 9px; background: var(--bg-subtle); border-radius: 999px; overflow: hidden;">
+                <div style="height: 100%; background: var(--border); border-radius: 999px; transition: width 0.5s;" :style="{ width: `${skippedRate}%` }" />
               </div>
-              <span style="font-size: 12px; font-weight: 700; color: #6B7A72; min-width: 52px; text-align: right;">{{ skipped.toLocaleString() }}</span>
-              <span style="font-size: 11px; color: #A8B3AC; min-width: 38px; text-align: right;">{{ skippedRate }}%</span>
+              <span style="font-size: 12px; font-weight: 700; color: var(--text-muted); min-width: 52px; text-align: right;">{{ skipped.toLocaleString() }}</span>
+              <span style="font-size: 11px; color: var(--text-faint); min-width: 38px; text-align: right;">{{ skippedRate }}%</span>
             </div>
 
           </div>

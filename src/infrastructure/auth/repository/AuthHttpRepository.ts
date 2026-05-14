@@ -4,7 +4,7 @@ import { injectable } from 'inversify'
 import type { AuthRepository, RegisterDto, ChangeEmailDto, ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto } from '@/domain/auth/repository/AuthRepository'
 
 import type { Admin } from '@/domain/auth/entities/Admin'
-import { apiClient } from '@/infrastructure/http/ApiClient'
+import { apiClient, ApiError } from '@/infrastructure/http/ApiClient'
 
 interface LoginResponse {
   admin: Admin
@@ -35,7 +35,8 @@ export class AuthHttpRepository implements AuthRepository {
       apiClient.setToken(accessToken)
       this._admin = admin
       return admin
-    } catch {
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 429) throw e
       return null
     }
   }
@@ -59,6 +60,17 @@ export class AuthHttpRepository implements AuthRepository {
 
   async checkSession(): Promise<Admin | null> {
     try {
+      const res = await fetch(apiClient.urlFor('/auth/refresh'), {
+        method: 'POST',
+        credentials: 'include',
+      })
+      if (!res.ok) {
+        this._admin = null
+        return null
+      }
+      const { accessToken } = await res.json()
+      if (accessToken) apiClient.setToken(accessToken)
+
       const { admin: payload } = await apiClient.get<MeResponse>('/auth/me')
       this._admin = { id: payload.adminId, email: payload.email, emailVerified: payload.emailVerified }
       return this._admin

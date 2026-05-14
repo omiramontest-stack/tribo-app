@@ -86,9 +86,9 @@ const passwordStrength = computed(() => {
 
 const strengthLabel = computed(() => {
   const s = passwordStrength.value
-  if (s <= 1) return { text: 'Débil',  color: '#DC2626' }
-  if (s <= 3) return { text: 'Media',  color: '#D97706' }
-  return             { text: 'Fuerte', color: '#16A34A' }
+  if (s <= 1) return { text: 'Débil',  color: 'var(--danger)' }
+  if (s <= 3) return { text: 'Media',  color: 'var(--warning)' }
+  return             { text: 'Fuerte', color: 'var(--success)' }
 })
 
 async function handleChangePassword() {
@@ -249,9 +249,9 @@ function getErrorCode(e: unknown): string {
 const roleLabel: Record<MemberRole, string> = { owner: 'Propietario', admin: 'Admin', staff: 'Staff' }
 
 const roleBadgeStyle: Record<MemberRole, string> = {
-  owner: 'background:#EDE9FE;color:#6D28D9;',
-  admin: 'background:#DBEAFE;color:#1D4ED8;',
-  staff: 'background:#F3F4F6;color:#374151;',
+  owner: 'background:var(--info-bg);color:var(--info);',
+  admin: 'background:var(--info-bg);color:var(--info);',
+  staff: 'background:var(--bg-subtle);color:var(--text-medium);',
 }
 
 function formatDate(value?: string): string {
@@ -306,7 +306,7 @@ function getInitials(email = ''): string {
         <!-- Email section -->
         <section class="settings-section">
           <div class="section-head">
-            <div class="section-head__icon" style="background:#EFF6FF;color:#1D4ED8;">
+            <div class="section-head__icon" style="background:var(--info-bg);color:var(--info);">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                 <polyline points="22,6 12,13 2,6"/>
@@ -314,7 +314,7 @@ function getInitials(email = ''): string {
             </div>
             <div>
               <h2 class="section-head__title">Correo electrónico</h2>
-              <p class="section-head__sub">Correo actual: <strong style="color:#0F1B14;">{{ admin?.email }}</strong></p>
+              <p class="section-head__sub">Correo actual: <strong style="color:var(--text-ink);">{{ admin?.email }}</strong></p>
             </div>
           </div>
 
@@ -356,7 +356,7 @@ function getInitials(email = ''): string {
         <!-- Password section -->
         <section class="settings-section">
           <div class="section-head">
-            <div class="section-head__icon" style="background:#F0FDF4;color:#15803D;">
+            <div class="section-head__icon" style="background:var(--bg-subtle);color:var(--success);">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                 <path d="M7 11V7a5 5 0 0110 0v4"/>
@@ -382,7 +382,7 @@ function getInitials(email = ''): string {
                 <input v-model="passwordForm.newPassword" type="password" placeholder="Mínimo 8 caracteres" class="field__input" />
                 <div v-if="passwordForm.newPassword" class="strength-bar">
                   <div class="strength-bar__track">
-                    <div v-for="i in 5" :key="i" class="strength-bar__seg" :style="{ background: i <= passwordStrength ? strengthLabel.color : '#ECEFEB' }" />
+                    <div v-for="i in 5" :key="i" class="strength-bar__seg" :style="{ background: i <= passwordStrength ? strengthLabel.color : 'var(--border)' }" />
                   </div>
                   <span class="strength-bar__label" :style="{ color: strengthLabel.color }">{{ strengthLabel.text }}</span>
                 </div>
@@ -416,7 +416,7 @@ function getInitials(email = ''): string {
 
         <section class="settings-section">
           <div class="section-head">
-            <div class="section-head__icon" style="background:#FFF7ED;color:#C2410C;">
+            <div class="section-head__icon" style="background:var(--warning-bg);color:var(--warning);">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
                 <polyline points="9 22 9 12 15 12 15 22"/>
@@ -430,7 +430,7 @@ function getInitials(email = ''): string {
 
           <div class="field-group">
             <div class="field">
-              <label class="field__label">Nombre <span style="color:#DC2626;">*</span></label>
+              <label class="field__label">Nombre <span style="color:var(--danger);">*</span></label>
               <input v-model="orgForm.name" type="text" placeholder="Mi empresa" class="field__input" />
             </div>
             <div class="field-row">
@@ -596,7 +596,7 @@ function getInitials(email = ''): string {
           </div>
 
           <div v-else class="members-empty">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#D8DDD7" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
               <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
               <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
             </svg>
@@ -613,7 +613,7 @@ function getInitials(email = ''): string {
         <div v-if="confirmRemoveId" class="modal-overlay" @click.self="confirmRemoveId = null">
           <div class="modal-box">
             <div class="modal-box__icon modal-box__icon--danger">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="1.8" stroke-linecap="round">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="1.8" stroke-linecap="round">
                 <polyline points="3 6 5 6 21 6"/>
                 <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
                 <path d="M10 11v6M14 11v6"/>
@@ -623,7 +623,7 @@ function getInitials(email = ''): string {
             <h3 class="modal-box__title">Eliminar miembro</h3>
             <p class="modal-box__body">
               ¿Estás seguro de que deseas eliminar a
-              <strong style="color:#0F1B14;">{{ confirmRemoveMember?.email ?? confirmRemoveMember?.adminId }}</strong>
+              <strong style="color:var(--text-ink);">{{ confirmRemoveMember?.email ?? confirmRemoveMember?.adminId }}</strong>
               del equipo? Esta acción no se puede deshacer.
             </p>
             <div class="modal-box__actions">
@@ -657,11 +657,11 @@ function getInitials(email = ''): string {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  background: #fff;
-  border: 1px solid #ECEFEB;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 8px;
-  box-shadow: 0 1px 0 rgba(15,27,20,0.02);
+  box-shadow: 0 1px 0 var(--shadow-card);
 }
 
 .nav-item {
@@ -674,15 +674,15 @@ function getInitials(email = ''): string {
   background: transparent;
   font-size: 13.5px;
   font-weight: 600;
-  color: #6B7A72;
+  color: var(--text-muted);
   cursor: pointer;
   font-family: inherit;
   text-align: left;
   width: 100%;
   transition: background 0.12s, color 0.12s;
 }
-.nav-item:hover   { background: #F7F4EF; color: #0F1B14; }
-.nav-item.is-active { background: #F3F8F5; color: #1B4332; }
+.nav-item:hover   { background: var(--bg-page); color: var(--text-ink); }
+.nav-item.is-active { background: var(--bg-subtle); color: var(--primary); }
 .nav-item__icon   { flex-shrink: 0; }
 
 /* ── Content area ── */
@@ -694,17 +694,17 @@ function getInitials(email = ''): string {
   display: flex;
   align-items: center;
   gap: 14px;
-  background: #fff;
-  border: 1px solid #ECEFEB;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
   border-radius: 14px;
   padding: 18px 20px;
-  box-shadow: 0 1px 0 rgba(15,27,20,0.02);
+  box-shadow: 0 1px 0 var(--shadow-card);
 }
 .profile-card__avatar {
   width: 52px; height: 52px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #1B4332, #2D6A4F);
-  color: #fff;
+  background: linear-gradient(135deg, var(--primary), var(--primary-mid));
+  color: var(--bg-surface);
   font-size: 16px;
   font-weight: 700;
   display: grid;
@@ -715,7 +715,7 @@ function getInitials(email = ''): string {
 .profile-card__email {
   font-size: 14px;
   font-weight: 600;
-  color: #0F1B14;
+  color: var(--text-ink);
   margin: 0 0 5px;
   word-break: break-all;
 }
@@ -724,8 +724,8 @@ function getInitials(email = ''): string {
   font-weight: 600;
   padding: 2px 9px;
   border-radius: 999px;
-  background: #DBEAFE;
-  color: #1D4ED8;
+  background: var(--info-bg);
+  color: var(--info);
 }
 
 /* ── Org card ── */
@@ -733,17 +733,17 @@ function getInitials(email = ''): string {
   display: flex;
   align-items: center;
   gap: 14px;
-  background: #fff;
-  border: 1px solid #ECEFEB;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
   border-radius: 14px;
   padding: 16px 20px;
-  box-shadow: 0 1px 0 rgba(15,27,20,0.02);
+  box-shadow: 0 1px 0 var(--shadow-card);
 }
 .org-card__avatar {
   width: 44px; height: 44px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #FFF7ED, #FED7AA);
-  color: #C2410C;
+  background: linear-gradient(135deg, var(--warning-bg), var(--amber-bg));
+  color: var(--warning);
   font-size: 14px;
   font-weight: 700;
   display: grid;
@@ -753,25 +753,25 @@ function getInitials(email = ''): string {
 .org-card__name {
   font-size: 15px;
   font-weight: 700;
-  color: #0F1B14;
+  color: var(--text-ink);
   margin: 0 0 2px;
 }
 .org-card__sub {
   font-size: 12px;
-  color: #6B7A72;
+  color: var(--text-muted);
   margin: 0;
 }
 
 /* ── Settings section card ── */
 .settings-section {
-  background: #fff;
-  border: 1px solid #ECEFEB;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
   border-radius: 14px;
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 20px;
-  box-shadow: 0 1px 0 rgba(15,27,20,0.02);
+  box-shadow: 0 1px 0 var(--shadow-card);
 }
 
 .section-head {
@@ -779,7 +779,7 @@ function getInitials(email = ''): string {
   align-items: flex-start;
   gap: 14px;
   padding-bottom: 20px;
-  border-bottom: 1px solid #F3F5F2;
+  border-bottom: 1px solid var(--bg-subtle);
 }
 .section-head__icon {
   width: 40px; height: 40px;
@@ -791,12 +791,12 @@ function getInitials(email = ''): string {
 .section-head__title {
   font-size: 15px;
   font-weight: 700;
-  color: #0F1B14;
+  color: var(--text-ink);
   margin: 0 0 3px;
 }
 .section-head__sub {
   font-size: 12.5px;
-  color: #6B7A72;
+  color: var(--text-muted);
   margin: 0;
 }
 
@@ -808,29 +808,29 @@ function getInitials(email = ''): string {
 .field__label {
   font-size: 12px;
   font-weight: 600;
-  color: #3A4A41;
+  color: var(--text-medium);
 }
-.field__hint     { font-size: 11px; font-weight: 400; color: #A8B3AC; }
-.field__required { color: #DC2626; }
+.field__hint     { font-size: 11px; font-weight: 400; color: var(--text-faint); }
+.field__required { color: var(--danger); }
 
 .field__input {
   width: 100%;
   padding: 10px 12px;
-  border: 1.5px solid #D8DDD7;
+  border: 1.5px solid var(--border);
   border-radius: 9px;
   font-size: 13.5px;
   font-family: inherit;
-  color: #0F1B14;
-  background: #fff;
+  color: var(--text-ink);
+  background: var(--bg-surface);
   outline: none;
   box-sizing: border-box;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .field__input:focus {
-  border-color: #1B4332;
+  border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(27,67,50,0.08);
 }
-.field__error  { font-size: 12px; color: #DC2626; margin: 0; }
+.field__error  { font-size: 12px; color: var(--danger); margin: 0; }
 .field__select { cursor: pointer; }
 .field__select--sm { padding: 6px 8px; font-size: 12.5px; width: auto; }
 
@@ -859,7 +859,7 @@ function getInitials(email = ''): string {
   border-radius: 10px;
   border: 1px solid transparent;
 }
-.alert--success { background: #D1FAE5; border-color: #A7F3D0; color: #15803D; }
+.alert--success { background: var(--success-bg); border-color: var(--success-bg); color: var(--success); }
 .alert__title   { font-size: 13.5px; font-weight: 600; margin-bottom: 2px; }
 .alert__body    { font-size: 12.5px; line-height: 1.5; }
 
@@ -869,8 +869,8 @@ function getInitials(email = ''): string {
   align-items: center;
   gap: 6px;
   padding: 10px 20px;
-  background: #1B4332;
-  color: #fff;
+  background: var(--primary);
+  color: var(--bg-surface);
   border: none;
   border-radius: 9px;
   font-size: 13px;
@@ -885,8 +885,8 @@ function getInitials(email = ''): string {
 
 .btn-orange {
   padding: 10px 18px;
-  background: #E8920A;
-  color: #13301F;
+  background: var(--amber);
+  color: var(--primary);
   border: none;
   border-radius: 9px;
   font-size: 13px;
@@ -903,11 +903,11 @@ function getInitials(email = ''): string {
   flex: 1;
   padding: 11px 16px;
   border-radius: 9px;
-  background: #F7F4EF;
+  background: var(--bg-page);
   border: none;
   font-size: 13px;
   font-weight: 600;
-  color: #3A4A41;
+  color: var(--text-medium);
   cursor: pointer;
   font-family: inherit;
   transition: opacity 0.15s;
@@ -918,11 +918,11 @@ function getInitials(email = ''): string {
   flex: 1;
   padding: 11px 16px;
   border-radius: 9px;
-  background: #DC2626;
+  background: var(--danger);
   border: none;
   font-size: 13px;
   font-weight: 700;
-  color: #fff;
+  color: var(--bg-surface);
   cursor: pointer;
   font-family: inherit;
   transition: opacity 0.15s;
@@ -935,7 +935,7 @@ function getInitials(email = ''): string {
   border: none;
   cursor: pointer;
   font-size: 12.5px;
-  color: #6B7A72;
+  color: var(--text-muted);
   font-family: inherit;
   padding: 0;
   text-decoration: underline;
@@ -952,58 +952,58 @@ function getInitials(email = ''): string {
 .members-head__title {
   font-size: 16px;
   font-weight: 700;
-  color: #0F1B14;
+  color: var(--text-ink);
   margin: 0 0 2px;
 }
-.members-head__sub { font-size: 12.5px; color: #6B7A72; margin: 0; }
+.members-head__sub { font-size: 12.5px; color: var(--text-muted); margin: 0; }
 
 /* ── Invite form ── */
 .invite-form {
-  background: #FAFAF8;
-  border: 1.5px dashed #D8DDD7;
+  background: var(--bg-subtle);
+  border: 1.5px dashed var(--border);
   border-radius: 14px;
   padding: 18px 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-.invite-form__title  { font-size: 13px; font-weight: 600; color: #0F1B14; margin: 0; }
+.invite-form__title  { font-size: 13px; font-weight: 600; color: var(--text-ink); margin: 0; }
 .invite-form__fields { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
 .invite-form__fields .field__input:not(select) { flex: 1; min-width: 180px; }
-.invite-form__hint   { font-size: 11.5px; color: #A8B3AC; margin: 0; }
+.invite-form__hint   { font-size: 11.5px; color: var(--text-faint); margin: 0; }
 
 /* ── Members list card ── */
 .members-list {
-  background: #fff;
-  border: 1px solid #ECEFEB;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
   border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 1px 0 rgba(15,27,20,0.02);
+  box-shadow: 0 1px 0 var(--shadow-card);
 }
 .members-list__header {
   padding: 13px 20px;
-  border-bottom: 1px solid #ECEFEB;
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
 }
-.members-list__count { font-size: 13px; font-weight: 600; color: #0F1B14; }
+.members-list__count { font-size: 13px; font-weight: 600; color: var(--text-ink); }
 
 .member-row {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 13px 20px;
-  border-bottom: 1px solid #F7F4EF;
+  border-bottom: 1px solid var(--bg-page);
   transition: background 0.1s;
 }
 .member-row:last-child { border-bottom: none; }
-.member-row:hover      { background: #FAFAF9; }
+.member-row:hover      { background: var(--bg-subtle); }
 
 .member-avatar {
   width: 40px; height: 40px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #E8F5EC, #D1FAE5);
-  color: #1B4332;
+  background: linear-gradient(135deg, var(--primary-light), var(--success-bg));
+  color: var(--primary);
   font-size: 13px;
   font-weight: 700;
   display: grid;
@@ -1015,14 +1015,14 @@ function getInitials(email = ''): string {
 .member-info__email {
   font-size: 13.5px;
   font-weight: 600;
-  color: #0F1B14;
+  color: var(--text-ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   margin: 0 0 2px;
 }
-.member-info__you   { font-size: 11px; font-weight: 400; color: #9DB7A8; margin-left: 4px; }
-.member-info__since { font-size: 11.5px; color: #A8B3AC; margin: 0; }
+.member-info__you   { font-size: 11px; font-weight: 400; color: var(--text-nav-icon); margin-left: 4px; }
+.member-info__since { font-size: 11.5px; color: var(--text-faint); margin: 0; }
 
 .member-role {
   display: flex;
@@ -1043,25 +1043,25 @@ function getInitials(email = ''): string {
 .action-btn {
   width: 32px; height: 32px;
   border-radius: 8px;
-  border: 1px solid #ECEFEB;
-  background: #fff;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
   display: grid;
   place-items: center;
   cursor: pointer;
-  color: #6B7A72;
+  color: var(--text-muted);
   transition: background 0.12s, color 0.12s, border-color 0.12s;
   flex-shrink: 0;
 }
-.action-btn:hover { background: #F7F4EF; color: #0F1B14; border-color: #D8DDD7; }
-.action-btn--danger { color: #DC2626; border-color: #FCA5A5; }
-.action-btn--danger:hover { background: #FEF2F2; border-color: #FCA5A5; }
+.action-btn:hover { background: var(--bg-page); color: var(--text-ink); border-color: var(--border); }
+.action-btn--danger { color: var(--danger); border-color: var(--border); }
+.action-btn--danger:hover { background: var(--danger-bg); border-color: var(--border); }
 
 .icon-btn {
   padding: 4px;
   background: none;
   border: none;
   cursor: pointer;
-  color: #A8B3AC;
+  color: var(--text-faint);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1070,7 +1070,7 @@ function getInitials(email = ''): string {
 .members-empty {
   padding: 44px 20px;
   text-align: center;
-  color: #A8B3AC;
+  color: var(--text-faint);
   font-size: 13px;
   display: flex;
   flex-direction: column;
@@ -1080,7 +1080,7 @@ function getInitials(email = ''): string {
 
 /* ── Skeleton ── */
 .skeleton {
-  background: #EFEAE0;
+  background: var(--bg-subtle);
   border-radius: 4px;
   animation: sk-pulse 1.4s ease-in-out infinite;
   display: block;
@@ -1090,7 +1090,7 @@ function getInitials(email = ''): string {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: var(--overlay);
   display: grid;
   place-items: center;
   z-index: 9100;
@@ -1098,7 +1098,7 @@ function getInitials(email = ''): string {
   padding: 20px;
 }
 .modal-box {
-  background: #fff;
+  background: var(--bg-surface);
   border-radius: 20px;
   padding: 32px;
   max-width: 420px;
@@ -1112,9 +1112,9 @@ function getInitials(email = ''): string {
   place-items: center;
   margin-bottom: 18px;
 }
-.modal-box__icon--danger { background: #FEE2E2; }
-.modal-box__title  { font-size: 18px; font-weight: 800; color: #0F1B14; margin-bottom: 8px; }
-.modal-box__body   { font-size: 13px; color: #6B7A72; line-height: 1.6; margin-bottom: 24px; }
+.modal-box__icon--danger { background: var(--danger-bg); }
+.modal-box__title  { font-size: 18px; font-weight: 800; color: var(--text-ink); margin-bottom: 8px; }
+.modal-box__body   { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px; }
 .modal-box__actions { display: flex; gap: 10px; }
 
 /* ── Keyframes ── */
@@ -1178,10 +1178,10 @@ function getInitials(email = ''): string {
     gap: 6px;
   }
   .nav-item.is-active {
-    background: #1B4332;
-    color: #fff;
+    background: var(--primary);
+    color: var(--bg-surface);
   }
-  .nav-item:hover:not(.is-active) { background: #F7F4EF; }
+  .nav-item:hover:not(.is-active) { background: var(--bg-page); }
 
   .settings-content {
     padding-top: 20px;

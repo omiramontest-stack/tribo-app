@@ -16,6 +16,7 @@ const passStore = usePassStore()
 const id = route.params.id as string
 const showModal = ref(false)
 const deleting = ref(false)
+const showDeleteModal = ref(false)
 const activeTab = ref<'pases' | 'canjeados'>('pases')
 const scannedPasses = ref<Pass[]>([])
 const loadingScanned = ref(false)
@@ -27,9 +28,49 @@ const isDaypass = computed(() => walletStore.currentWallet?.type === 'daypass')
 const wt = computed(() => {
   const found = walletTypeConfig.find(c => c.value === walletStore.currentWallet?.type)
   return found
-    ? { label: found.label, accent: found.iconColor, bg: found.iconBg }
-    : { label: '—', accent: '#6B7A72', bg: '#F7F4EF' }
+    ? { label: found.label, accent: found.iconColor, bg: found.iconBg, iconPath: found.iconPath }
+    : { label: '—', accent: 'var(--text-muted)', bg: 'var(--bg-field)', iconPath: '' }
 })
+
+const initials = computed(() =>
+  (walletStore.currentWallet?.businessName ?? '')
+    .split(' ')
+    .slice(0, 2)
+    .map((w: string) => w[0])
+    .join('')
+    .toUpperCase()
+)
+
+const stats = computed(() => [
+  {
+    label: 'Emitidos',
+    value: passStore.passes.length,
+    color: 'var(--amber)',
+    bg: 'var(--amber-bg)',
+    icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
+  },
+  {
+    label: 'Activos',
+    value: passStore.passes.length,
+    color: 'var(--primary-text)',
+    bg: 'var(--primary-light)',
+    icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+  },
+  {
+    label: 'Escaneos',
+    value: '—',
+    color: 'var(--primary-text)',
+    bg: 'var(--primary-light)',
+    icon: 'M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z',
+  },
+  {
+    label: 'Canjeados',
+    value: '—',
+    color: '#8B5CF6',
+    bg: '#EBE3FB',
+    icon: 'M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z',
+  },
+])
 
 onMounted(async () => {
   await Promise.all([walletStore.fetchWalletById(id), passStore.fetchPassesByWallet(id, 1)])
@@ -63,11 +104,16 @@ async function goToScannedPage(page: number) {
   }
 }
 
-async function handleDelete() {
-  if (!confirm('¿Eliminar esta wallet y todos sus passes?')) return
+function handleDelete() { showDeleteModal.value = true }
+
+async function confirmDelete() {
   deleting.value = true
-  await walletStore.deleteWallet(id)
-  router.push({ name: 'Wallets' })
+  try {
+    await walletStore.deleteWallet(id)
+    router.push({ name: 'Wallets' })
+  } finally {
+    deleting.value = false
+  }
 }
 
 async function onPassGenerated() {
@@ -83,199 +129,181 @@ function formatDate(iso: string): string {
 </script>
 
 <template>
-  <div style="display: flex; flex-direction: column; gap: 20px; max-width: 900px;">
+  <div class="detail-page">
 
     <!-- Page header -->
-    <div style="display: flex; align-items: center; gap: 12px;">
-      <button
-        style="font-size: 13px; color: #6B7A72; background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 4px;"
-        @click="router.back()"
-      >
-        ← Volver
-      </button>
-      <div style="flex: 1;" />
-      <button
-        style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #1B4332; border: 1px solid #ECEFEB; padding: 6px 12px; border-radius: 8px; background: #fff; cursor: pointer; font-weight: 600;"
-        @click="router.push({ name: 'WalletAnalytics', params: { id } })"
-      >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 21V5M3 21h18"/><path d="M7 17v-5M11 17V9M15 17v-3M19 17V7"/>
+    <div class="page-header">
+      <button class="btn-back-nav" @click="router.back()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M19 12H5M12 5l-7 7 7 7"/>
         </svg>
-        Ver Analytics
+        Volver
       </button>
-      <button
-        :disabled="deleting"
-        style="font-size: 12px; color: #DC2626; border: 1px solid #FCA5A5; padding: 6px 12px; border-radius: 8px; background: #fff; cursor: pointer;"
-        @click="handleDelete"
-      >
-        Eliminar wallet
-      </button>
+
+      <div class="header-actions">
+        <button
+          class="btn-action"
+          @click="router.push({ name: 'WalletAnalytics', params: { id } })"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 21V5M3 21h18"/><path d="M7 17v-5M11 17V9M15 17v-3M19 17V7"/>
+          </svg>
+          Ver analytics
+        </button>
+        <button
+          class="btn-danger-outline"
+          :disabled="deleting"
+          @click="handleDelete"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+            <path d="M10 11v6M14 11v6"/>
+          </svg>
+          Eliminar
+        </button>
+      </div>
     </div>
 
-    <!-- Wallet info card -->
-    <div
-      v-if="walletStore.currentWallet"
-      style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 0 rgba(15,27,20,0.02);"
-    >
-      <div style="height: 3px;" :style="{ background: walletStore.currentWallet.primaryColor }" />
-      <div style="padding: 18px; display: flex; align-items: center; gap: 14px;">
+    <!-- Wallet identity card -->
+    <div v-if="walletStore.currentWallet" class="identity-card">
+      <div class="identity-strip" :style="{ background: walletStore.currentWallet.primaryColor }" />
+      <div class="identity-body">
         <div
-          class="grid place-items-center shrink-0"
-          style="width: 44px; height: 44px; border-radius: 12px;"
-          :style="{ background: wt.bg }"
+          class="identity-avatar"
+          :style="walletStore.currentWallet.logoUrl ? {} : { background: walletStore.currentWallet.primaryColor }"
         >
-          <div style="width: 16px; height: 16px; border-radius: 4px;" :style="{ background: walletStore.currentWallet.primaryColor }" />
+          <img
+            v-if="walletStore.currentWallet.logoUrl"
+            :src="walletStore.currentWallet.logoUrl"
+            :alt="walletStore.currentWallet.businessName"
+            class="identity-avatar-img"
+          />
+          <span v-else class="identity-avatar-initials">{{ initials }}</span>
         </div>
-        <div>
-          <h2 style="font-size: 17px; font-weight: 700; color: #0F1B14; margin: 0 0 4px;">
-            {{ walletStore.currentWallet.businessName }}
-          </h2>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span
-              style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px;"
-              :style="{ color: wt.accent, background: wt.bg }"
-            >
+
+        <div class="identity-info">
+          <h2 class="identity-name">{{ walletStore.currentWallet.businessName }}</h2>
+          <div class="identity-meta">
+            <span class="type-badge" :style="{ color: wt.accent, background: wt.bg }">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" :stroke="wt.accent" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path :d="wt.iconPath" />
+              </svg>
               {{ wt.label }}
             </span>
-            <span v-if="walletStore.currentWallet.description" style="font-size: 12px; color: #6B7A72;">
+            <span v-if="walletStore.currentWallet.description" class="identity-desc">
               {{ walletStore.currentWallet.description }}
             </span>
           </div>
         </div>
+
+        <div class="identity-colors">
+          <span class="color-chip" :style="{ background: walletStore.currentWallet.primaryColor }" :title="walletStore.currentWallet.primaryColor" />
+          <span class="color-chip" :style="{ background: walletStore.currentWallet.accentColor, opacity: 0.75 }" :title="walletStore.currentWallet.accentColor" />
+        </div>
       </div>
     </div>
 
-    <!-- Overview stats -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
+    <!-- Stats grid -->
+    <div class="stats-grid">
       <div
-        v-for="stat in [
-          { label: 'Emitidos', value: passStore.passes.length, color: '#E8920A' },
-          { label: 'Activos',  value: passStore.passes.length, color: '#1B4332' },
-          { label: 'Escaneos', value: '—', color: '#2D6A4F' },
-          { label: 'Canjeados',value: '—', color: '#8B5CF6' },
-        ]"
+        v-for="stat in stats"
         :key="stat.label"
-        style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; padding: 14px; box-shadow: 0 1px 0 rgba(15,27,20,0.02);"
-        :style="{ borderLeft: `4px solid ${stat.color}` }"
+        class="stat-card"
+        :style="{ borderLeftColor: stat.color }"
       >
-        <div style="font-size: 11px; color: #6B7A72; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em;">
-          {{ stat.label }}
+        <div class="stat-icon-wrap" :style="{ background: stat.bg }">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" :stroke="stat.color" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path :d="stat.icon" />
+          </svg>
         </div>
-        <div style="font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums;" :style="{ color: stat.color }">
-          {{ stat.value }}
+        <div class="stat-body">
+          <p class="stat-label">{{ stat.label }}</p>
+          <p class="stat-value" :style="{ color: stat.color }">{{ stat.value }}</p>
         </div>
       </div>
     </div>
 
     <!-- Passes section -->
-    <div style="background: #fff; border: 1px solid #ECEFEB; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 0 rgba(15,27,20,0.02);">
+    <div class="passes-section">
 
-      <!-- Tab bar header -->
-      <div style="padding: 14px 20px; border-bottom: 1px solid #ECEFEB; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
-        <!-- Tabs for daypass, simple title otherwise -->
-        <div
-          v-if="isDaypass"
-          style="display: flex; gap: 2px; padding: 3px; background: #EFEAE0; border-radius: 8px;"
-        >
+      <!-- Tab bar / header -->
+      <div class="passes-header">
+        <div v-if="isDaypass" class="tab-group">
           <button
-            v-for="tab in [{ id: 'pases', label: `Activos (${passStore.passes.length})` }, { id: 'canjeados', label: 'Canjeados' }]"
+            v-for="tab in [
+              { id: 'pases', label: `Activos (${passStore.passes.length})` },
+              { id: 'canjeados', label: 'Canjeados' },
+            ]"
             :key="tab.id"
-            style="padding: 6px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; transition: all 0.12s;"
-            :style="activeTab === tab.id
-              ? 'background: #fff; color: #0F1B14; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'
-              : 'background: transparent; color: #6B7A72;'"
+            class="tab-btn"
+            :class="{ 'tab-btn--active': activeTab === tab.id }"
             @click="switchTab(tab.id as 'pases' | 'canjeados')"
           >
             {{ tab.label }}
           </button>
         </div>
 
-        <div v-else style="font-size: 14px; font-weight: 600; color: #0F1B14;">
-          Pases ({{ passStore.passes.length }})
-        </div>
+        <p v-else class="passes-title">
+          Pases
+          <span class="passes-count">{{ passStore.passes.length }}</span>
+        </p>
 
         <button
           v-if="activeTab === 'pases'"
-          style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; background: #E8920A; color: #13301F; font-weight: 600; font-size: 12px; border: none; cursor: pointer;"
+          class="btn-generate"
           @click="showModal = true"
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
           Generar pase
         </button>
       </div>
 
-      <!-- Passes table (activos) -->
+      <!-- Active passes -->
       <template v-if="activeTab === 'pases'">
         <PassTable
           :passes="passStore.passes"
           :wallet="walletStore.currentWallet!"
         />
-        <div
-          v-if="passStore.passesMeta.totalPages > 1"
-          style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 20px; border-top: 1px solid #ECEFEB;"
-        >
+        <div v-if="passStore.passesMeta.totalPages > 1" class="pagination">
           <button
+            class="page-btn"
             :disabled="passesPage <= 1"
-            style="padding: 5px 12px; border-radius: 7px; border: 1px solid #ECEFEB; background: #fff; font-size: 12px; cursor: pointer; color: #3A4A41; disabled:opacity-50;"
-            :style="passesPage <= 1 ? 'opacity:0.4;cursor:default;' : ''"
             @click="goToPassesPage(passesPage - 1)"
           >← Anterior</button>
-          <span style="font-size: 12px; color: #6B7A72;">
-            Página {{ passesPage }} de {{ passStore.passesMeta.totalPages }}
-          </span>
+          <span class="page-info">Página {{ passesPage }} de {{ passStore.passesMeta.totalPages }}</span>
           <button
+            class="page-btn"
             :disabled="passesPage >= passStore.passesMeta.totalPages"
-            style="padding: 5px 12px; border-radius: 7px; border: 1px solid #ECEFEB; background: #fff; font-size: 12px; cursor: pointer; color: #3A4A41;"
-            :style="passesPage >= passStore.passesMeta.totalPages ? 'opacity:0.4;cursor:default;' : ''"
             @click="goToPassesPage(passesPage + 1)"
           >Siguiente →</button>
         </div>
       </template>
 
-      <!-- Canjeados (daypass only) -->
+      <!-- Scanned passes (daypass) -->
       <div v-else-if="activeTab === 'canjeados'">
-        <div v-if="loadingScanned" style="padding: 48px 20px; text-align: center; color: #6B7A72; font-size: 13px;">
-          Cargando…
-        </div>
-        <div v-else-if="!scannedPasses.length" style="padding: 48px 20px; text-align: center; color: #6B7A72; font-size: 13px;">
+        <div v-if="loadingScanned" class="passes-loading">Cargando…</div>
+        <div v-else-if="!scannedPasses.length" class="passes-empty">
           Aún no se han canjeado pases para este evento.
         </div>
         <div v-else>
           <div
             v-for="pass in scannedPasses"
             :key="pass.id"
-            style="padding: 12px 20px; border-bottom: 1px solid #ECEFEB; display: flex; align-items: center; justify-content: space-between; gap: 12px;"
+            class="scanned-row"
           >
-            <div>
-              <p style="font-size: 13px; font-weight: 600; color: #0F1B14;">{{ pass.firstName }} {{ pass.lastName }}</p>
-              <p v-if="pass.phone" style="font-size: 11px; color: #6B7A72; margin-top: 1px;">{{ pass.phone }}</p>
-              <p style="font-size: 11px; color: #6B7A72; margin-top: 1px;">
-                Escaneado: {{ pass.scannedAt ? formatDate(pass.scannedAt) : '—' }}
-              </p>
+            <div class="scanned-info">
+              <p class="scanned-name">{{ pass.firstName }} {{ pass.lastName }}</p>
+              <p v-if="pass.phone" class="scanned-sub">{{ pass.phone }}</p>
+              <p class="scanned-sub">Escaneado: {{ pass.scannedAt ? formatDate(pass.scannedAt) : '—' }}</p>
             </div>
-            <span style="font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #EFEAE0; color: #6B7A72;">
-              Canjeado
-            </span>
+            <span class="scanned-badge">Canjeado</span>
           </div>
-          <div
-            v-if="passStore.scannedMeta.totalPages > 1"
-            style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 20px; border-top: 1px solid #ECEFEB;"
-          >
-            <button
-              :disabled="scannedPage <= 1"
-              style="padding: 5px 12px; border-radius: 7px; border: 1px solid #ECEFEB; background: #fff; font-size: 12px; cursor: pointer; color: #3A4A41;"
-              :style="scannedPage <= 1 ? 'opacity:0.4;cursor:default;' : ''"
-              @click="goToScannedPage(scannedPage - 1)"
-            >← Anterior</button>
-            <span style="font-size: 12px; color: #6B7A72;">
-              Página {{ scannedPage }} de {{ passStore.scannedMeta.totalPages }}
-            </span>
-            <button
-              :disabled="scannedPage >= passStore.scannedMeta.totalPages"
-              style="padding: 5px 12px; border-radius: 7px; border: 1px solid #ECEFEB; background: #fff; font-size: 12px; cursor: pointer; color: #3A4A41;"
-              :style="scannedPage >= passStore.scannedMeta.totalPages ? 'opacity:0.4;cursor:default;' : ''"
-              @click="goToScannedPage(scannedPage + 1)"
-            >Siguiente →</button>
+          <div v-if="passStore.scannedMeta.totalPages > 1" class="pagination">
+            <button class="page-btn" :disabled="scannedPage <= 1" @click="goToScannedPage(scannedPage - 1)">← Anterior</button>
+            <span class="page-info">Página {{ scannedPage }} de {{ passStore.scannedMeta.totalPages }}</span>
+            <button class="page-btn" :disabled="scannedPage >= passStore.scannedMeta.totalPages" @click="goToScannedPage(scannedPage + 1)">Siguiente →</button>
           </div>
         </div>
       </div>
@@ -287,4 +315,492 @@ function formatDate(iso: string): string {
       @generated="onPassGenerated"
     />
   </div>
+
+  <!-- Delete confirmation modal -->
+  <Teleport to="body">
+    <Transition name="modal">
+      <div v-if="showDeleteModal" class="modal-backdrop" @click.self="showDeleteModal = false">
+        <div class="modal-card">
+          <div class="modal-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+              <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+            </svg>
+          </div>
+          <div>
+            <p class="modal-title">Eliminar wallet</p>
+            <p class="modal-body">
+              ¿Eliminar <strong>{{ walletStore.currentWallet?.businessName }}</strong> y todos sus pases?
+              Esta acción no se puede deshacer.
+            </p>
+          </div>
+          <div class="modal-actions">
+            <button class="modal-btn-cancel" :disabled="deleting" @click="showDeleteModal = false">Cancelar</button>
+            <button class="modal-btn-confirm" :disabled="deleting" @click="confirmDelete">
+              <svg v-if="deleting" class="spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
+              </svg>
+              {{ deleting ? 'Eliminando…' : 'Eliminar' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
+
+<style scoped>
+.detail-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 900px;
+}
+
+/* Header */
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-back-nav {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+  transition: color 0.15s;
+}
+.btn-back-nav:hover { color: var(--text-ink); }
+
+.header-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.btn-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--primary-text);
+  border: 1px solid var(--border);
+  padding: 7px 13px;
+  border-radius: 8px;
+  background: var(--bg-surface);
+  cursor: pointer;
+  font-weight: 600;
+  font-family: inherit;
+  transition: background 0.12s, border-color 0.12s;
+}
+.btn-action:hover { background: var(--bg-page); border-color: var(--border); }
+
+.btn-danger-outline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--danger);
+  border: 1px solid var(--danger-bg);
+  padding: 7px 13px;
+  border-radius: 8px;
+  background: var(--bg-surface);
+  cursor: pointer;
+  font-weight: 600;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.btn-danger-outline:hover { background: var(--danger-bg); }
+.btn-danger-outline:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Identity card */
+.identity-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 0 var(--shadow-card);
+}
+
+.identity-strip { height: 3px; }
+
+.identity-body {
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.identity-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.identity-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
+  background: var(--bg-field);
+}
+
+.identity-avatar-initials {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--bg-surface);
+  letter-spacing: -0.5px;
+}
+
+.identity-info { flex: 1; min-width: 0; }
+
+.identity-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-ink);
+  margin: 0 0 6px;
+}
+
+.identity-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.identity-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.identity-colors {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.color-chip {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Stats */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.stat-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 1px 0 var(--shadow-card);
+}
+
+.stat-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-body { min-width: 0; }
+
+.stat-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 4px;
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+  line-height: 1;
+}
+
+/* Passes section */
+.passes-section {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 0 var(--shadow-card);
+}
+
+.passes-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.tab-group {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg-subtle);
+  border-radius: 8px;
+}
+
+.tab-btn {
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  transition: all 0.12s;
+}
+.tab-btn--active {
+  background: var(--bg-surface);
+  color: var(--text-ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.passes-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-ink);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.passes-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-subtle);
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.btn-generate {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 8px;
+  background: var(--amber);
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 12px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.btn-generate:hover { background: #E8920A; }
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.page-btn {
+  padding: 5px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text-medium);
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.page-btn:hover:not(:disabled) { background: var(--bg-page); }
+.page-btn:disabled { opacity: 0.4; cursor: default; }
+
+.page-info {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Scanned rows */
+.passes-loading,
+.passes-empty {
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.scanned-row {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.scanned-row:last-child { border-bottom: none; }
+
+.scanned-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-ink);
+  margin: 0 0 2px;
+}
+
+.scanned-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0 0 1px;
+}
+
+.scanned-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Delete modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--overlay);
+  backdrop-filter: blur(2px);
+}
+
+.modal-card {
+  background: var(--bg-surface);
+  border-radius: 18px;
+  box-shadow: 0 20px 60px var(--shadow-card);
+  width: 100%;
+  max-width: 380px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--danger-bg);
+  display: grid;
+  place-items: center;
+}
+
+.modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-ink);
+  margin: 0 0 6px;
+}
+
+.modal-body {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.55;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.modal-btn-cancel {
+  padding: 9px 18px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-medium);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.modal-btn-cancel:hover:not(:disabled) { background: var(--bg-page); }
+
+.modal-btn-confirm {
+  padding: 9px 18px;
+  border-radius: 9px;
+  border: none;
+  background: var(--danger);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--bg-surface);
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.15s;
+}
+.modal-btn-confirm:hover:not(:disabled) { opacity: 0.88; }
+.modal-btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
+.modal-enter-from, .modal-leave-to { opacity: 0; }
+.modal-enter-active .modal-card,
+.modal-leave-active .modal-card { transition: transform 0.2s ease; }
+.modal-enter-from .modal-card,
+.modal-leave-to .modal-card { transform: scale(0.96); }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.8s linear infinite; }
+</style>
