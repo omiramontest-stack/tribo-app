@@ -50,11 +50,14 @@ async function sendWhatsApp(pass: Pass) {
     await whatsappStore.sendPass(pass.token)
     toast.show('Enviado por WhatsApp ✓', 'success')
   } catch (e) {
-    const code = ((e as { body?: { error?: string } })?.body?.error) ?? ''
+    const err = e as { status?: number; body?: { error?: string } }
+    const code = err?.body?.error ?? ''
     toast.show(
-      code === 'WHATSAPP_NOT_CONNECTED'
-        ? 'Conecta WhatsApp en Ajustes primero'
-        : 'Error al enviar por WhatsApp',
+      err?.status === 429
+        ? 'Espera unos segundos antes de reenviar'
+        : code === 'WHATSAPP_NOT_CONNECTED'
+          ? 'Conecta WhatsApp en Ajustes primero'
+          : 'Error al enviar por WhatsApp',
       'error',
     )
   } finally {

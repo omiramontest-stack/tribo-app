@@ -49,52 +49,42 @@ function selectTab(tab: Tab) {
 }
 
 // ── WHATSAPP ──────────────────────────────────────────────────────────────────
-const waLoading        = ref(false)
-const waStatusLoading  = ref(false)
+const waLoading         = ref(false)
 const waTemplateLoading = ref(false)
-const waTemplateValue  = ref('')
-let waPollingTimer: ReturnType<typeof setInterval> | null = null
+const waTemplateValue   = ref('')
+const waQrTimedOut      = ref(false)
 
-function stopWaPolling() {
-  if (waPollingTimer) { clearInterval(waPollingTimer); waPollingTimer = null }
-}
-
-function startWaPolling(orgId: string) {
-  stopWaPolling()
-  waPollingTimer = setInterval(async () => {
-    try {
-      await whatsappStore.fetchQr(orgId)
-      await whatsappStore.fetchStatus(orgId)
-      if (whatsappStore.status === 'connected') stopWaPolling()
-    } catch { /* ignore polling errors silently */ }
-  }, 3000)
-}
-
-watch(activeTab, async (tab, prevTab) => {
-  if (prevTab === 'whatsapp') stopWaPolling()
-  if (tab !== 'whatsapp' || !activeOrgId.value) return
-  waStatusLoading.value = true
-  try {
-    await whatsappStore.fetchStatus(activeOrgId.value)
-    waTemplateValue.value = activeOrg.value?.whatsappMessageTemplate ?? ''
-    if (whatsappStore.status === 'qr_pending') {
-      await whatsappStore.fetchQr(activeOrgId.value)
-      startWaPolling(activeOrgId.value)
-    }
-  } catch {
-    toast.show('Error al obtener el estado de WhatsApp', 'error')
-  } finally {
-    waStatusLoading.value = false
+// When server pushes 'disconnected' while QR was visible → show expired screen
+watch(waStatus, (newStatus, oldStatus) => {
+  if (oldStatus === 'qr_pending' && newStatus === 'disconnected') {
+    waQrTimedOut.value = true
   }
+  if (newStatus === 'qr_pending') {
+    waQrTimedOut.value = false
+  }
+})
+
+function maskPhone(phone: string | null): string {
+  if (!phone) return ''
+  const digits = phone.replace(/\D/g, '')
+  if (digits.length < 8) return phone
+  const last4 = digits.slice(-4)
+  return `+** *** ***${last4}`
+}
+
+watch(activeTab, (tab, prevTab) => {
+  if (prevTab === 'whatsapp') whatsappStore.stopStream()
+  if (tab !== 'whatsapp' || !activeOrgId.value) return
+  waTemplateValue.value = activeOrg.value?.whatsappMessageTemplate ?? ''
+  whatsappStore.startStream(activeOrgId.value)
 })
 
 async function handleWaConnect() {
   if (!activeOrgId.value) return
   waLoading.value = true
+  waQrTimedOut.value = false
   try {
     await whatsappStore.connect(activeOrgId.value)
-    await whatsappStore.fetchQr(activeOrgId.value)
-    startWaPolling(activeOrgId.value)
   } catch {
     toast.show('Error al iniciar la conexión con WhatsApp', 'error')
   } finally {
@@ -102,10 +92,13 @@ async function handleWaConnect() {
   }
 }
 
+async function handleWaRetry() {
+  await handleWaConnect()
+}
+
 async function handleWaDisconnect() {
   if (!activeOrgId.value) return
   waLoading.value = true
-  stopWaPolling()
   try {
     await whatsappStore.disconnect(activeOrgId.value)
     toast.show('WhatsApp desconectado correctamente', 'success')
@@ -129,7 +122,7 @@ async function handleSaveWaTemplate() {
   }
 }
 
-onUnmounted(stopWaPolling)
+onUnmounted(() => whatsappStore.stopStream())
 
 // ── CUENTA: Cambiar email ─────────────────────────────────────────────────────
 const emailForm    = ref({ newEmail: '' })
@@ -724,16 +717,26 @@ function getInitials(email = ''): string {
             </div>
           </div>
 
-          <!-- Loading skeleton -->
-          <div v-if="waStatusLoading" class="wa-status-skeleton">
-            <div class="skeleton" style="width:44px;height:44px;border-radius:12px;flex-shrink:0;" />
-            <div style="display:flex;flex-direction:column;gap:8px;">
-              <div class="skeleton" style="width:160px;height:13px;" />
-              <div class="skeleton" style="width:100px;height:11px;" />
+          <!-- QR Timeout (server sent disconnected while QR was pending) -->
+          <div v-if="waStatus === 'disconnected' && waQrTimedOut" class="wa-timeout-box">
+            <div class="wa-timeout-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
             </div>
+            <div>
+              <p class="wa-timeout-title">El código QR expiró</p>
+              <p class="wa-timeout-sub">El código es válido por 5 minutos. Genera uno nuevo para continuar.</p>
+            </div>
+            <button class="btn-whatsapp" :disabled="waLoading" @click="handleWaRetry">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>
+              </svg>
+              {{ waLoading ? 'Generando…' : 'Generar nuevo QR' }}
+            </button>
           </div>
 
-          <!-- Disconnected -->
+          <!-- Disconnected (clean) -->
           <div v-else-if="waStatus === 'disconnected'" class="wa-state-box">
             <div class="wa-state-icon wa-state-icon--off">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -765,11 +768,13 @@ function getInitials(email = ''): string {
                 </svg>
                 <span>Generando código…</span>
               </div>
-              <div class="wa-qr-refresh">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="wa-spin">
-                  <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
-                </svg>
-                Actualizando cada 3 segundos
+              <div class="wa-qr-meta">
+                <div class="wa-qr-refresh">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                  Válido por 5 minutos
+                </div>
               </div>
             </div>
             <div class="wa-qr-instructions">
@@ -786,6 +791,19 @@ function getInitials(email = ''): string {
             </div>
           </div>
 
+          <!-- Reconnecting -->
+          <div v-else-if="waStatus === 'reconnecting'" class="wa-state-box">
+            <div class="wa-state-icon wa-state-icon--off">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="wa-spin">
+                <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
+              </svg>
+            </div>
+            <div>
+              <p class="wa-state-title">Reconectando…</p>
+              <p class="wa-state-sub">Se perdió la conexión. Reconectando automáticamente.</p>
+            </div>
+          </div>
+
           <!-- Connected -->
           <div v-else-if="waStatus === 'connected'" class="wa-connected-box">
             <div class="wa-connected-status">
@@ -796,7 +814,7 @@ function getInitials(email = ''): string {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.78 1.18 2 2 0 012.76 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
               </svg>
-              {{ waPhone }}
+              {{ maskPhone(waPhone) }}
             </div>
             <button class="btn-secondary wa-disconnect-btn" :disabled="waLoading" @click="handleWaDisconnect">
               <svg v-if="!waLoading" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1484,6 +1502,36 @@ function getInitials(email = ''): string {
 .btn-whatsapp:disabled         { opacity: 0.6; cursor: default; }
 .btn-whatsapp:not(:disabled):hover { opacity: 0.86; }
 
+/* QR timeout state */
+.wa-timeout-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+.wa-timeout-icon {
+  width: 48px; height: 48px;
+  border-radius: 14px;
+  background: var(--warning-bg);
+  color: var(--warning);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.wa-timeout-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-ink);
+  margin: 0 0 4px;
+}
+.wa-timeout-sub {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 0 0 14px;
+  line-height: 1.5;
+}
+
 /* QR pending state */
 .wa-qr-box {
   display: flex;
@@ -1510,6 +1558,11 @@ function getInitials(email = ''): string {
   gap: 10px;
   font-size: 12px;
   color: var(--text-faint);
+}
+.wa-qr-meta {
+  display: flex;
+  align-items: center;
+  width: 100%;
 }
 .wa-qr-refresh {
   display: flex;

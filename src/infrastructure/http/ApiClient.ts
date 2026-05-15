@@ -30,6 +30,10 @@ class ApiClient {
     this._accessToken = null
   }
 
+  getToken(): string | null {
+    return this._accessToken
+  }
+
   urlFor(path: string): string {
     return `${this.baseUrl}${path}`
   }

@@ -38,7 +38,19 @@ export default defineConfig(({ mode }) => {
         '/auth': { target: env.VITE_API_URL ?? 'http://localhost:3000', changeOrigin: true },
         '/wallets': { target: env.VITE_API_URL ?? 'http://localhost:3000', changeOrigin: true },
         '/passes': { target: env.VITE_API_URL ?? 'http://localhost:3000', changeOrigin: true },
-        '/organizations': { target: env.VITE_API_URL ?? 'http://localhost:3000', changeOrigin: true },
+        '/organizations': {
+          target: env.VITE_API_URL ?? 'http://localhost:3000',
+          changeOrigin: true,
+          // Disable response buffering so SSE frames are flushed immediately
+          configure: (proxy) => {
+            proxy.on('proxyRes', (proxyRes, req) => {
+              if (req.url?.includes('/whatsapp/stream')) {
+                proxyRes.headers['x-accel-buffering'] = 'no'
+                proxyRes.headers['cache-control'] = 'no-cache'
+              }
+            })
+          },
+        },
         '/invitations': { target: env.VITE_API_URL ?? 'http://localhost:3000', changeOrigin: true },
         '/campaigns': { target: env.VITE_API_URL ?? 'http://localhost:3000', changeOrigin: true },
         '/billing':   { target: env.VITE_API_URL ?? 'http://localhost:3000', changeOrigin: true },
