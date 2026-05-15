@@ -1,21 +1,25 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/app/stores/auth/AuthStore'
 import { useOrganizationStore } from '@/app/stores/organization/OrganizationStore'
+import { useWhatsAppStore } from '@/app/stores/whatsapp/WhatsAppStore'
 import { useToast } from '@/app/composables/useToast'
+import WhatsAppQR from '@/app/components/Admin/WhatsAppQR.vue'
 import type { MemberRole } from '@/domain/organization/entities/OrganizationMember'
 
-const router   = useRouter()
-const authStore = useAuthStore()
-const orgStore  = useOrganizationStore()
-const toast     = useToast()
+const router        = useRouter()
+const authStore     = useAuthStore()
+const orgStore      = useOrganizationStore()
+const whatsappStore = useWhatsAppStore()
+const toast         = useToast()
 const { admin }                          = storeToRefs(authStore)
 const { activeOrgId, activeOrg, members } = storeToRefs(orgStore)
+const { status: waStatus, phone: waPhone, qr: waQr } = storeToRefs(whatsappStore)
 
 // ── Tab navigation ────────────────────────────────────────────────────────────
-type Tab = 'account' | 'organization' | 'members' | 'billing'
+type Tab = 'account' | 'organization' | 'members' | 'whatsapp' | 'billing'
 const activeTab = ref<Tab>('account')
 
 const currentMember    = computed(() => members.value.find(m => m.adminId === admin.value?.id))
@@ -27,6 +31,7 @@ const tabs = computed(() => [
   { id: 'account'      as Tab, label: 'Cuenta' },
   ...(isOwnerOrAdmin.value ? [{ id: 'organization' as Tab, label: 'Organización' }] : []),
   { id: 'members'      as Tab, label: 'Miembros' },
+  { id: 'whatsapp'     as Tab, label: 'WhatsApp' },
   { id: 'billing'      as Tab, label: 'Facturación' },
 ])
 
@@ -34,6 +39,7 @@ const tabIconPaths: Record<string, string> = {
   account:      '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>',
   organization: '<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
   members:      '<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>',
+  whatsapp:     '<path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>',
   billing:      '<rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>',
 }
 
@@ -41,6 +47,89 @@ function selectTab(tab: Tab) {
   if (tab === 'billing') { router.push({ name: 'Billing' }); return }
   activeTab.value = tab
 }
+
+// ── WHATSAPP ──────────────────────────────────────────────────────────────────
+const waLoading        = ref(false)
+const waStatusLoading  = ref(false)
+const waTemplateLoading = ref(false)
+const waTemplateValue  = ref('')
+let waPollingTimer: ReturnType<typeof setInterval> | null = null
+
+function stopWaPolling() {
+  if (waPollingTimer) { clearInterval(waPollingTimer); waPollingTimer = null }
+}
+
+function startWaPolling(orgId: string) {
+  stopWaPolling()
+  waPollingTimer = setInterval(async () => {
+    try {
+      await whatsappStore.fetchQr(orgId)
+      await whatsappStore.fetchStatus(orgId)
+      if (whatsappStore.status === 'connected') stopWaPolling()
+    } catch { /* ignore polling errors silently */ }
+  }, 3000)
+}
+
+watch(activeTab, async (tab, prevTab) => {
+  if (prevTab === 'whatsapp') stopWaPolling()
+  if (tab !== 'whatsapp' || !activeOrgId.value) return
+  waStatusLoading.value = true
+  try {
+    await whatsappStore.fetchStatus(activeOrgId.value)
+    waTemplateValue.value = activeOrg.value?.whatsappMessageTemplate ?? ''
+    if (whatsappStore.status === 'qr_pending') {
+      await whatsappStore.fetchQr(activeOrgId.value)
+      startWaPolling(activeOrgId.value)
+    }
+  } catch {
+    toast.show('Error al obtener el estado de WhatsApp', 'error')
+  } finally {
+    waStatusLoading.value = false
+  }
+})
+
+async function handleWaConnect() {
+  if (!activeOrgId.value) return
+  waLoading.value = true
+  try {
+    await whatsappStore.connect(activeOrgId.value)
+    await whatsappStore.fetchQr(activeOrgId.value)
+    startWaPolling(activeOrgId.value)
+  } catch {
+    toast.show('Error al iniciar la conexión con WhatsApp', 'error')
+  } finally {
+    waLoading.value = false
+  }
+}
+
+async function handleWaDisconnect() {
+  if (!activeOrgId.value) return
+  waLoading.value = true
+  stopWaPolling()
+  try {
+    await whatsappStore.disconnect(activeOrgId.value)
+    toast.show('WhatsApp desconectado correctamente', 'success')
+  } catch {
+    toast.show('Error al desconectar WhatsApp', 'error')
+  } finally {
+    waLoading.value = false
+  }
+}
+
+async function handleSaveWaTemplate() {
+  if (!activeOrgId.value) return
+  waTemplateLoading.value = true
+  try {
+    await whatsappStore.updateTemplate(activeOrgId.value, waTemplateValue.value)
+    toast.show('Mensaje de WhatsApp actualizado', 'success')
+  } catch {
+    toast.show('Error al guardar el mensaje', 'error')
+  } finally {
+    waTemplateLoading.value = false
+  }
+}
+
+onUnmounted(stopWaPolling)
 
 // ── CUENTA: Cambiar email ─────────────────────────────────────────────────────
 const emailForm    = ref({ newEmail: '' })
@@ -605,6 +694,165 @@ function getInitials(email = ''): string {
         </div>
       </div>
 
+      <!-- ═══════════════════════════════ WHATSAPP ═══════════════════════════════ -->
+      <div v-if="activeTab === 'whatsapp'" class="tab-pane">
+
+        <!-- Header card -->
+        <div class="wa-header-card">
+          <div class="wa-header-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="wa-header-title">WhatsApp</p>
+            <p class="wa-header-sub">Conecta tu número y envía los pases directamente a tus clientes.</p>
+          </div>
+        </div>
+
+        <!-- ── Sección: conexión ── -->
+        <section class="settings-section">
+          <div class="section-head">
+            <div class="section-head__icon" style="background:var(--success-bg);color:var(--success);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.78 1.18 2 2 0 012.76 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+              </svg>
+            </div>
+            <div>
+              <h2 class="section-head__title">Conexión</h2>
+              <p class="section-head__sub">Vincula tu WhatsApp escaneando el código QR.</p>
+            </div>
+          </div>
+
+          <!-- Loading skeleton -->
+          <div v-if="waStatusLoading" class="wa-status-skeleton">
+            <div class="skeleton" style="width:44px;height:44px;border-radius:12px;flex-shrink:0;" />
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div class="skeleton" style="width:160px;height:13px;" />
+              <div class="skeleton" style="width:100px;height:11px;" />
+            </div>
+          </div>
+
+          <!-- Disconnected -->
+          <div v-else-if="waStatus === 'disconnected'" class="wa-state-box">
+            <div class="wa-state-icon wa-state-icon--off">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
+              </svg>
+            </div>
+            <div>
+              <p class="wa-state-title">Sin conectar</p>
+              <p class="wa-state-sub">Escanea el código QR con tu WhatsApp para activar el envío.</p>
+            </div>
+            <button class="btn-whatsapp" :disabled="waLoading" @click="handleWaConnect">
+              <svg v-if="!waLoading" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
+              </svg>
+              <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="wa-spin">
+                <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
+              </svg>
+              {{ waLoading ? 'Conectando…' : 'Conectar WhatsApp' }}
+            </button>
+          </div>
+
+          <!-- QR Pending -->
+          <div v-else-if="waStatus === 'qr_pending'" class="wa-qr-box">
+            <div class="wa-qr-panel">
+              <WhatsAppQR v-if="waQr" :value="waQr" />
+              <div v-else class="wa-qr-placeholder">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="1.5" stroke-linecap="round" class="wa-spin">
+                  <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
+                </svg>
+                <span>Generando código…</span>
+              </div>
+              <div class="wa-qr-refresh">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="wa-spin">
+                  <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
+                </svg>
+                Actualizando cada 3 segundos
+              </div>
+            </div>
+            <div class="wa-qr-instructions">
+              <p class="wa-qr-step-title">Cómo conectar:</p>
+              <ol class="wa-qr-steps">
+                <li>Abre WhatsApp en tu teléfono</li>
+                <li>Toca <strong>Dispositivos vinculados</strong></li>
+                <li>Toca <strong>Vincular un dispositivo</strong></li>
+                <li>Apunta la cámara al código QR</li>
+              </ol>
+              <button class="btn-secondary wa-cancel-btn" :disabled="waLoading" @click="handleWaDisconnect">
+                Cancelar
+              </button>
+            </div>
+          </div>
+
+          <!-- Connected -->
+          <div v-else-if="waStatus === 'connected'" class="wa-connected-box">
+            <div class="wa-connected-status">
+              <span class="wa-dot" />
+              <span class="wa-connected-label">Conectado</span>
+            </div>
+            <div class="wa-connected-phone" v-if="waPhone">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.78 1.18 2 2 0 012.76 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+              </svg>
+              {{ waPhone }}
+            </div>
+            <button class="btn-secondary wa-disconnect-btn" :disabled="waLoading" @click="handleWaDisconnect">
+              <svg v-if="!waLoading" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+              <svg v-else width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="wa-spin">
+                <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
+              </svg>
+              {{ waLoading ? 'Desconectando…' : 'Desconectar' }}
+            </button>
+          </div>
+        </section>
+
+        <!-- ── Sección: mensaje personalizado ── -->
+        <section class="settings-section">
+          <div class="section-head">
+            <div class="section-head__icon" style="background:var(--info-bg);color:var(--info);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+              </svg>
+            </div>
+            <div>
+              <h2 class="section-head__title">Mensaje de envío</h2>
+              <p class="section-head__sub">Personaliza el texto que reciben tus clientes.</p>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field">
+              <label class="field__label">Plantilla del mensaje</label>
+              <textarea
+                v-model="waTemplateValue"
+                class="field__input field__textarea"
+                rows="3"
+                placeholder="Hola {nombre}, aquí está tu wallet de {negocio}: {link}"
+              />
+              <p class="field__hint">Variables disponibles: <code class="wa-code">{nombre}</code> <code class="wa-code">{negocio}</code> <code class="wa-code">{link}</code></p>
+            </div>
+            <div class="wa-template-preview" v-if="waTemplateValue">
+              <p class="wa-template-preview__label">Vista previa</p>
+              <p class="wa-template-preview__text">{{
+                waTemplateValue
+                  .replace('{nombre}', 'Juan López')
+                  .replace('{negocio}', activeOrg?.name || 'Tu negocio')
+                  .replace('{link}', 'https://tribo.app/w/abc123')
+              }}</p>
+            </div>
+            <div>
+              <button class="btn-primary" :disabled="waTemplateLoading" @click="handleSaveWaTemplate">
+                {{ waTemplateLoading ? 'Guardando…' : 'Guardar mensaje' }}
+              </button>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
     </div><!-- /settings-content -->
 
     <!-- ════════════════ MODAL: Confirmar eliminación ═══════════════════════════ -->
@@ -1144,6 +1392,244 @@ function getInitials(email = ''): string {
 .slide-down-enter-from,
 .slide-down-leave-to { max-height: 0; opacity: 0; }
 
+/* ── WhatsApp ── */
+.wa-header-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 0 var(--shadow-card);
+}
+.wa-header-icon {
+  width: 48px; height: 48px;
+  border-radius: 14px;
+  background: var(--success-bg);
+  color: var(--success);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.wa-header-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-ink);
+  margin: 0 0 3px;
+}
+.wa-header-sub {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Status skeleton */
+.wa-status-skeleton {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 0;
+}
+
+/* Disconnected state */
+.wa-state-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 4px 0;
+  flex-wrap: wrap;
+}
+.wa-state-icon {
+  width: 48px; height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.wa-state-icon--off {
+  background: var(--bg-page);
+  color: var(--text-faint);
+}
+.wa-state-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-ink);
+  margin: 0 0 4px;
+}
+.wa-state-sub {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 0 0 14px;
+  line-height: 1.5;
+}
+
+/* WhatsApp brand button */
+.btn-whatsapp {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  background: var(--success);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.btn-whatsapp:disabled         { opacity: 0.6; cursor: default; }
+.btn-whatsapp:not(:disabled):hover { opacity: 0.86; }
+
+/* QR pending state */
+.wa-qr-box {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.wa-qr-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.wa-qr-placeholder {
+  width: 220px;
+  height: 220px;
+  border-radius: 14px;
+  background: var(--bg-page);
+  border: 1.5px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+.wa-qr-refresh {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+.wa-qr-instructions {
+  flex: 1;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.wa-qr-step-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-ink);
+  margin: 0;
+}
+.wa-qr-steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.wa-qr-steps li strong { color: var(--text-ink); font-weight: 600; }
+.wa-cancel-btn { align-self: flex-start; margin-top: 4px; }
+
+/* Connected state */
+.wa-connected-box {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+.wa-connected-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--success-bg);
+  padding: 7px 14px;
+  border-radius: 999px;
+}
+.wa-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 25%, transparent);
+}
+.wa-connected-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--success);
+}
+.wa-connected-phone {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-ink);
+  flex: 1;
+}
+.wa-disconnect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  font-size: 13px;
+}
+
+/* Template */
+.field__textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+.wa-code {
+  font-family: monospace;
+  font-size: 11.5px;
+  background: var(--bg-subtle);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--primary);
+}
+.wa-template-preview {
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wa-template-preview__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+.wa-template-preview__text {
+  font-size: 13px;
+  color: var(--text-medium);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Spinner */
+@keyframes wa-spin { to { transform: rotate(360deg); } }
+.wa-spin { animation: wa-spin 0.9s linear infinite; }
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .settings-root {
@@ -1205,5 +1691,8 @@ function getInitials(email = ''): string {
   .settings-section { padding: 18px 16px; }
   .section-head { gap: 12px; }
   .section-head__icon { width: 34px; height: 34px; }
+  .wa-qr-box { flex-direction: column; gap: 20px; }
+  .wa-state-box { gap: 12px; }
+  .wa-connected-box { gap: 12px; }
 }
 </style>

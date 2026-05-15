@@ -2,6 +2,8 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePassStore } from '@/app/stores/pass/PassStore'
+import { useWhatsAppStore } from '@/app/stores/whatsapp/WhatsAppStore'
+import { useToast } from '@/app/composables/useToast'
 import { apiClient } from '@/infrastructure/http/ApiClient'
 import type { Pass } from '@/domain/pass/entities/Pass'
 import type { Wallet } from '@/domain/wallet/entities/Wallet'
@@ -12,13 +14,16 @@ import type {
 import type { StampsRules, PointsRules, CashbackRules } from '@/domain/wallet/entities/WalletRules'
 
 const props = defineProps<{ passes: Pass[]; wallet: Wallet }>()
-const router     = useRouter()
-const passStore  = usePassStore()
+const router        = useRouter()
+const passStore     = usePassStore()
+const whatsappStore = useWhatsAppStore()
+const toast         = useToast()
 
-const sendingToken = ref<string | null>(null)
-const copiedToken  = ref<string | null>(null)
-const passToDelete = ref<Pass | null>(null)
-const deleting     = ref(false)
+const sendingToken   = ref<string | null>(null)
+const sendingWaToken = ref<string | null>(null)
+const copiedToken    = ref<string | null>(null)
+const passToDelete   = ref<Pass | null>(null)
+const deleting       = ref(false)
 
 // ── Actions ────────────────────────────────────────────────────────────────
 function copyLink(token: string) {
@@ -35,6 +40,25 @@ async function sendSms(pass: Pass) {
     await apiClient.post(`/passes/${pass.token}/send-link`, {})
   } finally {
     sendingToken.value = null
+  }
+}
+
+async function sendWhatsApp(pass: Pass) {
+  if (sendingWaToken.value) return
+  sendingWaToken.value = pass.token
+  try {
+    await whatsappStore.sendPass(pass.token)
+    toast.show('Enviado por WhatsApp ✓', 'success')
+  } catch (e) {
+    const code = ((e as { body?: { error?: string } })?.body?.error) ?? ''
+    toast.show(
+      code === 'WHATSAPP_NOT_CONNECTED'
+        ? 'Conecta WhatsApp en Ajustes primero'
+        : 'Error al enviar por WhatsApp',
+      'error',
+    )
+  } finally {
+    sendingWaToken.value = null
   }
 }
 
@@ -198,7 +222,21 @@ const rows = computed(() => props.passes.map(pass => ({
             <svg v-else width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="spin">
               <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
             </svg>
-            {{ sendingToken === row.pass.token ? 'Enviando…' : 'Enviar' }}
+            {{ sendingToken === row.pass.token ? 'Enviando…' : 'SMS' }}
+          </button>
+
+          <button
+            class="pc-action-btn pc-action-btn--wa"
+            :disabled="sendingWaToken === row.pass.token"
+            @click="sendWhatsApp(row.pass)"
+          >
+            <svg v-if="sendingWaToken !== row.pass.token" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
+            </svg>
+            <svg v-else width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="spin">
+              <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
+            </svg>
+            WA
           </button>
 
           <!-- Spacer -->
@@ -296,6 +334,20 @@ const rows = computed(() => props.passes.map(pass => ({
               >
                 <svg v-if="sendingToken !== row.pass.token" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.78 1.18 2 2 0 012.76 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+                </svg>
+                <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="spin">
+                  <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
+                </svg>
+              </button>
+
+              <button
+                class="tbl-icon-btn tbl-icon-btn--wa"
+                :disabled="sendingWaToken === row.pass.token"
+                title="Enviar por WhatsApp"
+                @click="sendWhatsApp(row.pass)"
+              >
+                <svg v-if="sendingWaToken !== row.pass.token" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
                 </svg>
                 <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="spin">
                   <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
@@ -509,6 +561,8 @@ const rows = computed(() => props.passes.map(pass => ({
 }
 .pc-action-btn:hover { background: var(--bg-subtle); }
 .pc-action-btn--copied { background: var(--primary-light); border-color: var(--primary-light); color: var(--success); }
+.pc-action-btn--wa { color: var(--success); border-color: var(--success-bg); background: var(--success-bg); }
+.pc-action-btn--wa:hover { background: color-mix(in srgb, var(--success) 18%, transparent); border-color: var(--success); }
 .pc-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .pc-delete-btn {
@@ -664,6 +718,8 @@ const rows = computed(() => props.passes.map(pass => ({
 }
 .tbl-icon-btn:hover { background: var(--bg-page); color: var(--text-ink); }
 .tbl-icon-btn--copied { background: var(--primary-light); border-color: var(--primary-light); color: var(--success); }
+.tbl-icon-btn--wa { color: var(--success); border-color: var(--success-bg); background: var(--success-bg); }
+.tbl-icon-btn--wa:hover { background: color-mix(in srgb, var(--success) 18%, transparent); border-color: var(--success); }
 .tbl-icon-btn--danger:hover { background: var(--danger-bg); border-color: var(--danger-bg); color: var(--danger); }
 .tbl-icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
