@@ -29,9 +29,7 @@ export const useWhatsAppStore = defineStore('WhatsAppStore', () => {
     const token = apiClient.getToken()
     if (!token) return
 
-    // Relative path → intercepted by Vite proxy (dev) or Cloudflare proxy (prod),
-    // avoiding cross-origin restrictions on EventSource.
-    const url = `/organizations/${orgId}/whatsapp/stream?token=${encodeURIComponent(token)}`
+    const url = apiClient.urlFor(`/organizations/${orgId}/whatsapp/stream?token=${encodeURIComponent(token)}`)
     _es = new EventSource(url)
 
     _es.addEventListener('status', (e) => {
