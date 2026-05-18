@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/app/stores/auth/AuthStore'
 import { useOrganizationStore } from '@/app/stores/organization/OrganizationStore'
@@ -10,6 +10,7 @@ import WhatsAppQR from '@/app/components/Admin/WhatsAppQR.vue'
 import type { MemberRole } from '@/domain/organization/entities/OrganizationMember'
 
 const router        = useRouter()
+const route         = useRoute()
 const authStore     = useAuthStore()
 const orgStore      = useOrganizationStore()
 const whatsappStore = useWhatsAppStore()
@@ -21,6 +22,10 @@ const { status: waStatus, phone: waPhone, qr: waQr } = storeToRefs(whatsappStore
 // ── Tab navigation ────────────────────────────────────────────────────────────
 type Tab = 'account' | 'organization' | 'members' | 'whatsapp' | 'billing'
 const activeTab = ref<Tab>('account')
+
+onMounted(() => {
+  if (route.query.tab === 'whatsapp') activeTab.value = 'whatsapp'
+})
 
 const currentMember    = computed(() => members.value.find(m => m.adminId === admin.value?.id))
 const currentRole      = computed<MemberRole>(() => currentMember.value?.role ?? 'staff')

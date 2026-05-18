@@ -15,12 +15,14 @@ import { apiClient } from '@/infrastructure/http/ApiClient'
 import { usePlanGate } from '@/app/composables/usePlanGate'
 import { useToast } from '@/app/composables/useToast'
 import { useBillingStore } from '@/app/stores/billing/BillingStore'
+import { useWhatsAppStore } from '@/app/stores/whatsapp/WhatsAppStore'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const orgStore = useOrganizationStore()
 const billingStore = useBillingStore()
+const whatsappStore = useWhatsAppStore()
 const moreOpen = ref(false)
 const planGate = usePlanGate()
 const toast = useToast()
@@ -43,8 +45,12 @@ onMounted(async () => {
   await new Promise((r) => setTimeout(r, 1000))
   layoutReady.value = true
   billingStore.fetchStatus().catch(() => {})
+  if (orgStore.activeOrgId) whatsappStore.fetchStatus(orgStore.activeOrgId).catch(() => {})
 })
-watch(() => orgStore.activeOrgId, () => billingStore.fetchStatus().catch(() => {}))
+watch(() => orgStore.activeOrgId, (id) => {
+  billingStore.fetchStatus().catch(() => {})
+  if (id) whatsappStore.fetchStatus(id).catch(() => {})
+})
 
 apiClient.onPlanError = (code, message) => {
   if (code === 'SUBSCRIPTION_REQUIRED') {

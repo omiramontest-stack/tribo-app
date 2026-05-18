@@ -9,10 +9,12 @@ export const useWhatsAppStore = defineStore('WhatsAppStore', () => {
     status: WhatsAppConnectionStatus
     phone: string | null
     qr: string | null
+    statusKnown: boolean
   }>({
     status: 'disconnected',
     phone: null,
     qr: null,
+    statusKnown: false,
   })
 
   let _es: EventSource | null = null
@@ -21,6 +23,23 @@ export const useWhatsAppStore = defineStore('WhatsAppStore', () => {
   const phone = computed(() => state.phone)
   const qr = computed(() => state.qr)
   const isConnected = computed(() => state.status === 'connected')
+  const statusKnown = computed(() => state.statusKnown)
+
+  // ── One-shot status check (used by AdminLayout for notifications) ──────────
+
+  async function fetchStatus(orgId: string) {
+    try {
+      const res = await apiClient.get<{ status: WhatsAppConnectionStatus; phone: string | null }>(
+        `/organizations/${orgId}/whatsapp/status`,
+      )
+      state.status = res.status
+      state.phone = res.phone
+    } catch {
+      // Non-critical — silently ignore (e.g. 403 for staff roles)
+    } finally {
+      state.statusKnown = true
+    }
+  }
 
   // ── SSE stream ────────────────────────────────────────────────────────────
 
@@ -29,19 +48,21 @@ export const useWhatsAppStore = defineStore('WhatsAppStore', () => {
     const token = apiClient.getToken()
     if (!token) return
 
-    const url = apiClient.urlFor(`/organizations/${orgId}/whatsapp/stream?token=${encodeURIComponent(token)}`)
+    const url = `/organizations/${orgId}/whatsapp/stream?token=${encodeURIComponent(token)}`
     _es = new EventSource(url)
 
     _es.addEventListener('status', (e) => {
       const { status: s, phone: p } = JSON.parse(e.data)
       state.status = s
       state.phone = p
+      state.statusKnown = true
     })
 
     _es.addEventListener('qr', (e) => {
       const { qr } = JSON.parse(e.data)
       state.qr = qr
       state.status = 'qr_pending'
+      state.statusKnown = true
     })
 
     _es.addEventListener('connected', (e) => {
@@ -49,17 +70,20 @@ export const useWhatsAppStore = defineStore('WhatsAppStore', () => {
       state.status = 'connected'
       state.phone = phone
       state.qr = null
+      state.statusKnown = true
     })
 
     _es.addEventListener('disconnected', () => {
       state.status = 'disconnected'
       state.phone = null
       state.qr = null
+      state.statusKnown = true
     })
 
     _es.addEventListener('reconnecting', () => {
       state.status = 'reconnecting'
       state.qr = null
+      state.statusKnown = true
     })
 
     // EventSource reconnects automatically on error — no manual retry needed
@@ -96,6 +120,8 @@ export const useWhatsAppStore = defineStore('WhatsAppStore', () => {
     phone,
     qr,
     isConnected,
+    statusKnown,
+    fetchStatus,
     startStream,
     stopStream,
     connect,

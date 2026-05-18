@@ -115,6 +115,16 @@ async function handleResend() {
                   {{ resent ? 'Email enviado ✓' : resending ? 'Enviando…' : 'Reenviar email' }}
                 </button>
               </div>
+              <div v-else-if="n.action" style="margin-top: 12px;">
+                <RouterLink
+                  :to="n.action.to"
+                  class="notif-item__action"
+                  style="display: inline-block; text-decoration: none;"
+                  @click="open = false"
+                >
+                  {{ n.action.label }}
+                </RouterLink>
+              </div>
             </div>
           </div>
         </div>
