@@ -7,6 +7,8 @@ export interface Pass {
   firstName: string
   lastName: string
   phone: string
+  email?: string
+  photoUrl?: string
   customerName: string
   createdAt: string
   data: PassData

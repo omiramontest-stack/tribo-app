@@ -5,4 +5,5 @@ export interface GeneratePassDto {
   lastName: string
   email?: string
   phone: string
+  photoUrl?: string
 }

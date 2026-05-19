@@ -35,6 +35,8 @@ export default class GeneratePassUseCase implements UseCase<GeneratePassDto, Pas
       firstName: dto.firstName,
       lastName: dto.lastName,
       phone: dto.phone,
+      email: dto.email,
+      photoUrl: dto.photoUrl,
       customerName: `${dto.firstName} ${dto.lastName}`,
       createdAt: now,
       data: this._buildPassData(wallet.type, wallet.rules, now),

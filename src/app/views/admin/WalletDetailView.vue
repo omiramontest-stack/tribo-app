@@ -312,6 +312,7 @@ function formatDate(iso: string): string {
     <GeneratePassModal
       v-model="showModal"
       :wallet-id="id"
+      :wallet-type="walletStore.currentWallet?.type ?? ''"
       @generated="onPassGenerated"
     />
   </div>

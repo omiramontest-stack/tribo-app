@@ -268,7 +268,7 @@ async function applyAction(action: 'add_stamp' | 'add_points' | 'renew_membershi
 function getSuccessMessage(action: 'add_stamp' | 'add_points' | 'renew_membership'): string {
   if (action === 'add_stamp') return '¡Sello agregado correctamente!'
   if (action === 'add_points') return `¡${pointsAmount.value} ${(passResult.value!.wallet.rules as PointsRules).pointsLabel} agregados!`
-  return '¡Membresía renovada!'
+  return '¡Visita registrada!'
 }
 
 async function scanAnother() {
@@ -377,8 +377,21 @@ startScanner()
 
           <!-- Membership -->
           <template v-else-if="passResult.pass.data.type === 'membership'">
-            <p class="pass-data-value">{{ (passResult.wallet.rules as MembershipRules).level }}</p>
-            <p class="pass-data-sub">Membresía activa</p>
+            <div class="membership-info">
+              <img
+                v-if="passResult.pass.photoUrl"
+                :src="passResult.pass.photoUrl"
+                class="member-photo"
+                alt="Foto del cliente"
+              />
+              <div>
+                <p class="pass-data-value" style="font-size: 20px;">{{ passResult.pass.customerName }}</p>
+                <p class="pass-data-sub" style="margin-top: 2px;">{{ (passResult.wallet.rules as MembershipRules).level }} · Membresía activa</p>
+                <p v-if="passResult.pass.data.expiresAt" class="pass-data-sub">
+                  Vence {{ new Date(passResult.pass.data.expiresAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) }}
+                </p>
+              </div>
+            </div>
           </template>
 
           <!-- Cashback -->
@@ -468,9 +481,9 @@ startScanner()
           @click="applyAction('renew_membership')"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+            <path d="M20 6L9 17l-5-5"/>
           </svg>
-          {{ loading ? 'Renovando…' : 'Renovar membresía' }}
+          {{ loading ? 'Registrando…' : 'Registrar visita' }}
         </button>
 
         <!-- Daypass -->
@@ -604,7 +617,7 @@ startScanner()
           <p class="result-state-val">{{ passResult.pass.data.currentPoints }} {{ (passResult.wallet.rules as PointsRules).pointsLabel }}</p>
         </template>
         <template v-else-if="passResult.pass.data.type === 'membership'">
-          <p class="result-state-val">Membresía activa</p>
+          <p class="result-state-val">{{ passResult.pass.customerName }} · Membresía activa</p>
         </template>
         <template v-else-if="passResult.pass.data.type === 'cashback'">
           <p class="result-state-val">{{ (passResult.wallet.rules as CashbackRules).currency }} {{ passResult.pass.data.balance.toFixed(2) }} de saldo</p>
@@ -929,7 +942,22 @@ startScanner()
   flex-shrink: 0;
 }
 
-.pass-data { }
+.pass-data {}
+
+.membership-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.member-photo {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid rgba(255,255,255,0.4);
+}
 
 .pass-progress-row {
   display: flex;

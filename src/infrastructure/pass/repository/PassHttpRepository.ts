@@ -30,6 +30,8 @@ export class PassHttpRepository implements PassRepository {
       firstName: pass.firstName,
       lastName: pass.lastName,
       phone: pass.phone,
+      ...(pass.email ? { email: pass.email } : {}),
+      ...(pass.photoUrl ? { photoUrl: pass.photoUrl } : {}),
     })
   }
 
