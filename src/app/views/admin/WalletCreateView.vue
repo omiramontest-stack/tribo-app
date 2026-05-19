@@ -369,23 +369,17 @@ async function handleSubmit() {
         <p class="step-subtitle">Así verá el cliente su pase digital antes de descargarlo.</p>
       </div>
 
-      <!-- Phone frame -->
-      <div class="phone-frame-wrap">
-        <div class="phone-frame">
-          <div class="phone-notch" />
-          <div class="phone-screen">
-            <StampsCard     v-if="form.type === 'stamps'"     :pass="getPreviewPass()" :wallet="(form as any)" />
-            <MembershipCard v-else-if="form.type === 'membership'" :pass="getPreviewPass()" :wallet="(form as any)" />
-            <PointsCard     v-else-if="form.type === 'points'"    :pass="getPreviewPass()" :wallet="(form as any)" />
-            <CashbackCard   v-else-if="form.type === 'cashback'"  :pass="getPreviewPass()" :wallet="(form as any)" />
-            <DaypassCard    v-else-if="form.type === 'daypass'"   :pass="getPreviewPass()" :wallet="(form as any)" />
-            <BundleCard     v-else-if="form.type === 'bundle'"    :pass="getPreviewPass()" :wallet="(form as any)" />
-            <GiftcardCard   v-else-if="form.type === 'giftcard'"  :pass="getPreviewPass()" :wallet="(form as any)" />
-            <CouponCard     v-else-if="form.type === 'coupon'"    :pass="getPreviewPass()" :wallet="(form as any)" />
-          </div>
-          <div class="phone-home" />
-        </div>
-        <p class="phone-caption">Vista previa · No representa el diseño final exacto</p>
+      <!-- Card preview -->
+      <div class="card-preview-wrap">
+        <StampsCard     v-if="form.type === 'stamps'"     :pass="getPreviewPass()" :wallet="(form as any)" />
+        <MembershipCard v-else-if="form.type === 'membership'" :pass="getPreviewPass()" :wallet="(form as any)" />
+        <PointsCard     v-else-if="form.type === 'points'"    :pass="getPreviewPass()" :wallet="(form as any)" />
+        <CashbackCard   v-else-if="form.type === 'cashback'"  :pass="getPreviewPass()" :wallet="(form as any)" />
+        <DaypassCard    v-else-if="form.type === 'daypass'"   :pass="getPreviewPass()" :wallet="(form as any)" />
+        <BundleCard     v-else-if="form.type === 'bundle'"    :pass="getPreviewPass()" :wallet="(form as any)" />
+        <GiftcardCard   v-else-if="form.type === 'giftcard'"  :pass="getPreviewPass()" :wallet="(form as any)" />
+        <CouponCard     v-else-if="form.type === 'coupon'"    :pass="getPreviewPass()" :wallet="(form as any)" />
+        <p class="card-preview-caption">Vista previa · No representa el diseño final exacto</p>
       </div>
 
       <!-- Summary -->
@@ -872,57 +866,15 @@ async function handleSubmit() {
 .upload-title { font-size: 13px; font-weight: 600; color: var(--text-medium); margin: 0; }
 .upload-label { font-size: 11px; color: var(--text-faint); margin: 0; }
 
-/* Phone frame (step 4) */
-.phone-frame-wrap {
+/* Card preview (step 4) */
+.card-preview-wrap {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 12px;
+  padding: 4px 0;
 }
 
-.phone-frame {
-  position: relative;
-  width: 280px;
-  background: var(--text-ink);
-  border-radius: 36px;
-  padding: 14px 10px 20px;
-  box-shadow:
-    0 0 0 2px #2D3D34,
-    0 24px 60px rgba(15, 27, 20, 0.4),
-    inset 0 1px 0 rgba(255,255,255,0.08);
-}
-
-.phone-notch {
-  width: 80px;
-  height: 22px;
-  background: var(--text-ink);
-  border-radius: 0 0 14px 14px;
-  margin: 0 auto 10px;
-  position: relative;
-  z-index: 2;
-  box-shadow: inset 0 -2px 0 #1a2e20;
-}
-
-.phone-screen {
-  background: var(--primary-text);
-  border-radius: 24px;
-  overflow: hidden;
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 280px;
-}
-
-.phone-home {
-  width: 80px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 2px;
-  margin: 14px auto 0;
-}
-
-.phone-caption {
+.card-preview-caption {
   font-size: 11px;
   color: var(--text-faint);
   margin: 0;

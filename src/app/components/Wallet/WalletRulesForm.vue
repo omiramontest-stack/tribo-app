@@ -5,6 +5,7 @@ import type {
   WalletRules, StampsRules, MembershipRules, PointsRules,
   CashbackRules, DaypassRules, BundleRules, GiftcardRules, CouponRules,
 } from '@/domain/wallet/entities/WalletRules'
+import { STAMP_ICONS } from '@/app/config/stampIcons'
 
 defineProps<{ type: WalletType; rules: WalletRules }>()
 
@@ -88,6 +89,23 @@ function onImageDrop(e: DragEvent, rules: DaypassRules) {
         class="field-input"
       />
       <p class="field-hint">Texto visible para el cliente al completar la tarjeta de sellos.</p>
+    </div>
+    <div class="field">
+      <label class="field-label">Ícono del sello</label>
+      <div class="stamp-icon-grid">
+        <button
+          v-for="ic in STAMP_ICONS"
+          :key="ic.id"
+          type="button"
+          class="stamp-icon-btn"
+          :class="{ 'stamp-icon-btn--active': ((rules as StampsRules).stampIcon ?? 'check') === ic.id }"
+          :title="ic.label"
+          @click="(rules as StampsRules).stampIcon = ic.id"
+        >
+          <svg viewBox="0 0 24 24" class="stamp-icon-svg" v-html="ic.svg" />
+          <span class="stamp-icon-label">{{ ic.label }}</span>
+        </button>
+      </div>
     </div>
   </template>
 
@@ -654,4 +672,55 @@ function onImageDrop(e: DragEvent, rules: DaypassRules) {
 
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin 0.9s linear infinite; }
+
+/* Stamp icon picker */
+.stamp-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.stamp-icon-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 6px 8px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-surface);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+.stamp-icon-btn:hover {
+  border-color: var(--amber);
+  background: var(--amber-bg);
+}
+.stamp-icon-btn--active {
+  border-color: var(--primary-text);
+  border-width: 2px;
+  background: var(--primary-light);
+  box-shadow: 0 2px 8px rgba(27, 58, 45, 0.12);
+}
+
+.stamp-icon-svg {
+  width: 22px;
+  height: 22px;
+  color: var(--text-muted);
+}
+.stamp-icon-btn--active .stamp-icon-svg {
+  color: var(--primary-text);
+}
+
+.stamp-icon-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-align: center;
+  line-height: 1;
+}
+.stamp-icon-btn--active .stamp-icon-label {
+  color: var(--primary-text);
+}
 </style>

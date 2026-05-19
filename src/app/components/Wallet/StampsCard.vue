@@ -3,58 +3,175 @@ import type { Pass } from '@/domain/pass/entities/Pass'
 import type { Wallet } from '@/domain/wallet/entities/Wallet'
 import type { StampsData } from '@/domain/pass/entities/PassData'
 import type { StampsRules } from '@/domain/wallet/entities/WalletRules'
+import { getStampIcon } from '@/app/config/stampIcons'
 
 const props = defineProps<{ pass: Pass; wallet: Wallet }>()
 
 const rules = props.wallet.rules as StampsRules
-const data = props.pass.data as StampsData
+const data  = props.pass.data as StampsData
+const icon  = getStampIcon(rules.stampIcon)
+
+const COLS = 5
+const filled = (i: number) => i <= data.currentStamps
 </script>
 
 <template>
   <div
-    class="w-full max-w-sm rounded-2xl overflow-hidden shadow-xl"
-    :style="{ background: `linear-gradient(135deg, ${wallet.primaryColor}, ${wallet.accentColor})` }"
+    class="stamps-card"
+    :style="{ background: `linear-gradient(135deg, ${wallet.primaryColor} 0%, ${wallet.accentColor} 100%)` }"
   >
     <!-- Header -->
-    <div class="px-5 pt-5 pb-3 flex items-center justify-between">
-      <div>
-        <p class="text-white font-bold text-lg leading-tight">{{ wallet.businessName }}</p>
-        <p v-if="wallet.description" class="text-white/70 text-xs mt-0.5">{{ wallet.description }}</p>
+    <div class="sc-header">
+      <div class="sc-title-block">
+        <p class="sc-business">{{ wallet.businessName }}</p>
+        <p v-if="wallet.description" class="sc-desc">{{ wallet.description }}</p>
       </div>
-      <img v-if="wallet.logoUrl" :src="wallet.logoUrl" class="w-10 h-10 rounded-full object-cover" alt="" />
+      <div v-if="wallet.logoUrl" class="sc-logo-wrap">
+        <img :src="wallet.logoUrl" class="sc-logo" :alt="wallet.businessName" />
+      </div>
     </div>
 
     <!-- Stamps grid -->
-    <div class="mx-5 my-3 bg-white/10 rounded-xl p-4">
-      <div class="grid grid-cols-5 gap-2">
+    <div class="sc-grid-wrap">
+      <div class="sc-grid" :style="{ '--cols': COLS }">
         <div
           v-for="i in rules.totalStamps"
           :key="i"
-          class="aspect-square rounded-full border-2 flex items-center justify-center text-sm transition-all"
-          :style="{
-            backgroundColor: i <= data.currentStamps ? 'white' : 'transparent',
-            borderColor: 'white',
-            opacity: i <= data.currentStamps ? '1' : '0.4',
-          }"
+          class="sc-stamp"
+          :class="filled(i) ? 'sc-stamp--filled' : 'sc-stamp--empty'"
         >
-          <span v-if="i <= data.currentStamps" class="text-xs">✓</span>
+          <svg
+            viewBox="0 0 24 24"
+            class="sc-stamp-icon"
+            v-html="icon.svg"
+          />
         </div>
       </div>
-      <p class="text-white/80 text-xs mt-3 text-center">
+      <p class="sc-reward">
         {{ data.currentStamps }} / {{ rules.totalStamps }} — {{ rules.reward }}
       </p>
     </div>
 
     <!-- Footer -->
-    <div class="px-5 pb-5 flex items-center justify-between">
+    <div class="sc-footer">
       <div>
-        <p class="text-white/60 text-xs uppercase tracking-wide">Nombre</p>
-        <p class="text-white font-semibold text-sm">{{ pass.firstName }} {{ pass.lastName }}</p>
+        <p class="sc-footer-label">Nombre</p>
+        <p class="sc-footer-value">{{ pass.firstName }} {{ pass.lastName }}</p>
       </div>
-      <div class="text-right">
-        <p class="text-white/60 text-xs uppercase tracking-wide">Vencimiento</p>
-        <p class="text-white text-sm">Sin vencimiento</p>
+      <div class="sc-footer-right">
+        <p class="sc-footer-label">Vencimiento</p>
+        <p class="sc-footer-value">Sin vencimiento</p>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.stamps-card {
+  width: 100%;
+  border-radius: 20px;
+  overflow: hidden;
+  color: #fff;
+}
+
+/* Header */
+.sc-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 18px 18px 10px;
+  gap: 12px;
+}
+.sc-title-block { flex: 1; min-width: 0; }
+.sc-business {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 1.2;
+}
+.sc-desc {
+  font-size: 11px;
+  color: rgba(255,255,255,0.65);
+  margin: 3px 0 0;
+}
+.sc-logo-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255,255,255,0.15);
+  flex-shrink: 0;
+}
+.sc-logo { width: 100%; height: 100%; object-fit: cover; }
+
+/* Grid */
+.sc-grid-wrap {
+  margin: 0 14px 4px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 14px;
+  padding: 14px 14px 10px;
+}
+.sc-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  gap: 8px;
+}
+.sc-stamp {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s;
+}
+.sc-stamp--filled {
+  background: rgba(255,255,255,0.95);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+.sc-stamp--empty {
+  background: transparent;
+  border: 2px solid rgba(255,255,255,0.3);
+}
+.sc-stamp-icon {
+  width: 48%;
+  height: 48%;
+}
+.sc-stamp--filled .sc-stamp-icon {
+  color: v-bind('wallet.primaryColor');
+  filter: brightness(0.75);
+}
+.sc-stamp--empty .sc-stamp-icon {
+  color: rgba(255,255,255,0.35);
+}
+.sc-reward {
+  font-size: 11px;
+  color: rgba(255,255,255,0.75);
+  text-align: center;
+  margin: 10px 0 0;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* Footer */
+.sc-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 18px 18px;
+}
+.sc-footer-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.55);
+  margin: 0 0 2px;
+}
+.sc-footer-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+.sc-footer-right { text-align: right; }
+</style>

@@ -2,6 +2,7 @@ export interface StampsRules {
   type: 'stamps'
   totalStamps: number
   reward: string
+  stampIcon?: string
 }
 
 export interface MembershipRules {
