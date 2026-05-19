@@ -48,7 +48,8 @@ export const useWhatsAppStore = defineStore('WhatsAppStore', () => {
     const token = apiClient.getToken()
     if (!token) return
 
-    const url = `/organizations/${orgId}/whatsapp/stream?token=${encodeURIComponent(token)}`
+    const base = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? 'https://api.tribowallet.me')
+    const url = `${base}/organizations/${orgId}/whatsapp/stream?token=${encodeURIComponent(token)}`
     _es = new EventSource(url)
 
     _es.addEventListener('status', (e) => {
