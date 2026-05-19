@@ -378,12 +378,18 @@ startScanner()
           <!-- Membership -->
           <template v-else-if="passResult.pass.data.type === 'membership'">
             <div class="membership-info">
-              <img
-                v-if="passResult.pass.photoUrl"
-                :src="passResult.pass.photoUrl"
-                class="member-photo"
-                alt="Foto del cliente"
-              />
+              <!-- Photo or initials fallback -->
+              <div class="member-avatar">
+                <img
+                  v-if="passResult.pass.photoUrl"
+                  :src="passResult.pass.photoUrl"
+                  class="member-photo"
+                  alt="Foto del cliente"
+                />
+                <span v-else class="member-initials">
+                  {{ passResult.pass.firstName?.[0]?.toUpperCase() ?? '' }}{{ passResult.pass.lastName?.[0]?.toUpperCase() ?? '' }}
+                </span>
+              </div>
               <div>
                 <p class="pass-data-value" style="font-size: 20px;">{{ passResult.pass.customerName }}</p>
                 <p class="pass-data-sub" style="margin-top: 2px;">{{ (passResult.wallet.rules as MembershipRules).level }} · Membresía activa</p>
@@ -950,13 +956,31 @@ startScanner()
   gap: 14px;
 }
 
-.member-photo {
+.member-avatar {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  object-fit: cover;
   flex-shrink: 0;
+  overflow: hidden;
   border: 2px solid rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.member-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.member-initials {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.5px;
 }
 
 .pass-progress-row {
