@@ -46,6 +46,11 @@ onUnmounted(() => { if (countdownTimer) clearInterval(countdownTimer) })
 
 const dl = computed(() => route.query.dl as string | undefined)
 
+const isAndroid = /android/i.test(navigator.userAgent)
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
+const showAppleButton = !isAndroid
+const showGoogleButton = !isIOS
+
 const isCashback = computed(() => passStore.currentPassWallet?.type === 'cashback')
 const isDaypass = computed(() => passStore.currentPassWallet?.type === 'daypass')
 const isBundle = computed(() => passStore.currentPassWallet?.type === 'bundle')
@@ -169,12 +174,20 @@ onMounted(async () => {
         <WalletQR :url="$router.resolve({ name: 'PassView', params: { token: passStore.currentPass.token } }).href" />
       </div>
 
-      <a
-        :href="apiClient.urlFor(`/passes/${passStore.currentPass.token}/apple${dlParam()}`)"
-        class="flex justify-center"
-      >
-        <img src="/add-to-wallet.png" alt="Add to Apple Wallet" class="h-10" />
-      </a>
+      <div class="flex flex-col items-center gap-3">
+        <a
+          v-if="showAppleButton"
+          :href="apiClient.urlFor(`/passes/${passStore.currentPass.token}/apple${dlParam()}`)"
+        >
+          <img src="/add-to-wallet.png" alt="Add to Apple Wallet" class="h-10" />
+        </a>
+        <a
+          v-if="showGoogleButton"
+          :href="apiClient.urlFor(`/passes/${passStore.currentPass.token}/google${dlParam()}`)"
+        >
+          <img src="/add-to-google-wallet.png" alt="Add to Google Wallet" class="h-10" />
+        </a>
+      </div>
 
 
       <!-- Cashback: historial de transacciones (solo lectura) -->

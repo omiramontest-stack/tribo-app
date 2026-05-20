@@ -872,6 +872,9 @@ async function handleSubmit() {
   flex-direction: column;
   gap: 12px;
   padding: 4px 0;
+  max-width: 390px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .card-preview-caption {
