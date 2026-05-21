@@ -75,7 +75,7 @@ onUnmounted(() => document.removeEventListener('mousedown', handleOutsideClick))
     <button
       class="w-full flex items-center gap-2.5 text-left transition-colors"
       :style="dark
-        ? 'padding: 10px 12px; background: var(--bg-surface); border-radius: 10px; border: 1px solid var(--border-nav); cursor: pointer;'
+        ? 'padding: 10px 12px; background: var(--on-primary-card); border-radius: 10px; border: 1px solid var(--on-primary-border); cursor: pointer;'
         : 'padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-surface); cursor: pointer; box-shadow: 0 1px 3px var(--shadow-card);'"
       @click="open = !open"
     >
@@ -105,7 +105,7 @@ onUnmounted(() => document.removeEventListener('mousedown', handleOutsideClick))
         <div
           class="font-semibold truncate"
           style="font-size: 13px; line-height: 1.2;"
-          :style="dark ? 'color: var(--bg-surface);' : 'color: var(--text-ink);'"
+          :style="dark ? 'color: var(--on-primary);' : 'color: var(--text-ink);'"
           :class="{ 'opacity-50': switching }"
         >
           {{ orgStore.activeOrg?.name ?? 'Sin organización' }}
@@ -118,8 +118,8 @@ onUnmounted(() => document.removeEventListener('mousedown', handleOutsideClick))
             {{ planLabel }}
           </span>
           <template v-if="billingStore.status?.smsCredits != null">
-            <span :style="`width: 2px; height: 2px; border-radius: 50%; flex-shrink: 0; background: ${dark ? 'var(--border)' : 'var(--text-ink)'};`" />
-            <span :style="`display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 500; white-space: nowrap; color: ${dark ? 'var(--text-nav-user)' : 'var(--text-ink)'};`">
+            <span :style="`width: 2px; height: 2px; border-radius: 50%; flex-shrink: 0; background: ${dark ? 'var(--on-primary-faint)' : 'var(--text-ink)'};`" />
+            <span :style="`display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 500; white-space: nowrap; color: ${dark ? 'var(--on-primary-muted)' : 'var(--text-ink)'};`">
 
              ©️ {{ billingStore.status.smsCredits.toLocaleString() }} créditos
             </span>
@@ -148,7 +148,7 @@ onUnmounted(() => document.removeEventListener('mousedown', handleOutsideClick))
       v-if="open"
       class="absolute left-0 right-0 top-full mt-1 z-50 rounded-xl shadow-lg overflow-hidden"
       :style="dark
-        ? 'background: var(--bg-surface); border: 1px solid var(--border-nav);'
+        ? 'background: var(--on-primary-card); border: 1px solid var(--on-primary-border);'
         : 'background: var(--bg-surface); border: 1px solid var(--border);'"
     >
       <div class="py-1">
@@ -157,8 +157,8 @@ onUnmounted(() => document.removeEventListener('mousedown', handleOutsideClick))
           :key="org.id"
           class="w-full flex items-center gap-2.5 text-left transition-colors"
           style="padding: 8px 12px; border: none; cursor: pointer; background: transparent;"
-          :style="dark ? 'color: var(--bg-surface);' : 'color: var(--text-ink);'"
-          @mouseenter="(e) => (e.currentTarget as HTMLElement).style.background = dark ? 'rgba(255,255,255,0.06)' : 'var(--bg-page)'"
+          :style="dark ? 'color: var(--on-primary);' : 'color: var(--text-ink);'"
+          @mouseenter="(e) => (e.currentTarget as HTMLElement).style.background = dark ? 'var(--on-primary-surface)' : 'var(--bg-page)'"
           @mouseleave="(e) => (e.currentTarget as HTMLElement).style.background = 'transparent'"
           @click="select(org)"
         >

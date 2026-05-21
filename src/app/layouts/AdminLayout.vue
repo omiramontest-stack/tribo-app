@@ -606,7 +606,7 @@ const iconPaths: Record<string, string> = {
           </div>
 
           <!-- Org switcher -->
-          <div style="padding: 8px 16px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); flex-shrink: 0;">
+          <div style="padding: 8px 16px 14px; border-bottom: 1px solid var(--on-primary-border); flex-shrink: 0;">
             <OrgSwitcher :dark="true" />
           </div>
 
@@ -636,7 +636,7 @@ const iconPaths: Record<string, string> = {
           </nav>
 
           <!-- User row + Logout -->
-          <div style="padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.08); flex-shrink: 0;">
+          <div style="padding: 12px 16px; border-top: 1px solid var(--on-primary-border); flex-shrink: 0;">
             <div class="flex items-center gap-3" style="padding: 6px 12px 12px;">
               <div
                 class="grid place-items-center shrink-0 font-bold"
@@ -645,17 +645,17 @@ const iconPaths: Record<string, string> = {
                 {{ getInitials(authStore.admin?.email ?? '') }}
               </div>
               <div style="flex: 1; min-width: 0;">
-                <div style="font-size: 13px; font-weight: 600; color: var(--bg-surface); line-height: 1.3;">
+                <div style="font-size: 13px; font-weight: 600; color: var(--on-primary); line-height: 1.3;">
                   {{ orgStore.activeOrg?.name ?? 'Admin' }}
                 </div>
-                <div class="truncate" style="font-size: 11.5px; color: var(--text-nav-icon);">
+                <div class="truncate" style="font-size: 11.5px; color: var(--on-primary-muted);">
                   {{ authStore.admin?.email }}
                 </div>
               </div>
             </div>
             <button
               class="w-full flex items-center gap-3"
-              style="padding: 12px 14px; border-radius: 10px; border: none; background: rgba(255,255,255,0.06); color: var(--text-nav-icon); cursor: pointer; font-size: 14px; font-weight: 500; font-family: inherit; transition: background 0.15s;"
+              style="padding: 12px 14px; border-radius: 10px; border: none; background: var(--on-primary-surface); color: var(--on-primary-muted); cursor: pointer; font-size: 14px; font-weight: 500; font-family: inherit; transition: background 0.15s;"
               @click="handleLogout"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -893,12 +893,12 @@ html.dark .bottom-nav { box-shadow: 0 -4px 16px rgba(0,0,0,0.3); }
   border: none;
   cursor: pointer;
   background: transparent;
-  color: var(--primary-light);
+  color: var(--on-primary);
   transition: background 0.15s, color 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
 .more-link:active {
-  background: rgba(255,255,255,0.08);
+  background: var(--on-primary-surface);
 }
 .more-link-active {
   background: var(--amber) !important;

@@ -51,6 +51,15 @@
   /* Utility */
   --overlay:       rgba(0, 0, 0, 0.5);
   --shadow-card:   rgba(15, 27, 20, 0.06);
+
+  /* On-primary context — UI rendered sobre --primary (siempre verde oscuro).
+     No necesitan override en dark mode excepto --on-primary-card. */
+  --on-primary:         rgba(255, 255, 255, 0.95);
+  --on-primary-muted:   rgba(255, 255, 255, 0.60);
+  --on-primary-faint:   rgba(255, 255, 255, 0.35);
+  --on-primary-card:    #ffffff;
+  --on-primary-surface: rgba(255, 255, 255, 0.08);
+  --on-primary-border:  rgba(255, 255, 255, 0.10);
 }
 
 html.dark {
@@ -100,6 +109,9 @@ html.dark {
   /* Utility */
   --overlay:       rgba(0, 0, 0, 0.72);
   --shadow-card:   rgba(0, 0, 0, 0.2);
+
+  /* On-primary — solo --on-primary-card cambia en dark */
+  --on-primary-card:    rgba(255, 255, 255, 0.10);
 }
 
 /* Prevent iOS auto-zoom on input focus */
