@@ -4,9 +4,27 @@ import { useRouter } from 'vue-router'
 import { useOrganizationStore } from '@/app/stores/organization/OrganizationStore'
 import { useAuthStore } from '@/app/stores/auth/AuthStore'
 import { useBillingStore } from '@/app/stores/billing/BillingStore'
+import { useTheme } from '@/app/composables/useTheme'
 import type { Organization } from '@/domain/organization/entities/Organization'
 
 const props = withDefaults(defineProps<{ dark?: boolean }>(), { dark: false })
+const { isDark } = useTheme()
+
+// Cuando dark=true, el texto va sobre --on-primary-card:
+//   · light mode → card es #fff (blanco) → necesita texto oscuro
+//   · dark mode  → card es rgba(255,255,255,0.10) sobre verde → necesita texto blanco
+const onCardText = computed(() => props.dark
+  ? (isDark.value ? 'var(--on-primary)' : 'var(--text-ink)')
+  : 'var(--text-ink)'
+)
+const onCardTextMuted = computed(() => props.dark
+  ? (isDark.value ? 'var(--on-primary-muted)' : 'var(--text-muted)')
+  : 'var(--text-muted)'
+)
+const onCardDot = computed(() => props.dark
+  ? (isDark.value ? 'var(--on-primary-faint)' : 'var(--text-faint)')
+  : 'var(--text-faint)'
+)
 
 const orgStore = useOrganizationStore()
 const authStore = useAuthStore()
@@ -105,7 +123,7 @@ onUnmounted(() => document.removeEventListener('mousedown', handleOutsideClick))
         <div
           class="font-semibold truncate"
           style="font-size: 13px; line-height: 1.2;"
-          :style="dark ? 'color: var(--on-primary);' : 'color: var(--text-ink);'"
+          :style="`color: ${onCardText};`"
           :class="{ 'opacity-50': switching }"
         >
           {{ orgStore.activeOrg?.name ?? 'Sin organización' }}
@@ -118,8 +136,8 @@ onUnmounted(() => document.removeEventListener('mousedown', handleOutsideClick))
             {{ planLabel }}
           </span>
           <template v-if="billingStore.status?.smsCredits != null">
-            <span :style="`width: 2px; height: 2px; border-radius: 50%; flex-shrink: 0; background: ${dark ? 'var(--on-primary-faint)' : 'var(--text-ink)'};`" />
-            <span :style="`display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 500; white-space: nowrap; color: ${dark ? 'var(--on-primary-muted)' : 'var(--text-ink)'};`">
+            <span :style="`width: 2px; height: 2px; border-radius: 50%; flex-shrink: 0; background: ${onCardDot};`" />
+            <span :style="`display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 500; white-space: nowrap; color: ${onCardTextMuted};`">
 
              ©️ {{ billingStore.status.smsCredits.toLocaleString() }} créditos
             </span>
@@ -157,7 +175,7 @@ onUnmounted(() => document.removeEventListener('mousedown', handleOutsideClick))
           :key="org.id"
           class="w-full flex items-center gap-2.5 text-left transition-colors"
           style="padding: 8px 12px; border: none; cursor: pointer; background: transparent;"
-          :style="dark ? 'color: var(--on-primary);' : 'color: var(--text-ink);'"
+          :style="`color: ${onCardText};`"
           @mouseenter="(e) => (e.currentTarget as HTMLElement).style.background = dark ? 'var(--on-primary-surface)' : 'var(--bg-page)'"
           @mouseleave="(e) => (e.currentTarget as HTMLElement).style.background = 'transparent'"
           @click="select(org)"
