@@ -179,13 +179,13 @@ onMounted(async () => {
           v-if="showAppleButton"
           :href="apiClient.urlFor(`/passes/${passStore.currentPass.token}/apple${dlParam()}`)"
         >
-          <img src="/add-to-wallet.png" alt="Add to Apple Wallet" class="h-10" />
+          <img src="/add-to-wallet.png" alt="Add to Apple Wallet" class="h-11 w-auto" />
         </a>
         <a
           v-if="showGoogleButton"
           :href="apiClient.urlFor(`/passes/${passStore.currentPass.token}/google${dlParam()}`)"
         >
-          <img src="/add-to-google-wallet.png" alt="Add to Google Wallet" class="h-10" />
+          <img src="/add-to-google-wallet.svg" alt="Add to Google Wallet" class="h-14 w-auto" />
         </a>
       </div>
 
