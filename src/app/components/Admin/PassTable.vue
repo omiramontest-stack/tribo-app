@@ -9,7 +9,7 @@ import type { Pass } from '@/domain/pass/entities/Pass'
 import type { Wallet } from '@/domain/wallet/entities/Wallet'
 import type {
   StampsData, PointsData, CashbackData,
-  DaypassData, MembershipData,
+  DaypassData, MembershipData, BundleData, GiftcardData,
 } from '@/domain/pass/entities/PassData'
 import type { StampsRules, PointsRules, CashbackRules } from '@/domain/wallet/entities/WalletRules'
 
@@ -97,6 +97,16 @@ function getProgress(pass: Pass): { value: number; max: number; text: string } |
   return null
 }
 
+function formatExpiresAt(iso: string | null | undefined): { label: string; ok: boolean } {
+  if (!iso) return { label: 'Sin vencimiento', ok: true }
+  const date = new Date(iso)
+  const days = Math.ceil((date.getTime() - Date.now()) / 86_400_000)
+  if (days < 0) return { label: 'Vencido', ok: false }
+  if (days === 0) return { label: 'Vence hoy', ok: false }
+  const formatted = date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
+  return { label: `Vence el ${formatted}`, ok: true }
+}
+
 function getStatusBadge(pass: Pass): { label: string; ok: boolean } | null {
   if (pass.data.type === 'daypass') {
     const used = (pass.data as DaypassData).used
@@ -110,6 +120,11 @@ function getStatusBadge(pass: Pass): { label: string; ok: boolean } | null {
     if (days === 0) return { label: 'Vence hoy', ok: false }
     return { label: `Vence en ${days}d`, ok: true }
   }
+  if (pass.data.type === 'stamps')   return formatExpiresAt((pass.data as StampsData).expiresAt)
+  if (pass.data.type === 'points')   return formatExpiresAt((pass.data as PointsData).expiresAt)
+  if (pass.data.type === 'cashback') return formatExpiresAt((pass.data as CashbackData).expiresAt)
+  if (pass.data.type === 'bundle')   return formatExpiresAt((pass.data as BundleData).expiresAt)
+  if (pass.data.type === 'giftcard') return formatExpiresAt((pass.data as GiftcardData).expiresAt)
   return null
 }
 
@@ -126,11 +141,27 @@ function getInitials(pass: Pass): string {
     .filter(Boolean).map(s => s[0].toUpperCase()).join('').slice(0, 2)
 }
 
+function getExpiryLabel(pass: Pass): string | null {
+  const { data } = pass
+  let expiresAt: string | null | undefined
+  if (data.type === 'stamps')   expiresAt = (data as StampsData).expiresAt
+  else if (data.type === 'points')   expiresAt = (data as PointsData).expiresAt
+  else if (data.type === 'cashback') expiresAt = (data as CashbackData).expiresAt
+  else return null
+  if (!expiresAt) return 'Sin vencimiento'
+  const date = new Date(expiresAt)
+  const days = Math.ceil((date.getTime() - Date.now()) / 86_400_000)
+  if (days < 0) return 'Vencido'
+  if (days === 0) return 'Vence hoy'
+  return `Vence el ${date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}`
+}
+
 // Pre-compute once — no repeated calls in the template
 const rows = computed(() => props.passes.map(pass => ({
   pass,
   progress:   getProgress(pass),
   badge:      getStatusBadge(pass),
+  expiry:     getExpiryLabel(pass),
   date:       relativeDate(pass.createdAt),
   initials:   getInitials(pass),
   passUrl:    `/w/${pass.token}`,
@@ -185,6 +216,9 @@ const rows = computed(() => props.passes.map(pass => ({
               }"
             />
           </div>
+          <span v-if="row.expiry" class="pc-expiry" :class="{ 'pc-expiry--warn': row.expiry === 'Vencido' || row.expiry === 'Vence hoy' }">
+            {{ row.expiry }}
+          </span>
         </div>
 
         <div v-else-if="row.badge" class="pc-badge-row">
@@ -299,6 +333,9 @@ const rows = computed(() => props.passes.map(pass => ({
                   />
                 </div>
                 <p v-if="row.progress.value >= row.progress.max" class="tbl-reward">🎉 Recompensa lista</p>
+                <p v-else-if="row.expiry" class="tbl-expiry" :class="{ 'tbl-expiry--warn': row.expiry === 'Vencido' || row.expiry === 'Vence hoy' }">
+                  {{ row.expiry }}
+                </p>
               </template>
               <span
                 v-else-if="row.badge"
@@ -513,6 +550,16 @@ const rows = computed(() => props.passes.map(pass => ({
   color: var(--success);
 }
 
+.pc-expiry {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-faint);
+}
+.pc-expiry--warn {
+  color: var(--danger);
+  font-weight: 600;
+}
+
 .pc-bar-track {
   height: 5px;
   background: var(--border);
@@ -683,6 +730,17 @@ const rows = computed(() => props.passes.map(pass => ({
   color: var(--success);
   font-weight: 600;
   margin: 4px 0 0;
+}
+
+.tbl-expiry {
+  font-size: 10.5px;
+  color: var(--text-faint);
+  font-weight: 500;
+  margin: 4px 0 0;
+}
+.tbl-expiry--warn {
+  color: var(--danger);
+  font-weight: 600;
 }
 
 .tbl-badge {

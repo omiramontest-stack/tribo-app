@@ -157,6 +157,17 @@ function relativeTime(iso: string) {
   return `hace ${Math.floor(h / 24)}d`
 }
 
+function localTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+}
+
+function localDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('es-MX', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
 const MONTHS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
 function shortDate(iso: string) {
   const p = iso.split('-')
@@ -333,7 +344,10 @@ onMounted(load)
                 <p style="font-size: 12.5px; color: var(--text-ink); margin: 0; font-weight: 500; line-height: 1.4;">{{ activityDescription(evt) }}</p>
                 <p style="font-size: 11px; color: var(--text-faint); margin: 2px 0 0;">{{ evt.walletName }}</p>
               </div>
-              <span style="font-size: 10.5px; color: var(--text-faint); white-space: nowrap; flex-shrink: 0; margin-top: 2px;">{{ relativeTime(evt.createdAt) }}</span>
+              <span
+                :title="localDateTime(evt.createdAt)"
+                style="font-size: 10.5px; color: var(--text-faint); white-space: nowrap; flex-shrink: 0; margin-top: 2px; cursor: default;"
+              >{{ localTime(evt.createdAt) }}</span>
             </div>
           </template>
           <p v-else style="font-size: 13px; color: var(--text-faint); text-align: center; padding: 24px 0; margin: 0;">Sin actividad reciente</p>

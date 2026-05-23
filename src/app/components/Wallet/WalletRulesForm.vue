@@ -107,6 +107,29 @@ function onImageDrop(e: DragEvent, rules: DaypassRules) {
         </button>
       </div>
     </div>
+    <div class="field">
+      <label class="field-label">
+        Vencimiento (días)
+        <span class="field-label-hint">(vacío = sin vencimiento)</span>
+      </label>
+      <div class="stepper-wrap">
+        <button
+          type="button" class="stepper-btn"
+          :disabled="!((rules as StampsRules).expiresInDays)"
+          @click="(rules as StampsRules).expiresInDays = Math.max(1, ((rules as StampsRules).expiresInDays ?? 1) - 1)"
+        >−</button>
+        <input
+          v-model.number="(rules as StampsRules).expiresInDays"
+          type="number" min="1" placeholder="Sin vencimiento (dejar vacío)"
+          class="field-input stepper-input"
+        />
+        <button
+          type="button" class="stepper-btn"
+          @click="(rules as StampsRules).expiresInDays = ((rules as StampsRules).expiresInDays ?? 0) + 1"
+        >+</button>
+      </div>
+      <p class="field-hint">Los sellos vencen N días después de emitir el pase.</p>
+    </div>
   </template>
 
   <!-- ── Membership ─────────────────────────────────────────── -->
@@ -185,6 +208,29 @@ function onImageDrop(e: DragEvent, rules: DaypassRules) {
       />
       <p class="field-hint">Descripción de lo que recibe el cliente al alcanzar el umbral.</p>
     </div>
+    <div class="field">
+      <label class="field-label">
+        Vencimiento (días)
+        <span class="field-label-hint">(vacío = sin vencimiento)</span>
+      </label>
+      <div class="stepper-wrap">
+        <button
+          type="button" class="stepper-btn"
+          :disabled="!((rules as PointsRules).expiresInDays)"
+          @click="(rules as PointsRules).expiresInDays = Math.max(1, ((rules as PointsRules).expiresInDays ?? 1) - 1)"
+        >−</button>
+        <input
+          v-model.number="(rules as PointsRules).expiresInDays"
+          type="number" min="1" placeholder="Sin vencimiento (dejar vacío)"
+          class="field-input stepper-input"
+        />
+        <button
+          type="button" class="stepper-btn"
+          @click="(rules as PointsRules).expiresInDays = ((rules as PointsRules).expiresInDays ?? 0) + 1"
+        >+</button>
+      </div>
+      <p class="field-hint">Los puntos vencen N días después de emitir el pase.</p>
+    </div>
   </template>
 
   <!-- ── Cashback ────────────────────────────────────────────── -->
@@ -206,6 +252,29 @@ function onImageDrop(e: DragEvent, rules: DaypassRules) {
       <select v-model="(rules as CashbackRules).currency" class="field-input field-select">
         <option v-for="c in CURRENCIES" :key="c" :value="c">{{ c }}</option>
       </select>
+    </div>
+    <div class="field">
+      <label class="field-label">
+        Vencimiento (días)
+        <span class="field-label-hint">(vacío = sin vencimiento)</span>
+      </label>
+      <div class="stepper-wrap">
+        <button
+          type="button" class="stepper-btn"
+          :disabled="!((rules as CashbackRules).expiresInDays)"
+          @click="(rules as CashbackRules).expiresInDays = Math.max(1, ((rules as CashbackRules).expiresInDays ?? 1) - 1)"
+        >−</button>
+        <input
+          v-model.number="(rules as CashbackRules).expiresInDays"
+          type="number" min="1" placeholder="Sin vencimiento (dejar vacío)"
+          class="field-input stepper-input"
+        />
+        <button
+          type="button" class="stepper-btn"
+          @click="(rules as CashbackRules).expiresInDays = ((rules as CashbackRules).expiresInDays ?? 0) + 1"
+        >+</button>
+      </div>
+      <p class="field-hint">El saldo de cashback vence a los N días.</p>
     </div>
   </template>
 
@@ -321,6 +390,29 @@ function onImageDrop(e: DragEvent, rules: DaypassRules) {
       />
       <p class="field-hint">Cómo se llama cada uso en tu servicio (aparece en la tarjeta).</p>
     </div>
+    <div class="field">
+      <label class="field-label">
+        Vencimiento (días)
+        <span class="field-label-hint">(vacío = sin vencimiento)</span>
+      </label>
+      <div class="stepper-wrap">
+        <button
+          type="button" class="stepper-btn"
+          :disabled="!((rules as BundleRules).expiresInDays)"
+          @click="(rules as BundleRules).expiresInDays = Math.max(1, ((rules as BundleRules).expiresInDays ?? 1) - 1)"
+        >−</button>
+        <input
+          v-model.number="(rules as BundleRules).expiresInDays"
+          type="number" min="1" placeholder="Sin vencimiento (dejar vacío)"
+          class="field-input stepper-input"
+        />
+        <button
+          type="button" class="stepper-btn"
+          @click="(rules as BundleRules).expiresInDays = ((rules as BundleRules).expiresInDays ?? 0) + 1"
+        >+</button>
+      </div>
+      <p class="field-hint">El paquete vence N días después de ser emitido.</p>
+    </div>
   </template>
 
   <!-- ── Giftcard ────────────────────────────────────────────── -->
@@ -339,6 +431,29 @@ function onImageDrop(e: DragEvent, rules: DaypassRules) {
       <select v-model="(rules as GiftcardRules).currency" class="field-input field-select">
         <option v-for="c in CURRENCIES" :key="c" :value="c">{{ c }}</option>
       </select>
+    </div>
+    <div class="field">
+      <label class="field-label">
+        Vencimiento (días)
+        <span class="field-label-hint">(vacío = sin vencimiento)</span>
+      </label>
+      <div class="stepper-wrap">
+        <button
+          type="button" class="stepper-btn"
+          :disabled="!((rules as GiftcardRules).expiresInDays)"
+          @click="(rules as GiftcardRules).expiresInDays = Math.max(1, ((rules as GiftcardRules).expiresInDays ?? 1) - 1)"
+        >−</button>
+        <input
+          v-model.number="(rules as GiftcardRules).expiresInDays"
+          type="number" min="1" placeholder="Sin vencimiento (dejar vacío)"
+          class="field-input stepper-input"
+        />
+        <button
+          type="button" class="stepper-btn"
+          @click="(rules as GiftcardRules).expiresInDays = ((rules as GiftcardRules).expiresInDays ?? 0) + 1"
+        >+</button>
+      </div>
+      <p class="field-hint">La gift card vence a los N días.</p>
     </div>
   </template>
 
