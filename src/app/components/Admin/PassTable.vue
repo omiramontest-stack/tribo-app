@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePassStore } from '@/app/stores/pass/PassStore'
 import { useWhatsAppStore } from '@/app/stores/whatsapp/WhatsAppStore'
 import { useToast } from '@/app/composables/useToast'
-import { apiClient } from '@/infrastructure/http/ApiClient'
+import { apiClient, ApiError } from '@/infrastructure/http/ApiClient'
 import type { Pass } from '@/domain/pass/entities/Pass'
 import type { Wallet } from '@/domain/wallet/entities/Wallet'
 import type {
@@ -25,6 +25,9 @@ const copiedToken    = ref<string | null>(null)
 const passToDelete   = ref<Pass | null>(null)
 const deleting       = ref(false)
 
+// Tokens bajo rate-limit de SMS (429). Vue 3 reactiva Sets con reactive().
+const smsRateLimited = reactive(new Set<string>())
+
 // ── Actions ────────────────────────────────────────────────────────────────
 function copyLink(token: string) {
   const url = window.location.origin + router.resolve({ name: 'PassView', params: { token } }).href
@@ -34,10 +37,22 @@ function copyLink(token: string) {
 }
 
 async function sendSms(pass: Pass) {
-  if (sendingToken.value) return
+  if (sendingToken.value || smsRateLimited.has(pass.token)) return
   sendingToken.value = pass.token
   try {
     await apiClient.post(`/passes/${pass.token}/send-link`, {})
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 429) {
+      const seconds = e.retryAfter ?? 60
+      toast.show(
+        `Demasiados intentos. Intenta de nuevo en ${seconds}s`,
+        'error',
+      )
+      smsRateLimited.add(pass.token)
+      setTimeout(() => { smsRateLimited.delete(pass.token) }, seconds * 1_000)
+    } else {
+      toast.show('Error al enviar SMS', 'error')
+    }
   } finally {
     sendingToken.value = null
   }
@@ -250,7 +265,7 @@ const rows = computed(() => props.passes.map(pass => ({
 
           <button
             class="pc-action-btn"
-            :disabled="sendingToken === row.pass.token"
+            :disabled="sendingToken === row.pass.token || smsRateLimited.has(row.pass.token)"
             @click="sendSms(row.pass)"
           >
             <svg v-if="sendingToken !== row.pass.token" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -259,7 +274,7 @@ const rows = computed(() => props.passes.map(pass => ({
             <svg v-else width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="spin">
               <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
             </svg>
-            {{ sendingToken === row.pass.token ? 'Enviando…' : 'SMS' }}
+            {{ sendingToken === row.pass.token ? 'Enviando…' : smsRateLimited.has(row.pass.token) ? 'Espera…' : 'SMS' }}
           </button>
 
           <button
@@ -368,8 +383,8 @@ const rows = computed(() => props.passes.map(pass => ({
 
               <button
                 class="tbl-icon-btn"
-                :disabled="sendingToken === row.pass.token"
-                title="Enviar por SMS"
+                :disabled="sendingToken === row.pass.token || smsRateLimited.has(row.pass.token)"
+                :title="smsRateLimited.has(row.pass.token) ? 'Límite alcanzado, espera unos segundos' : 'Enviar por SMS'"
                 @click="sendSms(row.pass)"
               >
                 <svg v-if="sendingToken !== row.pass.token" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

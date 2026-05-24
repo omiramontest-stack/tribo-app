@@ -2,6 +2,8 @@ export class ApiError extends Error {
   constructor(
     public readonly status: number,
     public readonly body: unknown,
+    /** Seconds to wait before retrying (from Retry-After header), if the server sent it. */
+    public readonly retryAfter?: number,
   ) {
     super(`HTTP ${status}`)
     this.name = 'ApiError'
@@ -49,6 +51,7 @@ class ApiClient {
       ...init,
       credentials: 'include',
       headers: {
+        'X-Request-ID': crypto.randomUUID(),
         ...(hasBody && !isFormData ? { 'Content-Type': 'application/json' } : {}),
         ...authHeader,
         ...init?.headers,
@@ -63,7 +66,9 @@ class ApiClient {
 
     if (res.status === 429) {
       const data429 = await res.json().catch(() => null)
-      throw new ApiError(429, data429)
+      const retryAfterRaw = res.headers.get('Retry-After')
+      const retryAfter = retryAfterRaw ? parseInt(retryAfterRaw, 10) : undefined
+      throw new ApiError(429, data429, Number.isFinite(retryAfter) ? retryAfter : undefined)
     }
 
     if (res.status === 204) return undefined as T

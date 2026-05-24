@@ -2,7 +2,7 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { BrowserQRCodeReader } from '@zxing/browser'
 import { usePassStore } from '@/app/stores/pass/PassStore'
-import { apiClient } from '@/infrastructure/http/ApiClient'
+import { apiClient, ApiError } from '@/infrastructure/http/ApiClient'
 import type { PassWithWallet } from '@/application/pass/useCase/GetPassByTokenUseCase'
 import type { StampsRules, PointsRules, MembershipRules, CashbackRules, BundleRules, GiftcardRules, CouponRules } from '@/domain/wallet/entities/WalletRules'
 import type { CashbackTransaction } from '@/domain/pass/repository/PassRepository'
@@ -20,7 +20,9 @@ const PASS_ERROR_MESSAGES: Record<string, string> = {
 }
 
 function resolvePassError(e: unknown, fallback: string): string {
-  const code = (e as any)?.body?.error as string | undefined
+  const code = e instanceof ApiError
+    ? (e.body as { error?: string } | null)?.error
+    : undefined
   return PASS_ERROR_MESSAGES[code ?? ''] ?? fallback
 }
 
@@ -34,6 +36,10 @@ const errorMsg = ref('')
 const pointsAmount = ref(1)
 const loading = ref(false)
 const successMsg = ref('')
+// Cooldown tras un 429 en POST /passes/scan/:token
+const scanRateLimitedUntil = ref<number | null>(null)
+const scanRateLimitedSecs = ref(0)
+let _scanCooldownTimer: ReturnType<typeof setInterval> | null = null
 
 // Cashback modal
 const showCashbackModal = ref(false)
@@ -173,16 +179,40 @@ async function redeemCoupon() {
   }
 }
 
+function _startScanCooldown(seconds: number) {
+  scanRateLimitedSecs.value = seconds
+  scanRateLimitedUntil.value = Date.now() + seconds * 1_000
+  if (_scanCooldownTimer) clearInterval(_scanCooldownTimer)
+  _scanCooldownTimer = setInterval(() => {
+    const remaining = Math.ceil(((scanRateLimitedUntil.value ?? 0) - Date.now()) / 1_000)
+    if (remaining <= 0) {
+      scanRateLimitedSecs.value = 0
+      scanRateLimitedUntil.value = null
+      clearInterval(_scanCooldownTimer!)
+      _scanCooldownTimer = null
+    } else {
+      scanRateLimitedSecs.value = remaining
+    }
+  }, 1_000)
+}
+
 async function markDaypassUsed() {
-  if (!scannedToken.value) return
+  if (!scannedToken.value || scanRateLimitedUntil.value) return
   loading.value = true
   try {
     await apiClient.post(`/passes/scan/${scannedToken.value}`)
     successMsg.value = '¡Pase validado correctamente!'
     step.value = 'success'
   } catch (e) {
-    errorMsg.value = resolvePassError(e, 'No se pudo validar el pase.')
-    step.value = 'error'
+    if (e instanceof ApiError && e.status === 429) {
+      const seconds = e.retryAfter ?? 60
+      errorMsg.value = `Demasiados intentos. Intenta de nuevo en ${seconds}s`
+      _startScanCooldown(seconds)
+      step.value = 'error'
+    } else {
+      errorMsg.value = resolvePassError(e, 'No se pudo validar el pase.')
+      step.value = 'error'
+    }
   } finally {
     loading.value = false
   }
@@ -275,7 +305,10 @@ async function scanAnother() {
   await startScanner()
 }
 
-onUnmounted(() => stopScanning?.())
+onUnmounted(() => {
+  stopScanning?.()
+  if (_scanCooldownTimer) clearInterval(_scanCooldownTimer)
+})
 
 startScanner()
 </script>
@@ -496,14 +529,22 @@ startScanner()
         <button
           v-else-if="passResult.pass.data.type === 'daypass'"
           class="btn-action-primary"
-          :class="{ 'btn-disabled': passResult.pass.data.used }"
-          :disabled="loading || passResult.pass.data.used"
+          :class="{ 'btn-disabled': passResult.pass.data.used || !!scanRateLimitedUntil }"
+          :disabled="loading || passResult.pass.data.used || !!scanRateLimitedUntil"
           @click="markDaypassUsed"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
             <path d="M20 6L9 17l-5-5"/>
           </svg>
-          {{ passResult.pass.data.used ? 'Pase ya utilizado' : (loading ? 'Validando…' : 'Validar pase') }}
+          {{
+            passResult.pass.data.used
+              ? 'Pase ya utilizado'
+              : scanRateLimitedUntil
+                ? `Espera ${scanRateLimitedSecs}s…`
+                : loading
+                  ? 'Validando…'
+                  : 'Validar pase'
+          }}
         </button>
 
         <!-- Bundle -->

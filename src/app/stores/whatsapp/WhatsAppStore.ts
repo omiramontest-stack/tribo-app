@@ -18,6 +18,8 @@ export const useWhatsAppStore = defineStore('WhatsAppStore', () => {
   })
 
   let _es: EventSource | null = null
+  let _reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  let _stopped = false
 
   const status = computed(() => state.status)
   const phone = computed(() => state.phone)
@@ -43,13 +45,32 @@ export const useWhatsAppStore = defineStore('WhatsAppStore', () => {
 
   // ── SSE stream ────────────────────────────────────────────────────────────
 
-  function startStream(orgId: string) {
+  /** Requests a one-shot ephemeral token (60 s TTL) from the backend. */
+  async function _fetchStreamToken(orgId: string): Promise<string | null> {
+    try {
+      const res = await apiClient.post<{ token: string }>(
+        `/organizations/${orgId}/whatsapp/stream-token`,
+        {},
+      )
+      return res.token
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Opens the SSE connection using a fresh ephemeral token.
+   * Each reconnection must call this again — tokens are one-shot and expire in 60 s.
+   */
+  async function startStream(orgId: string) {
     stopStream()
-    const token = apiClient.getToken()
-    if (!token) return
+    _stopped = false
+
+    const streamToken = await _fetchStreamToken(orgId)
+    if (!streamToken || _stopped) return
 
     const base = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? 'https://api.tribowallet.me')
-    const url = `${base}/organizations/${orgId}/whatsapp/stream?token=${encodeURIComponent(token)}`
+    const url = `${base}/organizations/${orgId}/whatsapp/stream?t=${encodeURIComponent(streamToken)}`
     _es = new EventSource(url)
 
     _es.addEventListener('status', (e) => {
@@ -87,10 +108,24 @@ export const useWhatsAppStore = defineStore('WhatsAppStore', () => {
       state.statusKnown = true
     })
 
-    // EventSource reconnects automatically on error — no manual retry needed
+    // EventSource does not expose HTTP status codes on error, so we can't
+    // distinguish a 401 (expired token) from a transient network drop.
+    // In both cases the token is no longer valid, so we always request a
+    // new one. A 3 s delay avoids hammering the server on repeated failures.
+    _es.onerror = () => {
+      _es?.close()
+      _es = null
+      if (_stopped) return
+      _reconnectTimer = setTimeout(() => startStream(orgId), 3_000)
+    }
   }
 
   function stopStream() {
+    _stopped = true
+    if (_reconnectTimer !== null) {
+      clearTimeout(_reconnectTimer)
+      _reconnectTimer = null
+    }
     _es?.close()
     _es = null
   }
