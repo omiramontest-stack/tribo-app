@@ -44,7 +44,7 @@ const periods = [
   { key: '90d', label: '90 días' },
   { key: '1y',  label: '1 año' },
 ]
-const period = ref('30d')
+const period = ref('7d')
 const loading = ref(false)
 const data = ref<AnalyticsResponse | null>(null)
 
