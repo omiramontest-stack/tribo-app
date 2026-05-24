@@ -105,7 +105,7 @@ export const useBillingStore = defineStore('BillingStore', () => {
       requireOrgId(),
       planSlug,
       `${origin}/admin/billing?success=true`,
-      `${origin}/admin/billing?canceled=true`,
+      `${origin}/admin/billing?cancelled=true`,
     )
   }
 
@@ -115,7 +115,7 @@ export const useBillingStore = defineStore('BillingStore', () => {
       requireOrgId(),
       packId,
       `${origin}/admin/billing?success=true`,
-      `${origin}/admin/billing?canceled=true`,
+      `${origin}/admin/billing?cancelled=true`,
     )
   }
 

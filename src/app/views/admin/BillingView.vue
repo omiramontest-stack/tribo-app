@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRoute, useRouter } from 'vue-router'
 import { useBillingStore } from '@/app/stores/billing/BillingStore'
 import { useOrganizationStore } from '@/app/stores/organization/OrganizationStore'
 import { useAuthStore } from '@/app/stores/auth/AuthStore'
@@ -12,8 +11,6 @@ import type { BillingPlan, SmsPack } from '@/app/stores/billing/BillingStore'
 const billingStore = useBillingStore()
 const orgStore = useOrganizationStore()
 const authStore = useAuthStore()
-const route = useRoute()
-const router = useRouter()
 const toast = useToast()
 const { activeOrgId } = storeToRefs(orgStore)
 
@@ -22,32 +19,45 @@ const redirecting = ref<string | null>(null)
 const showEmailVerifyModal = ref(false)
 const resendingVerification = ref(false)
 
+// ── Error guards ──────────────────────────────────────────────────────────────
+
 function isEmailNotVerified(e: unknown): boolean {
   return e instanceof ApiError && e.status === 403 && (e.body as { error?: string })?.error === 'EMAIL_NOT_VERIFIED'
 }
-
-async function handleResendVerification() {
-  resendingVerification.value = true
-  try {
-    await authStore.resendVerification()
-    toast.show('Email de verificación reenviado. Revisa tu bandeja.', 'success')
-    showEmailVerifyModal.value = false
-  } catch {
-    toast.show('No se pudo reenviar. Intenta de nuevo.', 'error')
-  } finally {
-    resendingVerification.value = false
-  }
+function isAlreadySubscribed(e: unknown): boolean {
+  return e instanceof ApiError && e.status === 409 && (e.body as { error?: string })?.error === 'ALREADY_SUBSCRIBED'
+}
+function isNoCustomer(e: unknown): boolean {
+  return e instanceof ApiError && e.status === 404 && (e.body as { error?: string })?.error === 'NO_CUSTOMER'
+}
+function handleBillingError(e: unknown): void {
+  if (isEmailNotVerified(e)) { showEmailVerifyModal.value = true; return }
+  toast.show('Error al procesar. Intenta de nuevo.', 'error')
 }
 
-onMounted(() => {
-  if (route.query.success === 'true') {
-    toast.show('¡Pago exitoso! Tu plan ha sido actualizado.', 'success')
-    router.replace({ name: 'Billing' })
-  } else if (route.query.canceled === 'true') {
-    toast.show('Pago cancelado.', 'error')
-    router.replace({ name: 'Billing' })
+// ── Return from Stripe ────────────────────────────────────────────────────────
+
+onMounted(async () => {
+  const params = new URLSearchParams(window.location.search)
+  const hasSuccess = params.get('success') === 'true'
+  const hasCancelled = params.get('cancelled') === 'true'
+
+  // Clean query params without triggering a navigation/reload
+  if (hasSuccess || hasCancelled) {
+    window.history.replaceState({}, '', window.location.pathname)
+  }
+
+  if (hasSuccess) {
+    // Give Stripe's webhook up to 2 s to land before refreshing
+    await new Promise<void>(resolve => setTimeout(resolve, 2000))
+    try { await billingStore.fetchStatus() } catch { /* best-effort */ }
+    toast.show('¡Plan actualizado exitosamente!', 'success')
+  } else if (hasCancelled) {
+    toast.show('Pago cancelado. Tu plan no cambió.', 'error')
   }
 })
+
+// ── Load data when org changes ────────────────────────────────────────────────
 
 watch(
   activeOrgId,
@@ -60,12 +70,136 @@ watch(
         billingStore.fetchPlans(),
         billingStore.fetchSmsPacks(),
       ])
+    } catch {
+      toast.show('Error al cargar datos de facturación.', 'error')
     } finally {
       fetching.value = false
     }
   },
   { immediate: true },
 )
+
+// ── Core redirect helpers (with cascade error handling) ───────────────────────
+
+async function redirectToCheckout(planSlug: string): Promise<void> {
+  try {
+    const url = await billingStore.checkout(planSlug)
+    window.location.href = url
+  } catch (e) {
+    // 409 ALREADY_SUBSCRIBED → cascade to portal
+    if (isAlreadySubscribed(e)) return redirectToPortal()
+    throw e
+  }
+}
+
+async function redirectToPortal(): Promise<void> {
+  try {
+    const url = await billingStore.openPortal()
+    window.location.href = url
+  } catch (e) {
+    // 404 NO_CUSTOMER → cascade to checkout (base plan)
+    if (isNoCustomer(e)) return redirectToCheckout('base')
+    throw e
+  }
+}
+
+// ── Central plan action (the decision function) ───────────────────────────────
+
+/**
+ * Main entry point for any plan CTA.
+ * 1. Fetches fresh status
+ * 2. isActive → portal (Stripe handles proration / upgrade / cancel)
+ * 3. !isActive → checkout with targetPlanSlug
+ */
+async function handlePlanAction(targetPlanSlug: string): Promise<void> {
+  if (redirecting.value) return
+  redirecting.value = targetPlanSlug
+  try {
+    await billingStore.fetchStatus()                   // fresh status
+    if (billingStore.status?.isActive) {
+      await redirectToPortal()
+    } else {
+      await redirectToCheckout(targetPlanSlug)
+    }
+  } catch (e) {
+    redirecting.value = null
+    handleBillingError(e)
+  }
+}
+
+// ── Computed action button for the status section ─────────────────────────────
+
+type ButtonVariant = 'primary' | 'warning' | 'secondary'
+
+const planAction = computed<{ label: string; slug: string; variant: ButtonVariant }>(() => {
+  const s = billingStore.status
+
+  if (!s || !s.plan) {
+    return { label: 'Elegir plan', slug: 'base', variant: 'primary' }
+  }
+  if (s.gracePeriod) {
+    return {
+      label: `Reactivar · acceso por ${s.gracePeriod.daysRemaining} días más`,
+      slug: 'base',
+      variant: 'warning',
+    }
+  }
+  if (s.trialInfo) {
+    return {
+      label: `Actualizar plan · ${s.trialInfo.daysRemaining} días restantes`,
+      slug: 'pro',
+      variant: 'primary',
+    }
+  }
+  if (s.isActive) {
+    if (s.plan.slug === 'pro') {
+      return { label: 'Administrar suscripción', slug: 'pro', variant: 'secondary' }
+    }
+    // base (or any other active plan)
+    return { label: 'Actualizar a Pro', slug: 'pro', variant: 'primary' }
+  }
+  // Cancelled without grace period
+  return { label: 'Reactivar suscripción', slug: 'base', variant: 'primary' }
+})
+
+const planActionStyle = computed<Record<string, string>>(() => {
+  const v = planAction.value.variant
+  if (v === 'warning')   return { background: 'var(--warning, #f59e0b)', color: '#fff' }
+  if (v === 'secondary') return { background: 'var(--bg-surface)', color: 'var(--text-medium)', border: '1px solid var(--border)' }
+  return { background: 'var(--amber)', color: 'var(--primary)' }
+})
+
+// ── SMS credits buy ───────────────────────────────────────────────────────────
+
+async function handleBuyCredits(pack: SmsPack): Promise<void> {
+  if (redirecting.value) return
+  redirecting.value = pack.id
+  try {
+    const url = await billingStore.buyCredits(pack.id)
+    window.location.href = url
+  } catch (e) {
+    redirecting.value = null
+    if (isEmailNotVerified(e)) { showEmailVerifyModal.value = true; return }
+    toast.show('Error al procesar el pago. Intenta de nuevo.', 'error')
+  }
+}
+
+// ── Email verification ────────────────────────────────────────────────────────
+
+async function handleResendVerification(): Promise<void> {
+  resendingVerification.value = true
+  try {
+    await authStore.resendVerification()
+    toast.show('Email de verificación reenviado. Revisa tu bandeja.', 'success')
+    showEmailVerifyModal.value = false
+  } catch {
+    toast.show('No se pudo reenviar. Intenta de nuevo.', 'error')
+  } finally {
+    resendingVerification.value = false
+  }
+}
+
+// ── Display helpers ───────────────────────────────────────────────────────────
 
 function formatPrice(price: number, currency = 'MXN'): string {
   return price.toLocaleString('es-MX', { style: 'currency', currency })
@@ -81,19 +215,21 @@ function formatDate(dateStr: string | null | undefined): string {
 }
 
 function subscriptionBadge(status: string | null | undefined) {
-  if (status === 'active') return { label: 'Activo', bg: 'var(--success-bg)', color: 'var(--success)' }
-  if (status === 'past_due' || status === 'unpaid') return { label: 'Vencido', bg: 'var(--danger-bg)', color: 'var(--danger)' }
-  return { label: 'Sin plan', bg: 'var(--bg-subtle)', color: 'var(--text-muted)' }
+  if (status === 'active')                          return { label: 'Activo',    bg: 'var(--success-bg)',                    color: 'var(--success)' }
+  if (status === 'trialing')                        return { label: 'Trial',     bg: 'rgba(245,158,11,0.12)',                color: 'var(--amber)' }
+  if (status === 'past_due' || status === 'unpaid') return { label: 'Vencido',   bg: 'var(--danger-bg)',                     color: 'var(--danger)' }
+  if (status === 'cancelled')                       return { label: 'Cancelado', bg: 'var(--bg-subtle)',                     color: 'var(--text-muted)' }
+  return                                                   { label: 'Sin plan',  bg: 'var(--bg-subtle)',                     color: 'var(--text-muted)' }
 }
 
 function planFeatures(plan: BillingPlan) {
   return [
-    { label: `${plan.maxWallets} wallets`, included: true },
-    { label: plan.maxPasses === null ? 'Pases ilimitados' : `${plan.maxPasses} pases`, included: true },
-    { label: 'Campañas email', included: plan.emailCampaigns },
-    { label: 'SMS con créditos', included: plan.smsCampaigns },
-    { label: `Analítica ${plan.analyticsLevel === 'complete' ? 'completa' : 'básica'}`, included: true },
-    { label: 'Soporte prioritario', included: plan.analyticsLevel === 'complete' },
+    { label: `${plan.maxWallets} wallets`,                                                             included: true },
+    { label: plan.maxPasses === null ? 'Pases ilimitados' : `${plan.maxPasses} pases`,                 included: true },
+    { label: 'Campañas email',                                                                         included: plan.emailCampaigns },
+    { label: 'SMS con créditos',                                                                       included: plan.smsCampaigns },
+    { label: `Analítica ${plan.analyticsLevel === 'full' ? 'completa' : 'básica'}`,                    included: true },
+    { label: 'Soporte prioritario',                                                                    included: plan.analyticsLevel === 'full' },
   ]
 }
 
@@ -102,11 +238,10 @@ function isPopularPack(index: number, total: number): boolean {
 }
 
 const displayedPlans = computed(() => billingStore.plans)
-
 const currentPlanPrice = computed(() => billingStore.status?.plan?.price ?? -1)
 
 function isPlanDisabled(plan: BillingPlan): boolean {
-  if (redirecting.value === plan.slug) return true
+  if (redirecting.value !== null) return true
   if (billingStore.status?.plan?.slug === plan.slug) return true
   if (plan.price < currentPlanPrice.value) return true
   return false
@@ -116,7 +251,7 @@ function planButtonLabel(plan: BillingPlan): string {
   if (redirecting.value === plan.slug) return 'Redirigiendo…'
   if (billingStore.status?.plan?.slug === plan.slug) return 'Plan actual'
   if (plan.price < currentPlanPrice.value) return 'Plan inferior'
-  return 'Suscribirse'
+  return 'Seleccionar plan'
 }
 
 function planButtonStyle(plan: BillingPlan): Record<string, string> {
@@ -125,48 +260,12 @@ function planButtonStyle(plan: BillingPlan): Record<string, string> {
   }
   return { background: 'var(--amber)', color: 'var(--primary)' }
 }
-
-async function handleCheckout(plan: BillingPlan) {
-  if (isPlanDisabled(plan)) return
-  redirecting.value = plan.slug
-  try {
-    const url = await billingStore.checkout(plan.slug)
-    window.location.href = url
-  } catch (e) {
-    redirecting.value = null
-    if (isEmailNotVerified(e)) { showEmailVerifyModal.value = true; return }
-    toast.show('Error al procesar el pago. Intenta de nuevo.', 'error')
-  }
-}
-
-async function handleBuyCredits(pack: SmsPack) {
-  redirecting.value = pack.id
-  try {
-    const url = await billingStore.buyCredits(pack.id)
-    window.location.href = url
-  } catch (e) {
-    redirecting.value = null
-    if (isEmailNotVerified(e)) { showEmailVerifyModal.value = true; return }
-    toast.show('Error al procesar el pago. Intenta de nuevo.', 'error')
-  }
-}
-
-async function handlePortal() {
-  redirecting.value = 'portal'
-  try {
-    const url = await billingStore.openPortal()
-    window.location.href = url
-  } catch {
-    toast.show('Error al abrir el portal. Intenta de nuevo.', 'error')
-    redirecting.value = null
-  }
-}
 </script>
 
 <template>
   <div style="display: flex; flex-direction: column; gap: 28px; max-width: 960px;">
 
-    <!-- ── SECCIÓN A: Estado actual ── -->
+    <!-- ── SECCIÓN A: Estado actual ───────────────────────────────────────── -->
     <section>
       <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 12px;">
         Estado actual
@@ -189,93 +288,139 @@ async function handlePortal() {
         </div>
       </div>
 
-      <!-- Sin plan activo -->
+      <!-- Status card (always shown once data is loaded) -->
       <div
-        v-else-if="billingStore.status && !billingStore.status.plan"
-        style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; display: flex; align-items: center; gap: 20px; box-shadow: 0 1px 0 rgba(15,27,20,0.02);"
+        v-else-if="billingStore.status"
+        style="background: var(--bg-surface); border-radius: 14px; box-shadow: 0 1px 0 rgba(15,27,20,0.02);"
+        :style="billingStore.status.gracePeriod
+          ? { border: '1.5px solid var(--warning, #f59e0b)' }
+          : { border: '1px solid var(--border)' }"
       >
-        <div style="width: 44px; height: 44px; border-radius: 12px; background: var(--bg-field); display: grid; place-items: center; flex-shrink: 0;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5" fill="var(--text-faint)" stroke="none"/>
+        <!-- Grace period banner -->
+        <div
+          v-if="billingStore.status.gracePeriod"
+          style="padding: 10px 22px; border-radius: 13px 13px 0 0; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; background: rgba(245,158,11,0.10); color: var(--warning, #f59e0b); border-bottom: 1px solid rgba(245,158,11,0.2);"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
           </svg>
+          Tu suscripción ha expirado. Tienes acceso por
+          <strong>{{ billingStore.status.gracePeriod.daysRemaining }} días más</strong> —
+          expira el {{ formatDate(billingStore.status.gracePeriod.expiresAt) }}.
         </div>
-        <div style="flex: 1;">
-          <div style="font-size: 14px; font-weight: 700; color: var(--text-ink); margin-bottom: 4px;">Sin suscripción activa</div>
-          <div style="font-size: 12.5px; color: var(--text-muted);">Elige un plan de los disponibles abajo para comenzar.</div>
-        </div>
-      </div>
 
-      <!-- Con plan activo -->
-      <div
-        v-else-if="billingStore.status?.plan"
-        style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; box-shadow: 0 1px 0 rgba(15,27,20,0.02);"
-      >
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
-          <div>
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap;">
-              <div
-                style="width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;"
-                :style="{ background: subscriptionBadge(billingStore.status.subscription?.status).color }"
-              />
-              <span style="font-size: 16px; font-weight: 700; color: var(--text-ink);">
-                {{ billingStore.status.plan.name }}
-              </span>
-              <span
-                style="font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px;"
-                :style="{
-                  background: subscriptionBadge(billingStore.status.subscription?.status).bg,
-                  color: subscriptionBadge(billingStore.status.subscription?.status).color,
-                }"
+        <!-- Trial banner -->
+        <div
+          v-else-if="billingStore.status.trialInfo"
+          style="padding: 10px 22px; border-radius: 13px 13px 0 0; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; background: rgba(245,158,11,0.08); color: var(--amber); border-bottom: 1px solid rgba(245,158,11,0.15);"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          Período de prueba activo ·
+          <strong>{{ billingStore.status.trialInfo.daysRemaining }} días restantes</strong>
+          (finaliza el {{ formatDate(billingStore.status.trialInfo.endsAt) }})
+        </div>
+
+        <!-- Main content -->
+        <div style="padding: 22px;">
+          <!-- Header row: name + action button -->
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+            <div>
+              <!-- No plan state -->
+              <div v-if="!billingStore.status.plan" style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: var(--bg-field); display: grid; place-items: center; flex-shrink: 0;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>
+                    <circle cx="17" cy="15" r="1.5" fill="var(--text-faint)" stroke="none"/>
+                  </svg>
+                </div>
+                <div>
+                  <div style="font-size: 15px; font-weight: 700; color: var(--text-ink);">Sin suscripción activa</div>
+                  <div style="font-size: 12.5px; color: var(--text-muted);">Elige un plan para comenzar.</div>
+                </div>
+              </div>
+
+              <!-- With plan -->
+              <template v-else>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap;">
+                  <div
+                    style="width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;"
+                    :style="{ background: subscriptionBadge(billingStore.status.subscription?.status).color }"
+                  />
+                  <span style="font-size: 16px; font-weight: 700; color: var(--text-ink);">
+                    {{ billingStore.status.plan.name }}
+                  </span>
+                  <span
+                    style="font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px;"
+                    :style="{
+                      background: subscriptionBadge(billingStore.status.subscription?.status).bg,
+                      color:      subscriptionBadge(billingStore.status.subscription?.status).color,
+                    }"
+                  >
+                    {{ subscriptionBadge(billingStore.status.subscription?.status).label }}
+                  </span>
+                </div>
+                <div v-if="billingStore.status.subscription" style="font-size: 12.5px; color: var(--text-muted);">
+                  Próxima renovación:
+                  <strong style="color: var(--text-ink);">{{ formatDate(billingStore.status.subscription.currentPeriodEnd) }}</strong>
+                </div>
+              </template>
+            </div>
+
+            <!-- Primary action button (computed from planAction) -->
+            <button
+              :disabled="redirecting !== null"
+              style="display: flex; align-items: center; gap: 7px; padding: 10px 18px; border-radius: 9px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; white-space: nowrap; font-family: inherit; transition: opacity 0.15s;"
+              :style="redirecting !== null
+                ? { opacity: '0.6', cursor: 'not-allowed', background: 'var(--bg-field)', color: 'var(--text-muted)', border: '1px solid var(--border)' }
+                : planActionStyle"
+              @click="handlePlanAction(planAction.slug)"
+            >
+              <!-- Spinner while redirecting -->
+              <svg
+                v-if="redirecting !== null"
+                width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2.5" stroke-linecap="round"
+                style="animation: spin 0.8s linear infinite; flex-shrink: 0;"
               >
-                {{ subscriptionBadge(billingStore.status.subscription?.status).label }}
-              </span>
-            </div>
-            <div v-if="billingStore.status.subscription" style="font-size: 12.5px; color: var(--text-muted);">
-              Próxima renovación: <strong style="color: var(--text-ink);">{{ formatDate(billingStore.status.subscription.currentPeriodEnd) }}</strong>
-            </div>
+                <path d="M21 12a9 9 0 11-6.219-8.56"/>
+              </svg>
+              {{ redirecting !== null ? 'Redirigiendo…' : planAction.label }}
+            </button>
           </div>
 
-          <button
-            v-if="billingStore.status.subscription"
-            :disabled="redirecting === 'portal'"
-            style="display: flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg-surface); font-size: 12.5px; font-weight: 600; color: var(--text-medium); cursor: pointer; white-space: nowrap; font-family: inherit;"
-            @click="handlePortal"
+          <!-- Stats chips (only when there's a plan) -->
+          <div
+            v-if="billingStore.status.plan"
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;"
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-              <polyline points="15 3 21 3 21 9" />
-              <line x1="10" y1="14" x2="21" y2="3" />
-            </svg>
-            {{ redirecting === 'portal' ? 'Abriendo…' : 'Administrar suscripción' }}
-          </button>
-        </div>
-
-        <!-- Stats chips -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
-          <div style="padding: 14px 16px; background: var(--bg-field); border-radius: 10px;">
-            <div style="font-size: 10.5px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; text-transform: uppercase;">Precio</div>
-            <div style="font-size: 17px; font-weight: 800; color: var(--primary-text);">
-              {{ formatPrice(billingStore.status.plan.price, billingStore.status.plan.currency) }}
-              <span style="font-size: 11px; font-weight: 500; color: var(--text-muted);">/mes</span>
+            <div style="padding: 14px 16px; background: var(--bg-field); border-radius: 10px;">
+              <div style="font-size: 10.5px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; text-transform: uppercase;">Precio</div>
+              <div style="font-size: 17px; font-weight: 800; color: var(--primary-text);">
+                {{ formatPrice(billingStore.status.plan.price, billingStore.status.plan.currency) }}
+                <span style="font-size: 11px; font-weight: 500; color: var(--text-muted);">/mes</span>
+              </div>
             </div>
-          </div>
-          <div style="padding: 14px 16px; background: var(--bg-field); border-radius: 10px;">
-            <div style="font-size: 10.5px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; text-transform: uppercase;">Wallets</div>
-            <div style="font-size: 17px; font-weight: 800; color: var(--primary-text);">
-              {{ billingStore.status.plan.maxWallets }}
+            <div style="padding: 14px 16px; background: var(--bg-field); border-radius: 10px;">
+              <div style="font-size: 10.5px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; text-transform: uppercase;">Wallets</div>
+              <div style="font-size: 17px; font-weight: 800; color: var(--primary-text);">
+                {{ billingStore.status.plan.maxWallets }}
+              </div>
             </div>
-          </div>
-          <div style="padding: 14px 16px; background: var(--primary); border-radius: 10px;">
-            <div style="font-size: 10.5px; color: var(--text-nav-icon); font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; text-transform: uppercase;">Créditos SMS</div>
-            <div style="font-size: 17px; font-weight: 800; color: var(--bg-surface);">
-              {{ billingStore.status.smsCredits.toLocaleString('es-MX') }}
+            <div style="padding: 14px 16px; background: var(--primary); border-radius: 10px;">
+              <div style="font-size: 10.5px; color: var(--text-nav-icon); font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; text-transform: uppercase;">Créditos SMS</div>
+              <div style="font-size: 17px; font-weight: 800; color: var(--bg-surface);">
+                {{ billingStore.status.smsCredits.toLocaleString('es-MX') }}
+              </div>
             </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ── SECCIÓN B: Planes disponibles ── -->
+    <!-- ── SECCIÓN B: Planes disponibles ─────────────────────────────────── -->
     <section>
       <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 12px;">
         Planes disponibles
@@ -357,13 +502,13 @@ async function handlePortal() {
             </div>
           </div>
 
-          <!-- CTA -->
+          <!-- CTA — wired through handlePlanAction -->
           <button
             v-if="plan.slug !== 'trial'"
             :disabled="isPlanDisabled(plan)"
             style="width: 100%; padding: 11px 16px; border-radius: 9px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; transition: opacity 0.15s; font-family: inherit;"
             :style="planButtonStyle(plan)"
-            @click="handleCheckout(plan)"
+            @click="handlePlanAction(plan.slug)"
           >
             {{ planButtonLabel(plan) }}
           </button>
@@ -379,10 +524,11 @@ async function handlePortal() {
       </div>
     </section>
 
+    <!-- ── SECCIÓN C: Comprar créditos SMS ───────────────────────────────── -->
     <section>
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
         <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;">
-          Comprar créditos
+          Comprar créditos SMS
         </div>
         <div v-if="billingStore.status && !fetching" style="font-size: 12.5px; color: var(--text-muted);">
           Saldo actual:
@@ -438,19 +584,20 @@ async function handlePortal() {
               <span style="font-size: 28px; font-weight: 800; color: var(--primary-text); letter-spacing: -0.01em;">
                 {{ pack.credits.toLocaleString('es-MX') }}
               </span>
-              <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Creditos</span>
+              <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">créditos</span>
             </div>
             <div style="font-size: 20px; font-weight: 700; color: var(--text-ink); margin-bottom: 4px;">
               {{ formatPrice(pack.price, pack.currency) }}
             </div>
             <div style="font-size: 11px; color: var(--text-muted);">
-              {{ formatPrice(pack.price / pack.credits, pack.currency) }} por credito
+              {{ formatPrice(pack.price / pack.credits, pack.currency) }} por crédito
             </div>
           </div>
 
           <button
-            :disabled="redirecting === pack.id"
+            :disabled="redirecting !== null"
             style="width: 100%; padding: 10px 16px; border-radius: 9px; background: var(--amber); border: none; font-size: 13px; font-weight: 700; color: var(--primary); cursor: pointer; transition: opacity 0.15s; font-family: inherit;"
+            :style="redirecting !== null ? { opacity: '0.6', cursor: 'not-allowed' } : {}"
             @click="handleBuyCredits(pack)"
           >
             {{ redirecting === pack.id ? 'Redirigiendo…' : 'Comprar' }}
@@ -469,7 +616,7 @@ async function handlePortal() {
 
   </div>
 
-  <!-- Modal: email no verificado -->
+  <!-- ── Modal: email no verificado ────────────────────────────────────────── -->
   <Teleport to="body">
     <div
       v-if="showEmailVerifyModal"
@@ -480,27 +627,29 @@ async function handlePortal() {
         <div style="display: flex; align-items: flex-start; gap: 14px; margin-bottom: 18px;">
           <div style="flex-shrink: 0; width: 40px; height: 40px; border-radius: 10px; background: var(--warning-bg); display: flex; align-items: center; justify-content: center;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22,6 12,13 2,6"/>
             </svg>
           </div>
           <div>
             <p style="font-size: 15px; font-weight: 700; color: var(--text-ink); margin: 0 0 4px;">Verifica tu correo</p>
             <p style="font-size: 13px; color: var(--text-muted); margin: 0; line-height: 1.5;">
-              Debes verificar tu correo electrónico antes de realizar pagos. Revisa tu bandeja de entrada o reenvía el email.
+              Debes verificar tu correo electrónico antes de realizar pagos.
+              Revisa tu bandeja de entrada o reenvía el email de verificación.
             </p>
           </div>
         </div>
         <div style="display: flex; gap: 8px; justify-content: flex-end;">
           <button
-            style="padding: 9px 16px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg-surface); font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer;"
+            style="padding: 9px 16px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg-surface); font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; font-family: inherit;"
             @click="showEmailVerifyModal = false"
           >
             Cerrar
           </button>
           <button
             :disabled="resendingVerification"
-            style="padding: 9px 18px; border-radius: 8px; border: none; background: var(--primary); font-size: 13px; font-weight: 700; color: var(--bg-surface); cursor: pointer;"
-            :style="resendingVerification ? 'opacity: 0.6; cursor: not-allowed;' : ''"
+            style="padding: 9px 18px; border-radius: 8px; border: none; background: var(--primary); font-size: 13px; font-weight: 700; color: var(--bg-surface); cursor: pointer; transition: opacity 0.15s; font-family: inherit;"
+            :style="resendingVerification ? { opacity: '0.6', cursor: 'not-allowed' } : {}"
             @click="handleResendVerification"
           >
             {{ resendingVerification ? 'Enviando…' : 'Reenviar verificación' }}
@@ -514,7 +663,12 @@ async function handlePortal() {
 <style scoped>
 @keyframes pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  50%       { opacity: 0.5; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
 button:not(:disabled):hover {
