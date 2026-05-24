@@ -975,7 +975,7 @@ function getInitials(email = ''): string {
   width: 52px; height: 52px;
   border-radius: 14px;
   background: linear-gradient(135deg, var(--primary), var(--primary-mid));
-  color: var(--bg-surface);
+  color: var(--on-primary);
   font-size: 16px;
   font-weight: 700;
   display: grid;
@@ -1141,7 +1141,7 @@ function getInitials(email = ''): string {
   gap: 6px;
   padding: 10px 20px;
   background: var(--primary);
-  color: var(--bg-surface);
+  color: var(--on-primary);
   border: none;
   border-radius: 9px;
   font-size: 13px;
@@ -1274,7 +1274,7 @@ function getInitials(email = ''): string {
   width: 40px; height: 40px;
   border-radius: 12px;
   background: linear-gradient(135deg, var(--primary-light), var(--success-bg));
-  color: var(--primary);
+  color: var(--primary-text);
   font-size: 13px;
   font-weight: 700;
   display: grid;

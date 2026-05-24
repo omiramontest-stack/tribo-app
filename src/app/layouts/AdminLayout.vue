@@ -262,29 +262,30 @@ const iconPaths: Record<string, string> = {
 
       <div class="sidebar-footer" style="padding-top: 14px;">
         <div class="flex items-center gap-2.5" style="padding: 4px 8px;">
+          <!-- Avatar: matches Settings profile card style, always legible -->
           <div
             class="grid place-items-center shrink-0 font-bold"
-            style="width: 32px; height: 32px; border-radius: 999px; background: var(--primary); color: var(--bg-surface); font-size: 12px;"
+            style="width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, var(--primary), var(--primary-mid)); color: var(--on-primary); font-size: 13px; letter-spacing: 0.03em; flex-shrink: 0;"
           >
-            {{ getInitials(authStore.admin?.email ?? '') }}
+            {{ (authStore.admin?.email ?? '').slice(0, 2).toUpperCase() }}
           </div>
           <div style="flex: 1; min-width: 0;">
-            <div style="font-size: 12.5px; font-weight: 600; color: var(--text-ink);">
+            <div style="font-size: 12.5px; font-weight: 600; color: var(--text-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
               {{ orgStore.activeOrg?.name ?? 'Admin' }}
             </div>
-            <div class="truncate" style="font-size: 11px; color: var(--text-nav-user);">
+            <div class="truncate" style="font-size: 11px; color: var(--text-muted);">
               {{ authStore.admin?.email }}
             </div>
           </div>
           <button
             class="shrink-0 sidebar-logout"
-            style="background: transparent; border: none; cursor: pointer; padding: 4px;"
+            style="background: transparent; border: none; cursor: pointer; padding: 5px; border-radius: 6px;"
             title="Cerrar sesión"
             @click="handleLogout"
           >
             <svg
               width="15" height="15" viewBox="0 0 24 24"
-              fill="none" stroke="var(--text-nav-icon)" stroke-width="1.8"
+              fill="none" stroke="var(--text-muted)" stroke-width="1.8"
               stroke-linecap="round" stroke-linejoin="round"
               v-html="iconPaths.logout"
             />
@@ -556,7 +557,7 @@ const iconPaths: Record<string, string> = {
                 {{ planGate.event.value.message }}. Actualiza tu plan para crear más wallets.
               </div>
               <button
-                style="width: 100%; padding: 12px 16px; border-radius: 10px; background: var(--primary); border: none; font-size: 13px; font-weight: 700; color: var(--bg-surface); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-family: inherit;"
+                style="width: 100%; padding: 12px 16px; border-radius: 10px; background: var(--primary); border: none; font-size: 13px; font-weight: 700; color: var(--on-primary); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-family: inherit;"
                 @click="() => { planGate.dismiss(); router.push({ name: 'Billing' }) }"
               >
                 Ver planes
@@ -575,7 +576,7 @@ const iconPaths: Record<string, string> = {
                 {{ planGate.event.value.message }}. Actualiza tu plan para emitir pases ilimitados.
               </div>
               <button
-                style="width: 100%; padding: 12px 16px; border-radius: 10px; background: var(--primary); border: none; font-size: 13px; font-weight: 700; color: var(--bg-surface); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-family: inherit;"
+                style="width: 100%; padding: 12px 16px; border-radius: 10px; background: var(--primary); border: none; font-size: 13px; font-weight: 700; color: var(--on-primary); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-family: inherit;"
                 @click="() => { planGate.dismiss(); router.push({ name: 'Billing' }) }"
               >
                 Ver planes
