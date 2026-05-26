@@ -11,6 +11,9 @@ const rules = props.wallet.rules as StampsRules
 const data  = props.pass.data as StampsData
 const icon  = getStampIcon(rules.stampIcon)
 
+/** Para ícono custom usamos el SVG completo; para el resto, el path interno. */
+const isCustomIcon = rules.stampIcon === 'custom' && !!rules.stampCustomSvg
+
 const COLS = 5
 const filled = (i: number) => i <= data.currentStamps
 </script>
@@ -40,7 +43,15 @@ const filled = (i: number) => i <= data.currentStamps
           class="sc-stamp"
           :class="filled(i) ? 'sc-stamp--filled' : 'sc-stamp--empty'"
         >
+          <!-- ícono custom: SVG completo del usuario -->
+          <span
+            v-if="isCustomIcon"
+            class="sc-stamp-icon sc-stamp-icon--custom"
+            v-html="rules.stampCustomSvg"
+          />
+          <!-- ícono predefinido: paths dentro de un <svg> 24x24 -->
           <svg
+            v-else
             viewBox="0 0 24 24"
             class="sc-stamp-icon"
             v-html="icon.svg"
@@ -136,6 +147,16 @@ const filled = (i: number) => i <= data.currentStamps
 .sc-stamp-icon {
   width: 48%;
   height: 48%;
+}
+/* custom SVG: span que contiene la etiqueta <svg> completa del usuario */
+.sc-stamp-icon--custom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sc-stamp-icon--custom :deep(svg) {
+  width: 100%;
+  height: 100%;
 }
 .sc-stamp--filled .sc-stamp-icon {
   color: v-bind('wallet.primaryColor');

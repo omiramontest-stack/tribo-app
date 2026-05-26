@@ -3,6 +3,7 @@ export interface StampsRules {
   totalStamps: number
   reward: string
   stampIcon?: string
+  stampCustomSvg?: string
   expiresInDays: number | null
 }
 

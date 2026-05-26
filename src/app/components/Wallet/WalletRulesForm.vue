@@ -5,7 +5,12 @@ import type {
   WalletRules, StampsRules, MembershipRules, PointsRules,
   CashbackRules, DaypassRules, BundleRules, GiftcardRules, CouponRules,
 } from '@/domain/wallet/entities/WalletRules'
-import { STAMP_ICONS } from '@/app/config/stampIcons'
+import {
+  groupedStampIcons,
+  STAMP_ICON_CATEGORY_LABELS,
+} from '@/app/config/stampIcons'
+
+const STAMP_ICON_GROUPS = groupedStampIcons()
 
 defineProps<{ type: WalletType; rules: WalletRules }>()
 
@@ -92,20 +97,49 @@ function onImageDrop(e: DragEvent, rules: DaypassRules) {
     </div>
     <div class="field">
       <label class="field-label">Ícono del sello</label>
-      <div class="stamp-icon-grid">
-        <button
-          v-for="ic in STAMP_ICONS"
-          :key="ic.id"
-          type="button"
-          class="stamp-icon-btn"
-          :class="{ 'stamp-icon-btn--active': ((rules as StampsRules).stampIcon ?? 'check') === ic.id }"
-          :title="ic.label"
-          @click="(rules as StampsRules).stampIcon = ic.id"
+      <div class="stamp-icon-picker">
+        <div
+          v-for="group in STAMP_ICON_GROUPS"
+          :key="group.category"
+          class="stamp-icon-group"
         >
-          <svg viewBox="0 0 24 24" class="stamp-icon-svg" v-html="ic.svg" />
-          <span class="stamp-icon-label">{{ ic.label }}</span>
-        </button>
+          <p class="stamp-icon-category-label">{{ STAMP_ICON_CATEGORY_LABELS[group.category] }}</p>
+          <div class="stamp-icon-grid">
+            <button
+              v-for="ic in group.icons"
+              :key="ic.id"
+              type="button"
+              class="stamp-icon-btn"
+              :class="{ 'stamp-icon-btn--active': ((rules as StampsRules).stampIcon ?? 'check') === ic.id }"
+              :title="ic.label"
+              @click="(rules as StampsRules).stampIcon = ic.id"
+            >
+              <svg viewBox="0 0 24 24" class="stamp-icon-svg" v-html="ic.svg" />
+              <span class="stamp-icon-label">{{ ic.label }}</span>
+            </button>
+          </div>
+        </div>
       </div>
+
+      <!-- Campo SVG custom (solo visible al elegir "Personalizado") -->
+      <template v-if="((rules as StampsRules).stampIcon ?? 'check') === 'custom'">
+        <textarea
+          v-model="(rules as StampsRules).stampCustomSvg"
+          class="field-input custom-svg-textarea"
+          placeholder='<svg viewBox="0 0 24 24">...</svg>'
+          spellcheck="false"
+        />
+        <p class="field-hint">
+          Pega aquí tu etiqueta <code>&lt;svg&gt;</code> completa con <code>viewBox</code>.
+          Usa <code>fill="currentColor"</code> para que tome el color de la marca automáticamente.
+        </p>
+        <div v-if="(rules as StampsRules).stampCustomSvg" class="custom-svg-preview">
+          <div class="custom-svg-circle">
+            <span v-html="(rules as StampsRules).stampCustomSvg" class="custom-svg-inner" />
+          </div>
+          <p class="custom-svg-preview-label">Preview 67 × 67 px dentro de círculo 76 px</p>
+        </div>
+      </template>
     </div>
     <div class="field">
       <label class="field-label">
@@ -322,7 +356,7 @@ function onImageDrop(e: DragEvent, rules: DaypassRules) {
         v-if="(rules as DaypassRules).imageUrl && !uploadingImage"
         class="image-preview-row"
       >
-        <img :src="(rules as DaypassRules).imageUrl" alt="Imagen de fondo" class="image-thumb" />
+        <img :src="(rules as DaypassRules).imageUrl ?? ''" alt="Imagen de fondo" class="image-thumb" />
         <div class="image-preview-info">
           <p class="image-preview-title">Imagen cargada</p>
           <p class="image-preview-url">{{ (rules as DaypassRules).imageUrl }}</p>
@@ -789,6 +823,27 @@ function onImageDrop(e: DragEvent, rules: DaypassRules) {
 .spin { animation: spin 0.9s linear infinite; }
 
 /* Stamp icon picker */
+.stamp-icon-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.stamp-icon-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stamp-icon-category-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  margin: 0;
+}
+
 .stamp-icon-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -837,5 +892,60 @@ function onImageDrop(e: DragEvent, rules: DaypassRules) {
 }
 .stamp-icon-btn--active .stamp-icon-label {
   color: var(--primary-text);
+}
+
+/* Custom SVG field */
+.custom-svg-textarea {
+  margin-top: 10px;
+  font-family: 'Menlo', 'Consolas', monospace;
+  font-size: 11.5px;
+  min-height: 88px;
+  resize: vertical;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.custom-svg-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border);
+}
+
+.custom-svg-circle {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: var(--primary-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+}
+
+.custom-svg-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 67px;
+  height: 67px;
+}
+
+/* force child SVG to fill the inner box */
+.custom-svg-inner :deep(svg) {
+  width: 67px;
+  height: 67px;
+}
+
+.custom-svg-preview-label {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin: 0;
+  line-height: 1.4;
 }
 </style>
