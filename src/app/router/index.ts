@@ -5,7 +5,6 @@ import AdminLayout from '@/app/layouts/AdminLayout.vue'
 
 import adminRoutes from './routes/admin.routes'
 import publicRoutes from './routes/public.routes'
-import sharedRoutes from './routes/shared.routes'
 
 import { useFlyonUIMiddleware } from './middlewares/useFlyonUIMiddleware'
 import { useAuthGuard } from './middlewares/useAuthGuard'
@@ -24,8 +23,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
-    component: AdminLayout,
-    children: sharedRoutes,
+    component: () => import('@/app/views/NotFound.vue'),
   },
 ]
 
