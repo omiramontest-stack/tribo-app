@@ -24,6 +24,7 @@ export default class CreateWalletUseCase implements UseCase<CreateWalletInput, W
       primaryColor: dto.primaryColor,
       accentColor: dto.accentColor,
       description: dto.description,
+      businessRules: dto.businessRules ?? null,
       rules: dto.rules,
       createdAt: new Date().toISOString(),
     }

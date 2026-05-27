@@ -3,6 +3,7 @@ import { reactive, ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWalletStore } from '@/app/stores/wallet/WalletStore'
 import { walletTypeConfig, findWalletTypeConfig } from '@/app/config/walletTypeConfig'
+import { useImgbbUpload } from '@/app/composables/useImgbbUpload'
 import WalletRulesForm from '@/app/components/Wallet/WalletRulesForm.vue'
 import StampsCard from '@/app/components/Wallet/StampsCard.vue'
 import MembershipCard from '@/app/components/Wallet/MembershipCard.vue'
@@ -16,16 +17,14 @@ import type { CreateWalletDto } from '@/application/wallet/dto/CreateWalletDto'
 import type { WalletType } from '@/domain/wallet/entities/Wallet'
 import type { Pass } from '@/domain/pass/entities/Pass'
 
-const router = useRouter()
+const router    = useRouter()
 const walletStore = useWalletStore()
 
-const step = ref(1)
+const step    = ref(1)
 const loading = ref(false)
-const uploadingLogo = ref(false)
-const uploadError = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
 
-const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY
+const { uploading: uploadingLogo, error: uploadError, upload: uploadImage } = useImgbbUpload()
 
 const form = reactive<CreateWalletDto>({
   type: 'stamps',
@@ -34,6 +33,7 @@ const form = reactive<CreateWalletDto>({
   primaryColor: '#1B3A2D',
   accentColor: '#F5A623',
   description: '',
+  businessRules: '',
   rules: findWalletTypeConfig('stamps').defaultRules(),
 })
 
@@ -67,34 +67,9 @@ const steps = [
   { n: 4, label: 'Vista previa' },
 ]
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve((reader.result as string).split(',')[1])
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
-
 async function handleLogoFile(file: File) {
-  if (!file.type.startsWith('image/')) { uploadError.value = 'Solo se permiten imágenes'; return }
-  if (file.size > 4 * 1024 * 1024) { uploadError.value = 'La imagen debe pesar menos de 4 MB'; return }
-  uploadError.value = ''
-  uploadingLogo.value = true
-  try {
-    const base64 = await fileToBase64(file)
-    const body = new FormData()
-    body.append('key', IMGBB_API_KEY)
-    body.append('image', base64)
-    const res = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body })
-    if (!res.ok) throw new Error()
-    const data = await res.json()
-    form.logoUrl = data.data.url as string
-  } catch {
-    uploadError.value = 'No se pudo subir la imagen'
-  } finally {
-    uploadingLogo.value = false
-  }
+  const url = await uploadImage(file)
+  if (url) form.logoUrl = url
 }
 
 function onFileChange(e: Event) {
@@ -110,7 +85,10 @@ function onDrop(e: DragEvent) {
 async function handleSubmit() {
   try {
     loading.value = true
-    await walletStore.createWallet(form)
+    await walletStore.createWallet({
+      ...form,
+      businessRules: form.businessRules?.trim() || null,
+    })
     router.push({ name: 'Wallets' })
   } finally {
     loading.value = false
@@ -303,6 +281,24 @@ async function handleSubmit() {
               class="field-input"
               style="resize: none;"
             />
+          </div>
+
+          <!-- Business rules / T&C -->
+          <div class="field full-span">
+            <label class="field-label">
+              Reglas del negocio / Términos y condiciones
+              <span class="field-label-hint">(opcional)</span>
+            </label>
+            <textarea
+              v-model="form.businessRules"
+              rows="4"
+              placeholder="Ej: Válido solo en sucursal principal. No acumulable con otras promociones. El establecimiento se reserva el derecho de modificar los términos."
+              class="field-input"
+              style="resize: vertical;"
+            />
+            <p class="field-hint">
+              Este texto aparece en el reverso del pase físico (Apple Wallet y Google Wallet) de tus clientes.
+            </p>
           </div>
         </div>
 

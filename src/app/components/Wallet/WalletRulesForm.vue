@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import type { WalletType } from '@/domain/wallet/entities/Wallet'
 import type {
   WalletRules, StampsRules, MembershipRules, PointsRules,
@@ -9,46 +8,20 @@ import {
   groupedStampIcons,
   STAMP_ICON_CATEGORY_LABELS,
 } from '@/app/config/stampIcons'
+import { useImgbbUpload } from '@/app/composables/useImgbbUpload'
+import { ref } from 'vue'
 
 const STAMP_ICON_GROUPS = groupedStampIcons()
+const CURRENCIES = ['MXN', 'USD', 'EUR', 'COP', 'ARS', 'CLP', 'PEN', 'BRL']
 
 defineProps<{ type: WalletType; rules: WalletRules }>()
 
-const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY
-const uploadingImage = ref(false)
-const uploadImageError = ref('')
 const imageFileInput = ref<HTMLInputElement | null>(null)
-
-const CURRENCIES = ['MXN', 'USD', 'EUR', 'COP', 'ARS', 'CLP', 'PEN', 'BRL']
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve((reader.result as string).split(',')[1])
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
+const { uploading: uploadingImage, error: uploadImageError, upload: uploadImage } = useImgbbUpload()
 
 async function handleImageFile(file: File, rules: DaypassRules) {
-  if (!file.type.startsWith('image/')) { uploadImageError.value = 'Solo se permiten imágenes'; return }
-  if (file.size > 4 * 1024 * 1024) { uploadImageError.value = 'La imagen debe pesar menos de 4 MB'; return }
-  uploadImageError.value = ''
-  uploadingImage.value = true
-  try {
-    const base64 = await fileToBase64(file)
-    const body = new FormData()
-    body.append('key', IMGBB_API_KEY)
-    body.append('image', base64)
-    const res = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body })
-    if (!res.ok) throw new Error()
-    const data = await res.json()
-    rules.imageUrl = data.data.url as string
-  } catch {
-    uploadImageError.value = 'No se pudo subir la imagen'
-  } finally {
-    uploadingImage.value = false
-  }
+  const url = await uploadImage(file)
+  if (url) rules.imageUrl = url
 }
 
 function onImageFileChange(e: Event, rules: DaypassRules) {

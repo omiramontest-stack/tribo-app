@@ -3,6 +3,7 @@ import { injectable } from 'inversify'
 
 import type { WalletRepository } from '@/domain/wallet/repository/WalletRepository'
 import type { Wallet } from '@/domain/wallet/entities/Wallet'
+import type { UpdateWalletDto } from '@/application/wallet/dto/UpdateWalletDto'
 import { apiClient, ApiError } from '@/infrastructure/http/ApiClient'
 
 @injectable()
@@ -23,6 +24,10 @@ export class WalletHttpRepository implements WalletRepository {
   async save(orgId: string, wallet: Wallet): Promise<Wallet> {
     const { id: _id, createdAt: _createdAt, ...body } = wallet
     return apiClient.post<Wallet>(`/organizations/${orgId}/wallets`, body)
+  }
+
+  async update(orgId: string, id: string, dto: UpdateWalletDto): Promise<Wallet> {
+    return apiClient.put<Wallet>(`/organizations/${orgId}/wallets/${id}`, dto)
   }
 
   async delete(orgId: string, id: string): Promise<void> {

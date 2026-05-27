@@ -3,20 +3,34 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useWalletStore } from '@/app/stores/wallet/WalletStore'
 import { usePassStore } from '@/app/stores/pass/PassStore'
+import { useAuthStore } from '@/app/stores/auth/AuthStore'
+import { useOrganizationStore } from '@/app/stores/organization/OrganizationStore'
 import { walletTypeConfig } from '@/app/config/walletTypeConfig'
 import PassTable from '@/app/components/Admin/PassTable.vue'
 import GeneratePassModal from '@/app/components/Admin/GeneratePassModal.vue'
+import WalletEditModal from '@/app/components/Wallet/WalletEditModal.vue'
 import type { Pass } from '@/domain/pass/entities/Pass'
 
 const route = useRoute()
 const router = useRouter()
-const walletStore = useWalletStore()
-const passStore = usePassStore()
+const walletStore   = useWalletStore()
+const passStore     = usePassStore()
+const authStore     = useAuthStore()
+const orgStore      = useOrganizationStore()
 
 const id = route.params.id as string
-const showModal = ref(false)
+
+// Modals
+const showModal       = ref(false)   // Generate pass
+const showEditModal   = ref(false)   // Edit wallet
+const showDeleteModal = ref(false)   // Delete confirm
 const deleting = ref(false)
-const showDeleteModal = ref(false)
+
+// Role gate: only owners and admins can edit wallets
+const canEdit = computed(() => {
+  const myMember = orgStore.members.find(m => m.adminId === authStore.admin?.id)
+  return myMember?.role === 'owner' || myMember?.role === 'admin'
+})
 const activeTab = ref<'pases' | 'canjeados'>('pases')
 const scannedPasses = ref<Pass[]>([])
 const loadingScanned = ref(false)
@@ -73,7 +87,14 @@ const stats = computed(() => [
 ])
 
 onMounted(async () => {
-  await Promise.all([walletStore.fetchWalletById(id), passStore.fetchPassesByWallet(id, 1)])
+  await Promise.all([
+    walletStore.fetchWalletById(id),
+    passStore.fetchPassesByWallet(id, 1),
+    // Load members only if not already populated (needed for role check)
+    orgStore.members.length === 0 && orgStore.activeOrgId
+      ? orgStore.fetchMembers(orgStore.activeOrgId)
+      : Promise.resolve(),
+  ])
 })
 
 async function goToPassesPage(page: number) {
@@ -151,6 +172,18 @@ function formatDate(iso: string): string {
           Ver analytics
         </button>
         <button
+          v-if="canEdit"
+          class="btn-action btn-action--edit"
+          @click="showEditModal = true"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Editar
+        </button>
+        <button
+          v-if="canEdit"
           class="btn-danger-outline"
           :disabled="deleting"
           @click="handleDelete"
@@ -200,6 +233,18 @@ function formatDate(iso: string): string {
           <span class="color-chip" :style="{ background: walletStore.currentWallet.primaryColor }" :title="walletStore.currentWallet.primaryColor" />
           <span class="color-chip" :style="{ background: walletStore.currentWallet.accentColor, opacity: 0.75 }" :title="walletStore.currentWallet.accentColor" />
         </div>
+      </div>
+
+      <!-- Business rules / T&C (shown only when present) -->
+      <div v-if="walletStore.currentWallet.businessRules" class="business-rules-section">
+        <div class="business-rules-header">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+          </svg>
+          <span class="business-rules-title">Reglas del negocio</span>
+        </div>
+        <p class="business-rules-text">{{ walletStore.currentWallet.businessRules }}</p>
       </div>
     </div>
 
@@ -317,6 +362,13 @@ function formatDate(iso: string): string {
     />
   </div>
 
+  <!-- Edit wallet drawer -->
+  <WalletEditModal
+    v-if="walletStore.currentWallet"
+    v-model="showEditModal"
+    :wallet="walletStore.currentWallet"
+  />
+
   <!-- Delete confirmation modal -->
   <Teleport to="body">
     <Transition name="modal">
@@ -402,6 +454,8 @@ function formatDate(iso: string): string {
   transition: background 0.12s, border-color 0.12s;
 }
 .btn-action:hover { background: var(--bg-page); border-color: var(--border); }
+.btn-action--edit { color: var(--amber); border-color: var(--amber-bg); }
+.btn-action--edit:hover { background: var(--amber-bg); }
 
 .btn-danger-outline {
   display: flex;
@@ -508,6 +562,35 @@ function formatDate(iso: string): string {
   height: 16px;
   border-radius: 4px;
   border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Business rules section */
+.business-rules-section {
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.business-rules-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  color: var(--text-muted);
+}
+
+.business-rules-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.business-rules-text {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
 }
 
 /* Stats */
