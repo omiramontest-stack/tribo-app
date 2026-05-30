@@ -17,6 +17,11 @@ export class OrganizationHttpRepository implements OrganizationRepository {
     return res.organization
   }
 
+  async createAdditionalOrganization(dto: OnboardingDto): Promise<Organization> {
+    const res = await apiClient.post<{ organization: Organization }>('/organizations', dto)
+    return res.organization
+  }
+
   getMembers(organizationId: string): Promise<OrganizationMember[]> {
     return apiClient.get<OrganizationMember[]>(`/organizations/${organizationId}/members`)
   }

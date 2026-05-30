@@ -32,6 +32,7 @@ export interface RemoveMemberDto {
 export interface OrganizationRepository {
   getMyOrganizations(): Promise<Organization[]>
   createOrganization(dto: OnboardingDto): Promise<Organization>
+  createAdditionalOrganization(dto: OnboardingDto): Promise<Organization>
   getMembers(organizationId: string): Promise<OrganizationMember[]>
   addMember(organizationId: string, email: string, role: MemberRole): Promise<OrganizationMember>
   inviteMember(organizationId: string, email: string, role: MemberRole): Promise<Invitation>

@@ -7,6 +7,7 @@ import type { Organization } from '@/domain/organization/entities/Organization'
 import type { OrganizationMember } from '@/domain/organization/entities/OrganizationMember'
 import type { Invitation } from '@/domain/organization/entities/Invitation'
 import type { OnboardingDto, UpdateMemberRoleDto, RemoveMemberDto } from '@/domain/organization/repository/OrganizationRepository'
+export type { OnboardingDto }
 import type { InviteMemberDto } from '@/application/organization/useCase/InviteMemberUseCase'
 import type { AcceptInvitationDto } from '@/application/organization/useCase/AcceptInvitationUseCase'
 import type { UpdateOrganizationUseCaseDto } from '@/application/organization/useCase/UpdateOrganizationUseCase'
@@ -17,6 +18,7 @@ const ACTIVE_ORG_KEY = 'wallet_saas_active_org_id'
 export const useOrganizationStore = defineStore('OrganizationStore', () => {
   const getMyOrganizationsUseCase = container.get<UseCase<void, Organization[]>>(organizationTypes.getMyOrganizationsUseCase)
   const onboardingUseCase = container.get<UseCase<OnboardingDto, Organization>>(organizationTypes.onboardingUseCase)
+  const createOrganizationUseCase = container.get<UseCase<OnboardingDto, Organization>>(organizationTypes.createOrganizationUseCase)
   const getMembersUseCase = container.get<UseCase<string, OrganizationMember[]>>(organizationTypes.getMembersUseCase)
   const inviteMemberUseCase = container.get<UseCase<InviteMemberDto, Invitation>>(organizationTypes.inviteMemberUseCase)
   const getInvitationUseCase = container.get<UseCase<string, Invitation>>(organizationTypes.getInvitationUseCase)
@@ -30,16 +32,19 @@ export const useOrganizationStore = defineStore('OrganizationStore', () => {
     _activeOrgId: string | null
     _members: OrganizationMember[]
     _initialized: boolean
+    _loadingOrgs: boolean
   }>({
     _organizations: [],
     _activeOrgId: localStorage.getItem(ACTIVE_ORG_KEY),
     _members: [],
     _initialized: false,
+    _loadingOrgs: false,
   })
 
   const organizations = computed(() => state._organizations)
   const members = computed(() => state._members)
   const initialized = computed(() => state._initialized)
+  const loadingOrgs = computed(() => state._loadingOrgs)
   const hasOrganization = computed(() => state._initialized && state._organizations.length > 0)
 
   const activeOrg = computed<Organization | null>(() => {
@@ -59,14 +64,25 @@ export const useOrganizationStore = defineStore('OrganizationStore', () => {
   }
 
   async function fetchMyOrganizations() {
-    const orgs = await getMyOrganizationsUseCase.run()
-    state._organizations = orgs
-    state._initialized = true
-    // Restore saved active org, or default to first
-    const savedId = localStorage.getItem(ACTIVE_ORG_KEY)
-    const match = orgs.find((o) => o.id === savedId)
-    state._activeOrgId = match ? match.id : (orgs[0]?.id ?? null)
-    if (state._activeOrgId) localStorage.setItem(ACTIVE_ORG_KEY, state._activeOrgId)
+    state._loadingOrgs = true
+    try {
+      const orgs = await getMyOrganizationsUseCase.run()
+      state._organizations = orgs
+      state._initialized = true
+      // Restore saved active org, or default to first
+      const savedId = localStorage.getItem(ACTIVE_ORG_KEY)
+      const match = orgs.find((o) => o.id === savedId)
+      state._activeOrgId = match ? match.id : (orgs[0]?.id ?? null)
+      if (state._activeOrgId) localStorage.setItem(ACTIVE_ORG_KEY, state._activeOrgId)
+    } finally {
+      state._loadingOrgs = false
+    }
+  }
+
+  async function createOrg(dto: OnboardingDto): Promise<Organization> {
+    const org = await createOrganizationUseCase.run(dto)
+    state._organizations = [...state._organizations, org]
+    return org
   }
 
   async function onboarding(dto: OnboardingDto) {
@@ -138,9 +154,11 @@ export const useOrganizationStore = defineStore('OrganizationStore', () => {
     activeOrg,
     activeOrgId,
     initialized,
+    loadingOrgs,
     hasOrganization,
     setActiveOrg,
     fetchMyOrganizations,
+    createOrg,
     onboarding,
     fetchMembers,
     inviteMember,

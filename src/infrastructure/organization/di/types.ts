@@ -2,6 +2,7 @@ export default {
   organizationRepository: Symbol('OrganizationRepository'),
   getMyOrganizationsUseCase: Symbol('GetMyOrganizationsUseCase'),
   onboardingUseCase: Symbol('OnboardingUseCase'),
+  createOrganizationUseCase: Symbol('CreateOrganizationUseCase'),
   getMembersUseCase: Symbol('GetMembersUseCase'),
   addMemberUseCase: Symbol('AddMemberUseCase'),
   inviteMemberUseCase: Symbol('InviteMemberUseCase'),

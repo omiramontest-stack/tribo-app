@@ -15,6 +15,7 @@ import type UseCase from '@/application/common/useCase/UseCase'
 import { OrganizationHttpRepository } from '@/infrastructure/organization/repository/OrganizationHttpRepository'
 import GetMyOrganizationsUseCase from '@/application/organization/useCase/GetMyOrganizationsUseCase'
 import OnboardingUseCase from '@/application/organization/useCase/OnboardingUseCase'
+import CreateOrganizationUseCase from '@/application/organization/useCase/CreateOrganizationUseCase'
 import GetMembersUseCase from '@/application/organization/useCase/GetMembersUseCase'
 import AddMemberUseCase from '@/application/organization/useCase/AddMemberUseCase'
 import InviteMemberUseCase from '@/application/organization/useCase/InviteMemberUseCase'
@@ -28,6 +29,7 @@ export default new ContainerModule((bind: interfaces.Bind) => {
   bind<OrganizationRepository>(organizationTypes.organizationRepository).to(OrganizationHttpRepository)
   bind<UseCase<void, Organization[]>>(organizationTypes.getMyOrganizationsUseCase).to(GetMyOrganizationsUseCase)
   bind<UseCase<OnboardingDto, Organization>>(organizationTypes.onboardingUseCase).to(OnboardingUseCase)
+  bind<UseCase<OnboardingDto, Organization>>(organizationTypes.createOrganizationUseCase).to(CreateOrganizationUseCase)
   bind<UseCase<string, OrganizationMember[]>>(organizationTypes.getMembersUseCase).to(GetMembersUseCase)
   bind<UseCase<AddMemberDto, OrganizationMember>>(organizationTypes.addMemberUseCase).to(AddMemberUseCase)
   bind<UseCase<InviteMemberDto, Invitation>>(organizationTypes.inviteMemberUseCase).to(InviteMemberUseCase)
