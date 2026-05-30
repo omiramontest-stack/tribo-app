@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useOrganizationStore } from '@/app/stores/organization/OrganizationStore'
 import { useAuthStore } from '@/app/stores/auth/AuthStore'
@@ -7,8 +7,9 @@ import { useBillingStore } from '@/app/stores/billing/BillingStore'
 import { useTheme } from '@/app/composables/useTheme'
 import { useToast } from '@/app/composables/useToast'
 import { ApiError } from '@/infrastructure/http/ApiClient'
+import CreateOrgForm from '@/app/components/Shared/CreateOrgForm.vue'
 import type { Organization } from '@/domain/organization/entities/Organization'
-import type { OnboardingDto } from '@/app/stores/organization/OrganizationStore'
+import type { OnboardingDto } from '@/domain/organization/repository/OrganizationRepository'
 
 const props = withDefaults(defineProps<{ dark?: boolean }>(), { dark: false })
 const { isDark } = useTheme()
@@ -26,28 +27,21 @@ const onCardDot = computed(() => props.dark
   : 'var(--text-faint)'
 )
 
-const orgStore = useOrganizationStore()
-const authStore = useAuthStore()
+const orgStore    = useOrganizationStore()
+const authStore   = useAuthStore()
 const billingStore = useBillingStore()
-const router = useRouter()
-const toast = useToast()
+const router      = useRouter()
+const toast       = useToast()
 
-const open = ref(false)
-const trigger = ref<HTMLElement | null>(null)
-const switching = ref(false)
+const open        = ref(false)
+const trigger     = ref<HTMLElement | null>(null)
+const switching   = ref(false)
 const loadingList = ref(false)
 
-// Create org modal
-const showCreate = ref(false)
-const creating = ref(false)
-const formError = ref('')
-const form = reactive<OnboardingDto & { industry: string; country: string; phone: string; logoUrl: string }>({
-  organizationName: '',
-  industry: '',
-  country: '',
-  phone: '',
-  logoUrl: '',
-})
+// Modal state
+const showCreate  = ref(false)
+const creating    = ref(false)
+const createError = ref('')
 
 function getInitials(name: string = ''): string {
   return name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('')
@@ -62,7 +56,7 @@ const trialDaysLeft = computed(() => {
   return days > 0 ? days : 0
 })
 
-const isTrial = computed(() => trialDaysLeft.value !== null)
+const isTrial    = computed(() => trialDaysLeft.value !== null)
 const trialUrgent = computed(() => isTrial.value && trialDaysLeft.value! <= 3)
 
 const planLabel = computed(() => {
@@ -81,7 +75,6 @@ const planColor = computed(() => {
 async function openDropdown() {
   open.value = !open.value
   if (!open.value) return
-  // Fetch always but only show skeleton when the list is empty
   const needsSkeleton = orgStore.organizations.length === 0
   if (needsSkeleton) loadingList.value = true
   orgStore.fetchMyOrganizations().finally(() => { loadingList.value = false })
@@ -104,30 +97,14 @@ async function select(org: Organization) {
 
 function openCreate() {
   open.value = false
-  form.organizationName = ''
-  form.industry = ''
-  form.country = ''
-  form.phone = ''
-  form.logoUrl = ''
-  formError.value = ''
+  createError.value = ''
   showCreate.value = true
 }
 
-async function submitCreate() {
-  if (!form.organizationName.trim()) {
-    formError.value = 'El nombre es requerido'
-    return
-  }
+async function handleCreateSubmit(dto: OnboardingDto) {
   creating.value = true
-  formError.value = ''
+  createError.value = ''
   try {
-    const dto: OnboardingDto = {
-      organizationName: form.organizationName.trim(),
-      ...(form.industry?.trim() && { industry: form.industry.trim() }),
-      ...(form.country?.trim() && { country: form.country.trim() }),
-      ...(form.phone?.trim() && { phone: form.phone.trim() }),
-      ...(form.logoUrl?.trim() && { logoUrl: form.logoUrl.trim() }),
-    }
     const newOrg = await orgStore.createOrg(dto)
     await authStore.switchOrg(newOrg)
     showCreate.value = false
@@ -135,9 +112,8 @@ async function submitCreate() {
     router.push({ name: 'Dashboard' })
   } catch (e: unknown) {
     const body = e instanceof ApiError ? (e.body as { message?: string } | null) : null
-    const msg = body?.message ?? 'Error al crear la organización'
-    formError.value = msg
-    toast.show(msg, 'error')
+    createError.value = body?.message ?? 'Error al crear la organización'
+    toast.show(createError.value, 'error')
   } finally {
     creating.value = false
   }
@@ -161,7 +137,7 @@ onUnmounted(() => document.removeEventListener('mousedown', handleOutsideClick))
         : 'padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-surface); cursor: pointer; box-shadow: 0 1px 3px var(--shadow-card);'"
       @click="openDropdown"
     >
-      <!-- Initials avatar -->
+      <!-- Avatar -->
       <template v-if="orgStore.activeOrg">
         <img
           v-if="orgStore.activeOrg.logoUrl"
@@ -192,17 +168,14 @@ onUnmounted(() => document.removeEventListener('mousedown', handleOutsideClick))
         >
           {{ orgStore.activeOrg?.name ?? 'Sin organización' }}
         </div>
-        <div
-          v-if="orgStore.activeOrg"
-          style="display: flex; align-items: center; gap: 5px; margin-top: 3px;"
-        >
+        <div v-if="orgStore.activeOrg" style="display: flex; align-items: center; gap: 5px; margin-top: 3px;">
           <span :style="`font-size: 11px; font-weight: 600; color: ${planColor}; line-height: 1.2;`">
             {{ planLabel }}
           </span>
           <template v-if="billingStore.status?.smsCredits != null">
             <span :style="`width: 2px; height: 2px; border-radius: 50%; flex-shrink: 0; background: ${onCardDot};`" />
             <span :style="`display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 500; white-space: nowrap; color: ${onCardTextMuted};`">
-             ©️ {{ billingStore.status.smsCredits.toLocaleString() }} créditos
+              ©️ {{ billingStore.status.smsCredits.toLocaleString() }} créditos
             </span>
           </template>
         </div>
@@ -280,7 +253,9 @@ onUnmounted(() => document.removeEventListener('mousedown', handleOutsideClick))
         </button>
       </div>
 
+      <!-- Nueva organización (solo owners) -->
       <div
+        v-if="orgStore.isOwner"
         class="py-1"
         :style="dark ? 'border-top: 1px solid var(--border-nav);' : 'border-top: 1px solid var(--border);'"
       >
@@ -297,142 +272,75 @@ onUnmounted(() => document.removeEventListener('mousedown', handleOutsideClick))
     </div>
   </div>
 
-  <!-- Create Org Modal -->
+  <!-- Modal: Crear organización -->
   <Teleport to="body">
-    <div
-      v-if="showCreate"
-      class="fixed inset-0 z-[200] flex items-center justify-center p-4"
-      style="background: rgba(0,0,0,0.45);"
-      @mousedown.self="showCreate = false"
-    >
+    <Transition name="modal">
       <div
-        class="w-full max-w-md rounded-2xl shadow-2xl"
-        style="background: var(--bg-surface); border: 1px solid var(--border);"
+        v-if="showCreate"
+        class="fixed inset-0 z-[200] flex items-center justify-center p-4"
+        style="background: rgba(0,0,0,0.5);"
+        @mousedown.self="showCreate = false"
       >
-        <!-- Header -->
-        <div class="flex items-center justify-between" style="padding: 20px 24px 0;">
-          <h2 style="font-size: 16px; font-weight: 700; color: var(--text-ink); margin: 0;">
-            Nueva organización
-          </h2>
-          <button
-            style="background: none; border: none; cursor: pointer; padding: 4px; border-radius: 6px; color: var(--text-muted); display: grid; place-items: center;"
-            @click="showCreate = false"
+        <div
+          class="w-full rounded-2xl shadow-2xl flex flex-col"
+          style="max-width: 520px; max-height: calc(100dvh - 48px); background: var(--bg-surface); border: 1px solid var(--border); overflow: hidden;"
+        >
+          <!-- Header fijo -->
+          <div
+            class="flex items-center justify-between shrink-0"
+            style="padding: 20px 24px 16px; border-bottom: 1px solid var(--border);"
           >
-            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
-
-        <!-- Form -->
-        <form style="padding: 20px 24px 24px;" @submit.prevent="submitCreate">
-          <!-- Organization name -->
-          <div style="margin-bottom: 14px;">
-            <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px;">
-              Nombre <span style="color: var(--danger);">*</span>
-            </label>
-            <input
-              v-model="form.organizationName"
-              type="text"
-              placeholder="Mi empresa"
-              autofocus
-              style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-field, var(--bg-page)); color: var(--text-ink); font-size: 14px; outline: none; box-sizing: border-box;"
-              :style="formError && !form.organizationName.trim() ? 'border-color: var(--danger);' : ''"
-              @focus="(e) => ((e.target as HTMLElement).style.borderColor = 'var(--primary)')"
-              @blur="(e) => ((e.target as HTMLElement).style.borderColor = (formError && !form.organizationName.trim()) ? 'var(--danger)' : 'var(--border)')"
-            />
-          </div>
-
-          <!-- Industry -->
-          <div style="margin-bottom: 14px;">
-            <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px;">
-              Industria
-            </label>
-            <input
-              v-model="form.industry"
-              type="text"
-              placeholder="Retail, Hospitalidad…"
-              style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-field, var(--bg-page)); color: var(--text-ink); font-size: 14px; outline: none; box-sizing: border-box;"
-              @focus="(e) => ((e.target as HTMLElement).style.borderColor = 'var(--primary)')"
-              @blur="(e) => ((e.target as HTMLElement).style.borderColor = 'var(--border)')"
-            />
-          </div>
-
-          <!-- Country + Phone (2 cols) -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
             <div>
-              <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px;">
-                País
-              </label>
-              <input
-                v-model="form.country"
-                type="text"
-                placeholder="México"
-                style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-field, var(--bg-page)); color: var(--text-ink); font-size: 14px; outline: none; box-sizing: border-box;"
-                @focus="(e) => ((e.target as HTMLElement).style.borderColor = 'var(--primary)')"
-                @blur="(e) => ((e.target as HTMLElement).style.borderColor = 'var(--border)')"
-              />
+              <h2 style="font-size: 16px; font-weight: 800; color: var(--text-ink); margin: 0 0 3px; letter-spacing: -0.01em;">
+                Nueva organización
+              </h2>
+              <p style="font-size: 12px; color: var(--text-muted); margin: 0;">
+                Serás el owner y tendrás un trial de 14 días.
+              </p>
             </div>
-            <div>
-              <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px;">
-                Teléfono
-              </label>
-              <input
-                v-model="form.phone"
-                type="tel"
-                placeholder="+52 33 1234 5678"
-                style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-field, var(--bg-page)); color: var(--text-ink); font-size: 14px; outline: none; box-sizing: border-box;"
-                @focus="(e) => ((e.target as HTMLElement).style.borderColor = 'var(--primary)')"
-                @blur="(e) => ((e.target as HTMLElement).style.borderColor = 'var(--border)')"
-              />
-            </div>
-          </div>
-
-          <!-- Logo URL -->
-          <div style="margin-bottom: 20px;">
-            <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px;">
-              Logo URL
-            </label>
-            <input
-              v-model="form.logoUrl"
-              type="url"
-              placeholder="https://…"
-              style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-field, var(--bg-page)); color: var(--text-ink); font-size: 14px; outline: none; box-sizing: border-box;"
-              @focus="(e) => ((e.target as HTMLElement).style.borderColor = 'var(--primary)')"
-              @blur="(e) => ((e.target as HTMLElement).style.borderColor = 'var(--border)')"
-            />
-          </div>
-
-          <!-- Error message -->
-          <p v-if="formError" style="font-size: 13px; color: var(--danger); margin: 0 0 14px; line-height: 1.4;">
-            {{ formError }}
-          </p>
-
-          <!-- Actions -->
-          <div style="display: flex; justify-content: flex-end; gap: 10px;">
             <button
-              type="button"
-              style="padding: 9px 18px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text-ink); font-size: 14px; font-weight: 500; cursor: pointer;"
-              :disabled="creating"
+              style="background: none; border: none; cursor: pointer; padding: 6px; border-radius: 8px; color: var(--text-muted); display: grid; place-items: center; flex-shrink: 0;"
               @click="showCreate = false"
             >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              style="padding: 9px 18px; border-radius: 8px; border: none; background: var(--primary); color: var(--bg-surface); font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"
-              :style="creating ? 'opacity: 0.7; cursor: not-allowed;' : ''"
-              :disabled="creating"
-            >
-              <svg v-if="creating" class="animate-spin" width="14" height="14" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24">
+                <path d="M18 6L6 18M6 6l12 12"/>
               </svg>
-              {{ creating ? 'Creando…' : 'Crear organización' }}
             </button>
           </div>
-        </form>
+
+          <!-- Formulario scrollable -->
+          <div style="padding: 20px 24px 24px; overflow-y: auto;">
+            <CreateOrgForm
+              :loading="creating"
+              :server-error="createError"
+              submit-label="Crear organización"
+              :show-cancel="true"
+              @submit="handleCreateSubmit"
+              @cancel="showCreate = false"
+            />
+          </div>
+        </div>
       </div>
-    </div>
+    </Transition>
   </Teleport>
 </template>
+
+<style scoped>
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.18s ease;
+}
+.modal-enter-active > div,
+.modal-leave-active > div {
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+.modal-enter-from > div,
+.modal-leave-to > div {
+  transform: scale(0.97) translateY(8px);
+  opacity: 0;
+}
+</style>

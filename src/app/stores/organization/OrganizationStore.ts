@@ -2,6 +2,7 @@ import { reactive, computed } from 'vue'
 import { defineStore } from 'pinia'
 
 import { container } from '@/container'
+import { apiClient } from '@/infrastructure/http/ApiClient'
 import organizationTypes from '@/infrastructure/organization/di/types'
 import type { Organization } from '@/domain/organization/entities/Organization'
 import type { OrganizationMember } from '@/domain/organization/entities/OrganizationMember'
@@ -14,6 +15,18 @@ import type { UpdateOrganizationUseCaseDto } from '@/application/organization/us
 import type UseCase from '@/application/common/useCase/UseCase'
 
 const ACTIVE_ORG_KEY = 'wallet_saas_active_org_id'
+
+function _decodeRoleFromToken(): string | null {
+  const token = apiClient.getToken()
+  if (!token) return null
+  try {
+    const [, part] = token.split('.')
+    const payload = JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/')))
+    return typeof payload.role === 'string' ? payload.role : null
+  } catch {
+    return null
+  }
+}
 
 export const useOrganizationStore = defineStore('OrganizationStore', () => {
   const getMyOrganizationsUseCase = container.get<UseCase<void, Organization[]>>(organizationTypes.getMyOrganizationsUseCase)
@@ -33,12 +46,14 @@ export const useOrganizationStore = defineStore('OrganizationStore', () => {
     _members: OrganizationMember[]
     _initialized: boolean
     _loadingOrgs: boolean
+    _currentOrgRole: string | null
   }>({
     _organizations: [],
     _activeOrgId: localStorage.getItem(ACTIVE_ORG_KEY),
     _members: [],
     _initialized: false,
     _loadingOrgs: false,
+    _currentOrgRole: _decodeRoleFromToken(),
   })
 
   const organizations = computed(() => state._organizations)
@@ -46,6 +61,8 @@ export const useOrganizationStore = defineStore('OrganizationStore', () => {
   const initialized = computed(() => state._initialized)
   const loadingOrgs = computed(() => state._loadingOrgs)
   const hasOrganization = computed(() => state._initialized && state._organizations.length > 0)
+  const currentOrgRole = computed(() => state._currentOrgRole)
+  const isOwner = computed(() => state._currentOrgRole === 'owner')
 
   const activeOrg = computed<Organization | null>(() => {
     if (!state._organizations.length) return null
@@ -60,6 +77,7 @@ export const useOrganizationStore = defineStore('OrganizationStore', () => {
 
   function setActiveOrg(org: Organization) {
     state._activeOrgId = org.id
+    state._currentOrgRole = _decodeRoleFromToken()
     localStorage.setItem(ACTIVE_ORG_KEY, org.id)
   }
 
@@ -74,6 +92,7 @@ export const useOrganizationStore = defineStore('OrganizationStore', () => {
       const match = orgs.find((o) => o.id === savedId)
       state._activeOrgId = match ? match.id : (orgs[0]?.id ?? null)
       if (state._activeOrgId) localStorage.setItem(ACTIVE_ORG_KEY, state._activeOrgId)
+      state._currentOrgRole = _decodeRoleFromToken()
     } finally {
       state._loadingOrgs = false
     }
@@ -144,6 +163,7 @@ export const useOrganizationStore = defineStore('OrganizationStore', () => {
     state._activeOrgId = null
     state._members = []
     state._initialized = false
+    state._currentOrgRole = null
     localStorage.removeItem(ACTIVE_ORG_KEY)
   }
 
@@ -156,6 +176,8 @@ export const useOrganizationStore = defineStore('OrganizationStore', () => {
     initialized,
     loadingOrgs,
     hasOrganization,
+    currentOrgRole,
+    isOwner,
     setActiveOrg,
     fetchMyOrganizations,
     createOrg,
