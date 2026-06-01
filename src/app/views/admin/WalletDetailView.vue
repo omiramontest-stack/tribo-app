@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useInfiniteScroll } from '@/app/composables/useInfiniteScroll'
 import { useRoute, useRouter } from 'vue-router'
 import { useWalletStore } from '@/app/stores/wallet/WalletStore'
 import { usePassStore } from '@/app/stores/pass/PassStore'
@@ -36,6 +37,10 @@ const scannedPasses = ref<Pass[]>([])
 const loadingScanned = ref(false)
 const passesPage = ref(1)
 const scannedPage = ref(1)
+const displayPasses = ref<Pass[]>([])
+const loadingMore   = ref(false)
+const passesSentinelRef = ref<HTMLElement | null>(null)
+const isMobile = ref(window.matchMedia('(max-width: 767px)').matches)
 
 const isDaypass = computed(() => walletStore.currentWallet?.type === 'daypass')
 
@@ -95,12 +100,29 @@ onMounted(async () => {
       ? orgStore.fetchMembers(orgStore.activeOrgId)
       : Promise.resolve(),
   ])
+  displayPasses.value = [...passStore.passes]
 })
 
 async function goToPassesPage(page: number) {
   passesPage.value = page
   await passStore.fetchPassesByWallet(id, page)
+  displayPasses.value = [...passStore.passes]
 }
+
+async function loadMorePasses() {
+  if (!isMobile.value || loadingMore.value) return
+  if (passesPage.value >= passStore.passesMeta.totalPages) return
+  loadingMore.value = true
+  passesPage.value++
+  try {
+    await passStore.fetchPassesByWallet(id, passesPage.value)
+    displayPasses.value = [...displayPasses.value, ...passStore.passes]
+  } finally {
+    loadingMore.value = false
+  }
+}
+
+useInfiniteScroll(passesSentinelRef, loadMorePasses)
 
 async function switchTab(tab: 'pases' | 'canjeados') {
   activeTab.value = tab
@@ -138,7 +160,9 @@ async function confirmDelete() {
 }
 
 async function onPassGenerated() {
-  await passStore.fetchPassesByWallet(id)
+  passesPage.value = 1
+  await passStore.fetchPassesByWallet(id, 1)
+  displayPasses.value = [...passStore.passes]
 }
 
 function formatDate(iso: string): string {
@@ -308,10 +332,19 @@ function formatDate(iso: string): string {
       <!-- Active passes -->
       <template v-if="activeTab === 'pases'">
         <PassTable
-          :passes="passStore.passes"
+          :passes="displayPasses"
           :wallet="walletStore.currentWallet!"
         />
-        <div v-if="passStore.passesMeta.totalPages > 1" class="pagination">
+        <!-- Sentinel: IntersectionObserver lo detecta en mobile para infinite scroll -->
+        <div ref="passesSentinelRef" class="scroll-sentinel" />
+        <div v-if="isMobile && loadingMore" class="loading-more">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="spin">
+            <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
+          </svg>
+          Cargando más…
+        </div>
+        <!-- Paginación solo en desktop -->
+        <div v-if="!isMobile && passStore.passesMeta.totalPages > 1" class="pagination">
           <button
             class="page-btn"
             :disabled="passesPage <= 1"
@@ -887,4 +920,17 @@ function formatDate(iso: string): string {
 
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin 0.8s linear infinite; }
+
+.scroll-sentinel { height: 1px; }
+
+.loading-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px;
+  font-size: 12px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+}
 </style>
