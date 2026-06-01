@@ -51,8 +51,8 @@ export const usePassStore = defineStore('PassStore', () => {
     return pass
   }
 
-  async function fetchPassesByWallet(walletId: string, page = 1) {
-    const { data, meta } = await passRepository.findByWalletId(walletId, page)
+  async function fetchPassesByWallet(walletId: string, page = 1, search = '') {
+    const { data, meta } = await passRepository.findByWalletId(walletId, page, search)
     state._passes = data
     state._passesMeta = meta
   }

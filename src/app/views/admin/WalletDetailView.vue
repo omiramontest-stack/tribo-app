@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useInfiniteScroll } from '@/app/composables/useInfiniteScroll'
+import { useDebounce } from '@/app/composables/useDebounce'
 import { useRoute, useRouter } from 'vue-router'
 import { useWalletStore } from '@/app/stores/wallet/WalletStore'
 import { usePassStore } from '@/app/stores/pass/PassStore'
@@ -39,8 +40,28 @@ const passesPage = ref(1)
 const scannedPage = ref(1)
 const displayPasses = ref<Pass[]>([])
 const loadingMore   = ref(false)
+const searching     = ref(false)
 const passesSentinelRef = ref<HTMLElement | null>(null)
 const isMobile = ref(window.matchMedia('(max-width: 767px)').matches)
+const searchQuery = ref('')
+const debouncedSearch = useDebounce(searchQuery, 350)
+
+watch(debouncedSearch, async (query) => {
+  passesPage.value = 1
+  searching.value = true
+  try {
+    await passStore.fetchPassesByWallet(id, 1, query)
+    displayPasses.value = [...passStore.passes]
+  } finally {
+    searching.value = false
+  }
+})
+
+const searchEmptyMessage = computed(() =>
+  debouncedSearch.value.trim()
+    ? `Sin resultados para "${debouncedSearch.value.trim()}"`
+    : 'No hay pases generados aún.'
+)
 
 const isDaypass = computed(() => walletStore.currentWallet?.type === 'daypass')
 
@@ -105,7 +126,7 @@ onMounted(async () => {
 
 async function goToPassesPage(page: number) {
   passesPage.value = page
-  await passStore.fetchPassesByWallet(id, page)
+  await passStore.fetchPassesByWallet(id, page, debouncedSearch.value)
   displayPasses.value = [...passStore.passes]
 }
 
@@ -115,7 +136,7 @@ async function loadMorePasses() {
   loadingMore.value = true
   passesPage.value++
   try {
-    await passStore.fetchPassesByWallet(id, passesPage.value)
+    await passStore.fetchPassesByWallet(id, passesPage.value, debouncedSearch.value)
     displayPasses.value = [...displayPasses.value, ...passStore.passes]
   } finally {
     loadingMore.value = false
@@ -300,7 +321,7 @@ function formatDate(iso: string): string {
         <div v-if="isDaypass" class="tab-group">
           <button
             v-for="tab in [
-              { id: 'pases', label: `Activos (${passStore.passes.length})` },
+              { id: 'pases', label: `Activos (${passStore.passesMeta.total})` },
               { id: 'canjeados', label: 'Canjeados' },
             ]"
             :key="tab.id"
@@ -314,7 +335,7 @@ function formatDate(iso: string): string {
 
         <p v-else class="passes-title">
           Pases
-          <span class="passes-count">{{ passStore.passes.length }}</span>
+          <span class="passes-count">{{ passStore.passesMeta.total }}</span>
         </p>
 
         <button
@@ -329,11 +350,37 @@ function formatDate(iso: string): string {
         </button>
       </div>
 
+      <!-- Search bar (solo tab pases) -->
+      <div v-if="activeTab === 'pases'" class="passes-search">
+        <div class="search-wrap">
+          <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+          </svg>
+          <input
+            v-model="searchQuery"
+            class="search-input"
+            type="search"
+            placeholder="Buscar por nombre o teléfono…"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <svg v-if="searching" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="spin search-spinner">
+            <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
+          </svg>
+          <button v-else-if="searchQuery" class="search-clear" title="Limpiar búsqueda" @click="searchQuery = ''">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
       <!-- Active passes -->
       <template v-if="activeTab === 'pases'">
         <PassTable
           :passes="displayPasses"
           :wallet="walletStore.currentWallet!"
+          :empty-message="searchEmptyMessage"
         />
         <!-- Sentinel: IntersectionObserver lo detecta en mobile para infinite scroll -->
         <div ref="passesSentinelRef" class="scroll-sentinel" />
@@ -920,6 +967,68 @@ function formatDate(iso: string): string {
 
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin 0.8s linear infinite; }
+
+/* Search bar */
+.passes-search {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0 12px;
+  height: 38px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.search-wrap:focus-within {
+  border-color: var(--primary-text);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-text) 12%, transparent);
+}
+
+.search-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text-ink);
+  font-family: inherit;
+  outline: none;
+  min-width: 0;
+}
+.search-input::placeholder { color: var(--text-faint); }
+.search-input::-webkit-search-cancel-button { display: none; }
+
+.search-spinner {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.12s, color 0.12s;
+}
+.search-clear:hover { background: var(--border); color: var(--text-ink); }
 
 .scroll-sentinel { height: 1px; }
 

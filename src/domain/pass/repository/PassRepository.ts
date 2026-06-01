@@ -34,7 +34,7 @@ export interface PaginationMeta {
 
 export interface PassRepository {
   findByToken(token: string, dl?: string): Promise<PassWithWalletRaw | null>
-  findByWalletId(walletId: string, page?: number): Promise<{ data: Pass[]; meta: PaginationMeta }>
+  findByWalletId(walletId: string, page?: number, search?: string): Promise<{ data: Pass[]; meta: PaginationMeta }>
   findScanned(walletId: string, page?: number): Promise<{ data: Pass[]; meta: PaginationMeta }>
   save(pass: Pass): Promise<Pass>
   update(pass: Pass): Promise<Pass>

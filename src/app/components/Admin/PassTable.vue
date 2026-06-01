@@ -12,7 +12,7 @@ import type {
 } from '@/domain/pass/entities/PassData'
 import type { StampsRules, PointsRules, CashbackRules } from '@/domain/wallet/entities/WalletRules'
 
-const props = defineProps<{ passes: Pass[]; wallet: Wallet }>()
+const props = defineProps<{ passes: Pass[]; wallet: Wallet; emptyMessage?: string }>()
 const router        = useRouter()
 const passStore     = usePassStore()
 const whatsappStore = useWhatsAppStore()
@@ -162,7 +162,7 @@ const rows = computed(() => props.passes.map(pass => ({
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary-light)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
       <rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/>
     </svg>
-    <p>No hay pases generados aún.</p>
+    <p>{{ props.emptyMessage ?? 'No hay pases generados aún.' }}</p>
   </div>
 
   <template v-else>

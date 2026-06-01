@@ -17,12 +17,14 @@ export class PassHttpRepository implements PassRepository {
     }
   }
 
-  async findByWalletId(walletId: string, page = 1): Promise<{ data: Pass[]; meta: PaginationMeta }> {
-    return apiClient.get<{ data: Pass[]; meta: PaginationMeta }>(`/wallets/${walletId}/passes?page=${page}&limit=20`)
+  async findByWalletId(walletId: string, page = 1, search = ''): Promise<{ data: Pass[]; meta: PaginationMeta }> {
+    const params = new URLSearchParams({ page: String(page), limit: '20' })
+    if (search.trim()) params.set('search', search.trim())
+    return apiClient.get<{ data: Pass[]; meta: PaginationMeta }>(`/wallets/${walletId}/passes?${params}`)
   }
 
-  async findScanned(walletId: string, page = 1): Promise<{ data: Pass[]; meta: PaginationMeta }> {
-    return apiClient.get<{ data: Pass[]; meta: PaginationMeta }>(`/wallets/${walletId}/passes/scanned?page=${page}&limit=20`)
+  async findScanned(walletId: string, page = 1, limit = 20): Promise<{ data: Pass[]; meta: PaginationMeta }> {
+    return apiClient.get<{ data: Pass[]; meta: PaginationMeta }>(`/wallets/${walletId}/passes/scanned?page=${page}&limit=${limit}`)
   }
 
   async save(pass: Pass): Promise<Pass> {
