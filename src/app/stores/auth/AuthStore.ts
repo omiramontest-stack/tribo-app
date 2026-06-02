@@ -12,6 +12,7 @@ import type { RegisterDto } from '@/domain/auth/repository/AuthRepository'
 import { useOrganizationStore } from '@/app/stores/organization/OrganizationStore'
 
 export const useAuthStore = defineStore('AuthStore', () => {
+  const exchangeGoogleSessionUseCase = container.get<UseCase<string, Admin>>(authTypes.exchangeGoogleSessionUseCase)
   const loginUseCase = container.get<UseCase<LoginDto, Admin>>(authTypes.loginUseCase)
   const logoutUseCase = container.get<UseCase<void, void>>(authTypes.logoutUseCase)
   const registerUseCase = container.get<UseCase<RegisterDto, Admin>>(authTypes.registerUseCase)
@@ -89,5 +90,9 @@ export const useAuthStore = defineStore('AuthStore', () => {
     await resetPasswordUseCase.run({ token, newPassword })
   }
 
-  return { admin, emailVerified, isAuthenticated, init, login, register, logout, switchOrg, verifyEmail, resendVerification, changeEmail, confirmEmailChange, changePassword, forgotPassword, resetPassword }
+  async function exchangeGoogleSession(code: string): Promise<void> {
+    state._admin = await exchangeGoogleSessionUseCase.run(code)
+  }
+
+  return { admin, emailVerified, isAuthenticated, init, login, register, logout, switchOrg, verifyEmail, resendVerification, changeEmail, confirmEmailChange, changePassword, forgotPassword, resetPassword, exchangeGoogleSession }
 })

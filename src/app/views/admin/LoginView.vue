@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/app/stores/auth/AuthStore'
 import { ApiError } from '@/infrastructure/http/ApiClient'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 type Tab = 'login' | 'register'
 const tab = ref<Tab>('login')
 const loading = ref(false)
-const error = ref('')
+const error = ref(route.query.error === 'google_auth_failed' ? 'El enlace de Google expiró o ya fue usado. Intenta de nuevo.' : '')
 
 const loginForm = reactive({ email: '', password: '' })
 const registerForm = reactive({ email: '', password: '' })

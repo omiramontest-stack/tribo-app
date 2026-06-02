@@ -6,12 +6,13 @@ import { useAuthStore } from '@/app/stores/auth/AuthStore'
 const router = useRouter()
 const authStore = useAuthStore()
 
-onMounted(async () => {
-  await authStore.init()
+// By the time this component mounts, main.ts has already exchanged the code
+// (or marked the exchange as failed). We just redirect based on auth state.
+onMounted(() => {
   if (authStore.isAuthenticated) {
     router.replace({ name: 'Dashboard' })
   } else {
-    router.replace({ name: 'Login' })
+    router.replace({ name: 'Login', query: { error: 'google_auth_failed' } })
   }
 })
 </script>

@@ -37,4 +37,5 @@ export interface AuthRepository {
   changePassword(dto: ChangePasswordDto): Promise<void>
   forgotPassword(dto: ForgotPasswordDto): Promise<void>
   resetPassword(dto: ResetPasswordDto): Promise<void>
+  exchangeGoogleSession(code: string): Promise<Admin>
 }

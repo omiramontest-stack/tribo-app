@@ -8,4 +8,5 @@ export default {
   changePasswordUseCase: Symbol('ChangePasswordUseCase'),
   forgotPasswordUseCase: Symbol('ForgotPasswordUseCase'),
   resetPasswordUseCase: Symbol('ResetPasswordUseCase'),
+  exchangeGoogleSessionUseCase: Symbol('ExchangeGoogleSessionUseCase'),
 }

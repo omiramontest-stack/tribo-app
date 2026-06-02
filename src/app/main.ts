@@ -17,9 +17,24 @@ const head = createHead()
 
 app.use(pinia)
 
-// Verify active session before the router guard runs (top-level await)
 const authStore = useAuthStore()
-await authStore.init()
+
+// Exchange one-time Google OAuth code for a real session before the router guard
+// runs. The code is single-use and expires in 60 s, so we strip it from the URL
+// immediately to prevent sharing or replay via browser history.
+const _googleCode = new URLSearchParams(window.location.search).get('code')
+const _isGoogleCallback = window.location.pathname.endsWith('/auth/google/callback')
+
+if (_isGoogleCallback && _googleCode) {
+  window.history.replaceState({}, '', window.location.pathname)
+  try {
+    await authStore.exchangeGoogleSession(_googleCode)
+  } catch {
+    window.history.replaceState({}, '', '/login?error=google_auth_failed')
+  }
+} else {
+  await authStore.init()
+}
 
 // When any request returns 403 "No organization context", reset org state and
 // navigate back through the auth guard, which will re-call switch-org.

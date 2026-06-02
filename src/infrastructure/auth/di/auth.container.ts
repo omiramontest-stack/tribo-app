@@ -16,6 +16,7 @@ import ConfirmEmailChangeUseCase from '@/application/auth/useCase/ConfirmEmailCh
 import ChangePasswordUseCase from '@/application/auth/useCase/ChangePasswordUseCase'
 import ForgotPasswordUseCase from '@/application/auth/useCase/ForgotPasswordUseCase'
 import ResetPasswordUseCase from '@/application/auth/useCase/ResetPasswordUseCase'
+import ExchangeGoogleSessionUseCase from '@/application/auth/useCase/ExchangeGoogleSessionUseCase'
 
 export default new ContainerModule((bind: interfaces.Bind) => {
   bind<AuthRepository>(authTypes.authRepository).to(AuthHttpRepository)
@@ -27,4 +28,5 @@ export default new ContainerModule((bind: interfaces.Bind) => {
   bind<UseCase<ChangePasswordDto, void>>(authTypes.changePasswordUseCase).to(ChangePasswordUseCase)
   bind<UseCase<ForgotPasswordDto, void>>(authTypes.forgotPasswordUseCase).to(ForgotPasswordUseCase)
   bind<UseCase<ResetPasswordDto, void>>(authTypes.resetPasswordUseCase).to(ResetPasswordUseCase)
+  bind<UseCase<string, Admin>>(authTypes.exchangeGoogleSessionUseCase).to(ExchangeGoogleSessionUseCase)
 })

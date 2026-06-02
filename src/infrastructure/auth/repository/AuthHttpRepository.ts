@@ -117,4 +117,21 @@ export class AuthHttpRepository implements AuthRepository {
   async resetPassword(dto: ResetPasswordDto): Promise<void> {
     await apiClient.post(`/auth/reset-password/${dto.token}`, { newPassword: dto.newPassword })
   }
+
+  async exchangeGoogleSession(code: string): Promise<Admin> {
+    const res = await fetch(apiClient.urlFor('/auth/session/exchange'), {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      throw new ApiError(res.status, data)
+    }
+    const { admin, accessToken }: { admin: Admin; accessToken: string } = await res.json()
+    apiClient.setToken(accessToken)
+    this._admin = admin
+    return admin
+  }
 }
