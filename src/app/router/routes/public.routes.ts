@@ -8,6 +8,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
+    path: '/auth/google/callback',
+    name: 'GoogleCallback',
+    component: () => import('@/app/views/admin/GoogleCallbackView.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
     path: '/onboarding',
     name: 'Onboarding',
     component: () => import('@/app/views/admin/OnboardingView.vue'),

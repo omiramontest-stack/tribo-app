@@ -4,7 +4,7 @@ import { useOrganizationStore } from '@/app/stores/organization/OrganizationStor
 
 export function useAuthGuard(router: Router) {
   router.beforeEach(async (to, _from, next) => {
-    if (to.name === 'PassView' || to.name === 'LinkExpired' || to.name === 'ForgotPassword' || to.name === 'ResetPassword') return next()
+    if (to.name === 'PassView' || to.name === 'LinkExpired' || to.name === 'ForgotPassword' || to.name === 'ResetPassword' || to.name === 'GoogleCallback') return next()
 
     const authStore = useAuthStore()
     const orgStore = useOrganizationStore()
