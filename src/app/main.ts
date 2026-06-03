@@ -22,10 +22,11 @@ const authStore = useAuthStore()
 // Exchange one-time Google OAuth code for a real session before the router guard
 // runs. The code is single-use and expires in 60 s, so we strip it from the URL
 // immediately to prevent sharing or replay via browser history.
+// The backend redirects to the root URL (https://www.tribowallet.me?code=<UUID>),
+// not to /auth/google/callback, so we only check for the presence of ?code=.
 const _googleCode = new URLSearchParams(window.location.search).get('code')
-const _isGoogleCallback = window.location.pathname.endsWith('/auth/google/callback')
 
-if (_isGoogleCallback && _googleCode) {
+if (_googleCode) {
   window.history.replaceState({}, '', window.location.pathname)
   try {
     await authStore.exchangeGoogleSession(_googleCode)
