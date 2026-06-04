@@ -299,7 +299,6 @@ function formatDate(iso: string): string {
         v-for="stat in stats"
         :key="stat.label"
         class="stat-card"
-        :style="{ borderLeftColor: stat.color }"
       >
         <div class="stat-icon-wrap" :style="{ background: stat.bg }">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" :stroke="stat.color" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -683,7 +682,6 @@ function formatDate(iso: string): string {
 .stat-card {
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-left-width: 4px;
   border-radius: 12px;
   padding: 14px;
   display: flex;
