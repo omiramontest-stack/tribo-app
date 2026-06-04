@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { apiClient } from '@/infrastructure/http/ApiClient'
 import { useOrganizationStore } from '@/app/stores/organization/OrganizationStore'
+import TCGDrawer from '@/app/components/Shared/TCGDrawer/TCGDrawer.vue'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface Summary {
@@ -29,14 +30,79 @@ interface AnalyticsResponse {
   eventBreakdown: EventBreakdown[]
 }
 
-// ── Constants ──────────────────────────────────────────────────────────────
+// ── UI constants ───────────────────────────────────────────────────────────
 const PERIODS = [
   { key: '7d',  label: '7 días' },
   { key: '30d', label: '30 días' },
   { key: '90d', label: '90 días' },
   { key: '1y',  label: '1 año' },
 ]
+const FEED_PREVIEW = 5
+const FEED_MAX     = 10
 
+// ── Activity config ────────────────────────────────────────────────────────
+// Each kind: icon path (Heroicons outline 24px), accent color, human label
+const ACTIVITY_KINDS: Record<string, { color: string; icon: string; label: string }> = {
+  stamp_added: {
+    color: 'var(--primary-text)',
+    icon:  'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
+    label: 'Sello agregado',
+  },
+  pass_created: {
+    color: '#A78BFA',
+    icon:  'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
+    label: 'Pase creado',
+  },
+  redemption: {
+    color: 'var(--amber)',
+    icon:  'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z',
+    label: 'Canje realizado',
+  },
+  scan: {
+    color: '#46B7F0',
+    icon:  'M13 10V3L4 14h7v7l9-11h-7z',
+    label: 'Escaneo',
+  },
+  link_sent: {
+    color: '#0EA5E9',
+    icon:  'M12 19l9 2-9-18-9 18 9-2zm0 0v-8',
+    label: 'Enlace enviado',
+  },
+  pass_deleted: {
+    color: 'var(--danger)',
+    icon:  'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16',
+    label: 'Pase eliminado',
+  },
+  stamp_redeemed: {
+    color: 'var(--amber)',
+    icon:  'M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7',
+    label: 'Sello canjeado',
+  },
+}
+
+function kindConfig(type: string) {
+  return ACTIVITY_KINDS[type] ?? {
+    color: 'var(--text-muted)',
+    icon:  'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+    label: type,
+  }
+}
+
+function activityMessage(evt: ActivityEvent): string {
+  const name = `${evt.passFirstName} ${evt.passLastName}`.trim()
+  switch (evt.type) {
+    case 'stamp_added':    return `${name} recibió un sello`
+    case 'pass_created':   return `${name} se unió con un nuevo pase`
+    case 'redemption':     return `${name} canjeó su recompensa`
+    case 'scan':           return `Pase de ${name} fue escaneado`
+    case 'link_sent':      return `Enlace enviado a ${name}`
+    case 'pass_deleted':   return `El pase de ${name} fue eliminado`
+    case 'stamp_redeemed': return `${name} canjeó sellos acumulados`
+    default:               return `${kindConfig(evt.type).label} — ${name}`
+  }
+}
+
+// ── Event breakdown ────────────────────────────────────────────────────────
 const EVENT_LABELS: Record<string, string> = {
   pass_created:       'Pases creados',
   pass_deleted:       'Pases eliminados',
@@ -50,25 +116,12 @@ const EVENT_LABELS: Record<string, string> = {
   membership_renewed: 'Membresías renovadas',
   daypass_scanned:    'Daypasses escaneados',
 }
-
 const EVENT_COLORS = ['#3CBA76', '#46B7F0', '#A78BFA', '#F5A623', '#F87171', '#0EA5E9', '#FBBF24', '#34D399']
 
-const ACTIVITY_LABELS: Record<string, string> = {
-  stamp_added:  'Sello añadido',
-  pass_created: 'Pase creado',
-  redemption:   'Canje realizado',
-  scan:         'Escaneo',
-  pass_deleted: 'Pase eliminado',
-}
+const DONUT_R = 78
+const DONUT_C = 2 * Math.PI * DONUT_R
 
-const ACTIVITY_CONFIG: Record<string, { color: string; icon: string }> = {
-  stamp_added:  { color: 'var(--primary-text)', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
-  pass_created: { color: '#A78BFA',             icon: 'M12 5v14M5 12h14' },
-  redemption:   { color: 'var(--amber)',         icon: 'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z' },
-  scan:         { color: '#46B7F0',             icon: 'M21 21l-4.3-4.3M11 19a8 8 0 100-16 8 8 0 000 16z' },
-  pass_deleted: { color: 'var(--danger)',        icon: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' },
-}
-
+// ── Wallet icons ───────────────────────────────────────────────────────────
 const WALLET_TYPE_ICONS: Record<string, string> = {
   stamps:     'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
   membership: 'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z',
@@ -77,11 +130,67 @@ const WALLET_TYPE_ICONS: Record<string, string> = {
   daypass:    'M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z',
 }
 
-const DONUT_R = 78
-const DONUT_C = 2 * Math.PI * DONUT_R
-
+// ── Date & timezone helpers ────────────────────────────────────────────────
 const MONTHS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
 const DAYS   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
+
+// Compute local UTC offset label once (e.g. "UTC-7", "UTC+2")
+const LOCAL_TZ = (() => {
+  const off  = -new Date().getTimezoneOffset()
+  const sign = off >= 0 ? '+' : '-'
+  const h    = Math.floor(Math.abs(off) / 60)
+  const m    = Math.abs(off) % 60
+  return `UTC${sign}${h}${m ? `:${String(m).padStart(2, '0')}` : ''}`
+})()
+
+function shortDate(iso: string) {
+  const [, m, d] = iso.split('-').map(Number)
+  return `${d} ${MONTHS[m - 1]}`
+}
+function dayLabel(iso: string) { return DAYS[new Date(iso).getDay()] }
+
+// Short time in local timezone — "09:08 p.m."
+function fmtTimeShort(iso: string) {
+  return new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+}
+
+// Full human datetime for drawer — "Hoy, 9:08 p.m." / "Ayer, 2:15 p.m." / "2 jun, 8:44 p.m."
+function fmtDateTimeFull(iso: string) {
+  const d   = new Date(iso)
+  const now = new Date()
+  const time = d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+  if (d.toDateString() === now.toDateString())
+    return `Hoy, ${time}`
+  if (d.toDateString() === new Date(now.getTime() - 86_400_000).toDateString())
+    return `Ayer, ${time}`
+  return d.toLocaleString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+// ISO string tooltip with UTC label for accessibility
+function fmtIsoLabel(iso: string) {
+  return `${new Date(iso).toLocaleString('es-MX')} (${LOCAL_TZ})`
+}
+
+// Group activity events by local calendar day for drawer
+interface DayGroup { label: string; events: (ActivityEvent & { _idx: number })[] }
+function groupByDay(events: ActivityEvent[]): DayGroup[] {
+  const now  = new Date()
+  const map  = new Map<string, DayGroup>()
+  events.forEach((e, idx) => {
+    const d       = new Date(e.createdAt)
+    const dateKey = d.toDateString()
+    let label: string
+    if (dateKey === now.toDateString())
+      label = 'Hoy'
+    else if (dateKey === new Date(now.getTime() - 86_400_000).toDateString())
+      label = 'Ayer'
+    else
+      label = d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })
+    if (!map.has(dateKey)) map.set(dateKey, { label, events: [] })
+    map.get(dateKey)!.events.push({ ...e, _idx: idx })
+  })
+  return Array.from(map.values())
+}
 
 // ── State ──────────────────────────────────────────────────────────────────
 const orgStore       = useOrganizationStore()
@@ -89,6 +198,7 @@ const period         = ref('7d')
 const loading        = ref(false)
 const data           = ref<AnalyticsResponse | null>(null)
 const hoveredBarIdx  = ref<number | null>(null)
+const feedDrawerOpen = ref(false)
 
 // ── Bar chart ──────────────────────────────────────────────────────────────
 const barPoints     = computed(() => data.value?.chartByDay ?? [])
@@ -104,8 +214,7 @@ const xLabelStep = computed(() => {
 })
 
 function barPct(count: number) {
-  if (count === 0) return 0
-  return Math.max((count / barMax.value) * 100, 2)
+  return count === 0 ? 0 : Math.max((count / barMax.value) * 100, 2)
 }
 
 // ── KPI cards ──────────────────────────────────────────────────────────────
@@ -114,64 +223,42 @@ const kpis = computed(() => {
   if (!s) return []
   return [
     {
-      key: 'scans',
-      label: 'Escaneos totales',
-      display: s.totalScans.toLocaleString(),
-      suffix: '',
-      delta: s.deltaScans,
-      spark: barPoints.value.map(p => p.count),
-      highlight: false,
+      key: 'scans',  label: 'Escaneos totales',
+      display: s.totalScans.toLocaleString(),       suffix: '', delta: s.deltaScans,
+      spark: barPoints.value.map(p => p.count),     highlight: false,
       iconPath: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v3M14 18v3M17 21h4"/>',
     },
     {
-      key: 'passes',
-      label: 'Pases activos',
-      display: s.totalPasses.toLocaleString(),
-      suffix: '',
-      delta: s.deltaPasses,
-      spark: [] as number[],
-      highlight: false,
+      key: 'passes', label: 'Pases activos',
+      display: s.totalPasses.toLocaleString(),      suffix: '', delta: s.deltaPasses,
+      spark: [] as number[],                        highlight: false,
       iconPath: '<rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5" fill="currentColor" stroke="none"/>',
     },
     {
-      key: 'new',
-      label: 'Nuevos pases',
-      display: s.newPassesInPeriod.toLocaleString(),
-      suffix: '',
-      delta: s.deltaNewPasses,
-      spark: [] as number[],
-      highlight: false,
+      key: 'new',    label: 'Nuevos pases',
+      display: s.newPassesInPeriod.toLocaleString(), suffix: '', delta: s.deltaNewPasses,
+      spark: [] as number[],                         highlight: false,
       iconPath: '<path d="M12 5v14M5 12h14"/>',
     },
     {
-      key: 'redeem',
-      label: 'Canjes totales',
-      display: s.totalRedemptions.toLocaleString(),
-      suffix: '',
-      delta: s.deltaRedemptions,
-      spark: [] as number[],
-      highlight: false,
+      key: 'redeem', label: 'Canjes totales',
+      display: s.totalRedemptions.toLocaleString(), suffix: '', delta: s.deltaRedemptions,
+      spark: [] as number[],                        highlight: false,
       iconPath: '<path d="M9 12l2 2 4-4"/><rect x="3" y="4" width="18" height="18" rx="2"/>',
     },
     {
-      key: 'ret',
-      label: 'Retención',
-      display: s.retentionRate.toFixed(1),
-      suffix: '%',
-      delta: s.deltaRetention,
-      spark: [] as number[],
-      highlight: true,
+      key: 'ret',    label: 'Retención',
+      display: s.retentionRate.toFixed(1),          suffix: '%', delta: s.deltaRetention,
+      spark: [] as number[],                        highlight: true,
       iconPath: '<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>',
     },
   ]
 })
 
-// ── Sparkline ──────────────────────────────────────────────────────────────
-function buildSparkPaths(counts: number[], w = 104, h = 36) {
+// ── Sparkline builder ──────────────────────────────────────────────────────
+function buildSpark(counts: number[], w = 104, h = 36) {
   if (counts.length < 2) return { area: '', line: '', dot: [w, h / 2] as [number, number] }
-  const mx  = Math.max(...counts)
-  const mn  = Math.min(...counts)
-  const rng = (mx - mn) || 1
+  const mx  = Math.max(...counts), mn = Math.min(...counts), rng = (mx - mn) || 1
   const step = w / (counts.length - 1)
   const pts  = counts.map((v, i) => [i * step, h - 4 - ((v - mn) / rng) * (h - 8)] as [number, number])
   const line = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ')
@@ -187,41 +274,24 @@ const donutSegments = computed(() => {
   return bd.map((item, i) => {
     const len = (item.percent / 100) * DONUT_C
     const seg = {
-      key:       item.type,
-      color:     EVENT_COLORS[i % EVENT_COLORS.length],
-      dasharray: `${len.toFixed(2)} ${(DONUT_C - len).toFixed(2)}`,
+      key:        item.type,
+      color:      EVENT_COLORS[i % EVENT_COLORS.length],
+      dasharray:  `${len.toFixed(2)} ${(DONUT_C - len).toFixed(2)}`,
       dashoffset: -acc,
-      label:     EVENT_LABELS[item.type] ?? item.type,
-      count:     item.count,
-      percent:   item.percent,
+      label:      EVENT_LABELS[item.type] ?? item.type,
+      count:      item.count,
+      percent:    item.percent,
     }
     acc += len
     return seg
   })
 })
 
-// ── Activity ───────────────────────────────────────────────────────────────
-function activityConfig(type: string) {
-  return ACTIVITY_CONFIG[type] ?? { color: 'var(--text-muted)', icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' }
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-function shortDate(iso: string) {
-  const [, m, d] = iso.split('-').map(Number)
-  return `${d} ${MONTHS[m - 1]}`
-}
-
-function dayLabel(iso: string) {
-  return DAYS[new Date(iso).getDay()]
-}
-
-function localTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
-}
-
-function localDateTime(iso: string) {
-  return new Date(iso).toLocaleString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-}
+// ── Feed slices ────────────────────────────────────────────────────────────
+const previewFeed = computed(() => (data.value?.recentActivity ?? []).slice(0, FEED_PREVIEW))
+const drawerFeed  = computed(() => (data.value?.recentActivity ?? []).slice(0, FEED_MAX))
+const drawerGroups = computed(() => groupByDay(drawerFeed.value))
+const hasMoreFeed  = computed(() => (data.value?.recentActivity.length ?? 0) > FEED_PREVIEW)
 
 // ── Fetch ──────────────────────────────────────────────────────────────────
 async function load() {
@@ -267,28 +337,30 @@ onMounted(load)
       </button>
     </div>
 
-    <!-- ── Loading skeleton ─────────────────────────────────────────────── -->
+    <!-- ── Loading ──────────────────────────────────────────────────────── -->
     <template v-if="loading">
       <div class="kpi-grid">
         <div v-for="i in 5" :key="i" class="skeleton" style="height: 106px;" />
       </div>
-      <div class="skeleton" style="height: 280px;" />
+      <div class="skeleton" style="height: 300px;" />
       <div class="skeleton" style="height: 180px;" />
     </template>
 
     <!-- ── Data ─────────────────────────────────────────────────────────── -->
     <template v-else-if="data">
 
-      <!-- KPI Grid -->
+      <!-- KPI grid -->
       <div class="kpi-grid">
         <div
           v-for="kpi in kpis"
           :key="kpi.key"
           class="kpi-card"
-          :class="{ 'kpi-card--highlight': kpi.highlight }"
+          :class="{ 'kpi-card--hl': kpi.highlight }"
         >
           <div class="kpi-top">
-            <span class="kpi-label">{{ kpi.label }}</span>
+            <div class="kpi-icon-wrap">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" v-html="kpi.iconPath" />
+            </div>
             <span
               v-if="kpi.delta !== undefined"
               class="delta-chip"
@@ -307,21 +379,18 @@ onMounted(load)
             <div v-if="kpi.spark.length >= 2" class="kpi-spark">
               <svg width="104" height="36" viewBox="0 0 104 36" preserveAspectRatio="none">
                 <defs>
-                  <linearGradient id="spark-area-grad" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="spark-grad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%"   stop-color="var(--primary-text)" stop-opacity="0.2"/>
                     <stop offset="100%" stop-color="var(--primary-text)" stop-opacity="0"/>
                   </linearGradient>
                 </defs>
-                <path :d="buildSparkPaths(kpi.spark).area" fill="url(#spark-area-grad)" />
-                <path :d="buildSparkPaths(kpi.spark).line" fill="none" stroke="var(--primary-text)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                <circle
-                  :cx="buildSparkPaths(kpi.spark).dot[0]"
-                  :cy="buildSparkPaths(kpi.spark).dot[1]"
-                  r="2.5" fill="var(--primary-text)"
-                />
+                <path :d="buildSpark(kpi.spark).area" fill="url(#spark-grad)" />
+                <path :d="buildSpark(kpi.spark).line" fill="none" stroke="var(--primary-text)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <circle :cx="buildSpark(kpi.spark).dot[0]" :cy="buildSpark(kpi.spark).dot[1]" r="2.5" fill="var(--primary-text)" />
               </svg>
             </div>
           </div>
+          <div class="kpi-label">{{ kpi.label }}</div>
         </div>
       </div>
 
@@ -336,23 +405,17 @@ onMounted(load)
               <p class="card-sub">Actividad en el período seleccionado</p>
             </div>
             <div class="chart-total">
-              <div class="chart-total-value">
-                {{ hoveredBar ? hoveredBar.count : totalBarScans.toLocaleString() }}
-              </div>
-              <div class="chart-total-label">
-                {{ hoveredBar ? shortDate(hoveredBar.date) : 'total período' }}
-              </div>
+              <div class="chart-total-value">{{ hoveredBar ? hoveredBar.count : totalBarScans.toLocaleString() }}</div>
+              <div class="chart-total-label">{{ hoveredBar ? shortDate(hoveredBar.date) : 'total período' }}</div>
             </div>
           </div>
 
           <div v-if="barPoints.length" class="bar-chart-wrap">
-            <!-- Y axis -->
             <div class="bar-yaxis">
               <span>{{ barMax }}</span>
               <span>{{ Math.round(barMax / 2) }}</span>
               <span>0</span>
             </div>
-            <!-- Chart + X labels -->
             <div class="bar-main">
               <div class="bar-area">
                 <div class="bar-grid-line" style="top: 0;" />
@@ -366,12 +429,14 @@ onMounted(load)
                     @mouseleave="hoveredBarIdx = null"
                   >
                     <div v-if="hoveredBarIdx === i && point.count > 0" class="bar-tooltip">
-                      <span>{{ point.count }}</span> · {{ shortDate(point.date) }}
+                      <span class="bar-tooltip-val">{{ point.count }}</span>
+                      <span class="bar-tooltip-sep">·</span>
+                      {{ shortDate(point.date) }}
                     </div>
                     <span
                       v-if="period === '7d' && point.count > 0"
-                      class="bar-val-label"
-                      :class="{ 'bar-val-label--active': hoveredBarIdx === i }"
+                      class="bar-val"
+                      :class="{ 'bar-val--active': hoveredBarIdx === i }"
                     >{{ point.count }}</span>
                     <div
                       class="bar-fill"
@@ -379,64 +444,79 @@ onMounted(load)
                         'bar-fill--active': hoveredBarIdx === i,
                         'bar-fill--zero':   point.count === 0,
                       }"
-                      :style="point.count > 0
-                        ? { height: `${barPct(point.count)}%` }
-                        : { height: '4px' }"
+                      :style="point.count > 0 ? { height: `${barPct(point.count)}%` } : { height: '4px' }"
                     />
                   </div>
                 </div>
               </div>
-              <!-- X labels -->
               <div class="bar-xlabels">
                 <div v-for="(point, i) in barPoints" :key="i" class="bar-xl-col">
                   <template v-if="i % xLabelStep === 0 || i === barPoints.length - 1">
-                    <span v-if="period === '7d'" class="bar-xl-day" :class="{ 'bar-xl-active': hoveredBarIdx === i }">{{ dayLabel(point.date) }}</span>
-                    <span class="bar-xl-date" :class="{ 'bar-xl-active': hoveredBarIdx === i }">{{ shortDate(point.date) }}</span>
+                    <span v-if="period === '7d'" class="bar-xl-day" :class="{ 'bar-xl--active': hoveredBarIdx === i }">{{ dayLabel(point.date) }}</span>
+                    <span class="bar-xl-date" :class="{ 'bar-xl--active': hoveredBarIdx === i }">{{ shortDate(point.date) }}</span>
                   </template>
                 </div>
               </div>
             </div>
           </div>
-
           <div v-else class="chart-empty">Sin datos para este período</div>
         </div>
 
-        <!-- Activity feed -->
+        <!-- Activity feed preview -->
         <div class="card feed-card">
           <div class="feed-head">
-            <h3 class="card-title">Actividad reciente</h3>
-            <span class="feed-see-all">Ver todo</span>
+            <div>
+              <h3 class="card-title">Actividad reciente</h3>
+              <p class="card-sub">Últimos eventos registrados</p>
+            </div>
+            <button
+              v-if="hasMoreFeed"
+              class="feed-see-all"
+              @click="feedDrawerOpen = true"
+            >
+              Ver todo
+              <span class="feed-badge">{{ data.recentActivity.length }}</span>
+            </button>
           </div>
+
           <div class="feed-list">
-            <template v-if="data.recentActivity?.length">
+            <template v-if="previewFeed.length">
               <div
-                v-for="(evt, i) in data.recentActivity"
+                v-for="(evt, i) in previewFeed"
                 :key="i"
                 class="feed-item"
                 :class="{ 'feed-item--sep': i > 0 }"
               >
-                <div
-                  class="feed-icon"
-                  :style="{ background: activityConfig(evt.type).color + '1A' }"
-                >
+                <div class="feed-icon" :style="{ background: kindConfig(evt.type).color + '18' }">
                   <svg
                     width="14" height="14" viewBox="0 0 24 24"
-                    fill="none"
-                    :stroke="activityConfig(evt.type).color"
+                    fill="none" :stroke="kindConfig(evt.type).color"
                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                    v-html="activityConfig(evt.type).icon"
+                    v-html="kindConfig(evt.type).icon"
                   />
                 </div>
                 <div class="feed-body">
-                  <span class="feed-type">{{ ACTIVITY_LABELS[evt.type] ?? evt.type }}</span>
-                  <span class="feed-who">{{ evt.passFirstName }} {{ evt.passLastName }} · {{ evt.walletName }}</span>
+                  <span class="feed-action">{{ activityMessage(evt) }}</span>
+                  <span class="feed-meta">{{ evt.walletName }}</span>
                 </div>
-                <span class="feed-time" :title="localDateTime(evt.createdAt)">
-                  {{ localTime(evt.createdAt) }}
+                <span class="feed-time" :title="fmtIsoLabel(evt.createdAt)">
+                  {{ fmtTimeShort(evt.createdAt) }}
                 </span>
               </div>
             </template>
-            <p v-else class="feed-empty">Sin actividad reciente</p>
+            <div v-else class="feed-empty">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.5" stroke-linecap="round" style="margin: 0 auto 8px;">
+                <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Sin actividad reciente
+            </div>
+          </div>
+
+          <!-- See all CTA when no badge (≤ FEED_PREVIEW items total) -->
+          <div v-if="previewFeed.length && !hasMoreFeed" class="feed-footer">
+            <button class="feed-footer-btn" @click="feedDrawerOpen = true">
+              Ver detalle completo
+            </button>
           </div>
         </div>
       </div>
@@ -492,7 +572,6 @@ onMounted(load)
           <h3 class="card-title">Top wallets</h3>
           <p class="card-sub">Las más activas en el período</p>
         </div>
-        <!-- Desktop table -->
         <table class="wallets-table">
           <thead>
             <tr>
@@ -505,11 +584,7 @@ onMounted(load)
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="(w, i) in data.topWallets"
-              :key="w.walletId"
-              class="wallets-row"
-            >
+            <tr v-for="(w, i) in data.topWallets" :key="w.walletId" class="wallets-row">
               <td class="wtd wtd-rank">{{ i + 1 }}</td>
               <td class="wtd wtd-name">{{ w.walletName }}</td>
               <td class="wtd">
@@ -523,10 +598,7 @@ onMounted(load)
               <td class="wtd wtd-num">{{ w.totalScans.toLocaleString() }}</td>
               <td class="wtd wtd-muted">{{ w.activeCount.toLocaleString() }}</td>
               <td class="wtd wtd-last">
-                <span
-                  class="delta-chip"
-                  :class="w.delta7d >= 0 ? 'delta-up' : 'delta-down'"
-                >
+                <span class="delta-chip" :class="w.delta7d >= 0 ? 'delta-up' : 'delta-down'">
                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
                     <path :d="w.delta7d >= 0 ? 'M18 15l-6-6-6 6' : 'M6 9l6 6 6-6'" />
                   </svg>
@@ -536,21 +608,14 @@ onMounted(load)
             </tr>
           </tbody>
         </table>
-        <!-- Mobile cards -->
+        <!-- Mobile -->
         <div class="wallets-mobile">
-          <div
-            v-for="(w, i) in data.topWallets"
-            :key="w.walletId"
-            class="wallet-mob-item"
-          >
+          <div v-for="(w, i) in data.topWallets" :key="w.walletId" class="wallet-mob-item">
             <span class="wallet-mob-rank">{{ i + 1 }}</span>
             <div class="wallet-mob-body">
               <div class="wallet-mob-top">
-                <span class="wtd-name" style="padding: 0;">{{ w.walletName }}</span>
-                <span
-                  class="delta-chip"
-                  :class="w.delta7d >= 0 ? 'delta-up' : 'delta-down'"
-                >
+                <span class="wtd-name" style="padding:0">{{ w.walletName }}</span>
+                <span class="delta-chip" :class="w.delta7d >= 0 ? 'delta-up' : 'delta-down'">
                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
                     <path :d="w.delta7d >= 0 ? 'M18 15l-6-6-6 6' : 'M6 9l6 6 6-6'" />
                   </svg>
@@ -564,8 +629,8 @@ onMounted(load)
                   </svg>
                   {{ w.walletType }}
                 </span>
-                <span class="wallet-mob-stat">{{ w.totalScans.toLocaleString() }} escaneos</span>
-                <span class="wallet-mob-stat">{{ w.activeCount.toLocaleString() }} activos</span>
+                <span class="mob-stat">{{ w.totalScans.toLocaleString() }} escaneos</span>
+                <span class="mob-stat">{{ w.activeCount.toLocaleString() }} activos</span>
               </div>
             </div>
           </div>
@@ -574,7 +639,7 @@ onMounted(load)
 
     </template>
 
-    <!-- ── Empty state ───────────────────────────────────────────────────── -->
+    <!-- ── Empty ─────────────────────────────────────────────────────────── -->
     <div v-else class="empty-state">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.5" stroke-linecap="round">
         <path d="M3 21V5M3 21h18"/><path d="M7 17v-5M11 17V9M15 17v-3M19 17V7"/>
@@ -582,6 +647,77 @@ onMounted(load)
       <p class="empty-title">Sin datos para este período</p>
       <p class="empty-sub">Prueba con un rango diferente</p>
     </div>
+
+    <!-- ── Activity drawer ───────────────────────────────────────────────── -->
+    <TCGDrawer
+      v-model="feedDrawerOpen"
+      position="end"
+      :width="460"
+      title="Actividad reciente"
+    >
+      <template #body>
+        <div class="drawer-body">
+
+          <!-- Timezone notice -->
+          <div class="tz-notice">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+            </svg>
+            Horarios en tu zona local
+            <span class="tz-badge">{{ LOCAL_TZ }}</span>
+          </div>
+
+          <!-- No events -->
+          <div v-if="!drawerFeed.length" class="drawer-empty">
+            Sin actividad registrada en este período
+          </div>
+
+          <!-- Events grouped by day -->
+          <div v-else class="drawer-groups">
+            <div v-for="group in drawerGroups" :key="group.label" class="drawer-group">
+              <div class="drawer-day-label">{{ group.label }}</div>
+              <div
+                v-for="(evt, idx) in group.events"
+                :key="evt._idx"
+                class="drawer-item"
+                :class="{ 'drawer-item--sep': idx > 0 }"
+              >
+                <div
+                  class="drawer-icon"
+                  :style="{ background: kindConfig(evt.type).color + '18' }"
+                >
+                  <svg
+                    width="16" height="16" viewBox="0 0 24 24"
+                    fill="none" :stroke="kindConfig(evt.type).color"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    v-html="kindConfig(evt.type).icon"
+                  />
+                </div>
+                <div class="drawer-content">
+                  <div class="drawer-action">{{ activityMessage(evt) }}</div>
+                  <div class="drawer-sub">
+                    <span class="drawer-kind-badge" :style="{ color: kindConfig(evt.type).color, background: kindConfig(evt.type).color + '14' }">
+                      {{ kindConfig(evt.type).label }}
+                    </span>
+                    <span class="drawer-wallet">{{ evt.walletName }}</span>
+                  </div>
+                </div>
+                <div class="drawer-time-col">
+                  <span class="drawer-time" :title="fmtIsoLabel(evt.createdAt)">
+                    {{ fmtDateTimeFull(evt.createdAt) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer note -->
+          <p v-if="drawerFeed.length === FEED_MAX" class="drawer-limit-note">
+            Mostrando los {{ FEED_MAX }} eventos más recientes
+          </p>
+        </div>
+      </template>
+    </TCGDrawer>
 
   </div>
 </template>
@@ -624,10 +760,7 @@ onMounted(load)
   background: transparent;
   color: var(--text-muted);
 }
-.period-tab--active {
-  background: var(--primary);
-  color: #fff;
-}
+.period-tab--active { background: var(--primary); color: #fff; }
 
 .export-btn {
   display: flex;
@@ -662,19 +795,8 @@ onMounted(load)
   margin-bottom: 18px;
 }
 
-.card-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-ink);
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-
-.card-sub {
-  font-size: 12px;
-  color: var(--text-faint);
-  margin: 3px 0 0;
-}
+.card-title { font-size: 15px; font-weight: 700; color: var(--text-ink); margin: 0; letter-spacing: -0.01em; }
+.card-sub   { font-size: 12px; color: var(--text-faint); margin: 3px 0 0; }
 
 /* ── Skeleton ───────────────────────────────────────────────────────────── */
 .skeleton {
@@ -714,11 +836,12 @@ onMounted(load)
   padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
 }
-.kpi-card--highlight .kpi-value { color: var(--primary-text); }
-.kpi-card--highlight .kpi-suffix { color: var(--primary-text); opacity: 0.7; }
+.kpi-card--hl .kpi-value { color: var(--primary-text); }
+.kpi-card--hl .kpi-suffix { color: var(--primary-text); opacity: 0.7; }
+.kpi-card--hl .kpi-icon-wrap { color: var(--primary-text); background: var(--primary-light); }
 
 .kpi-top {
   display: flex;
@@ -727,13 +850,16 @@ onMounted(load)
   gap: 8px;
 }
 
-.kpi-label {
-  font-size: 12.5px;
-  font-weight: 600;
+.kpi-icon-wrap {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--bg-field);
   color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .kpi-bottom {
@@ -744,25 +870,22 @@ onMounted(load)
 }
 
 .kpi-value {
-  font-size: 34px;
+  font-size: 32px;
   font-weight: 800;
   letter-spacing: -0.03em;
-  line-height: 0.95;
+  line-height: 1;
   color: var(--text-ink);
   font-variant-numeric: tabular-nums;
 }
-
 .kpi-suffix {
-  font-size: 20px;
+  font-size: 18px;
   color: var(--text-muted);
   margin-left: 1px;
   font-weight: 700;
 }
 
-.kpi-spark {
-  flex-shrink: 0;
-  margin-bottom: -2px;
-}
+.kpi-spark  { flex-shrink: 0; margin-bottom: -2px; }
+.kpi-label  { font-size: 12px; font-weight: 600; color: var(--text-muted); }
 
 /* ── Charts row ─────────────────────────────────────────────────────────── */
 .charts-row {
@@ -773,14 +896,11 @@ onMounted(load)
 }
 
 /* ── Bar chart ──────────────────────────────────────────────────────────── */
-.chart-total        { text-align: right; flex-shrink: 0; }
-.chart-total-value  { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; color: var(--primary-text); font-variant-numeric: tabular-nums; }
-.chart-total-label  { font-size: 10.5px; color: var(--text-faint); margin-top: 3px; }
+.chart-total       { text-align: right; flex-shrink: 0; }
+.chart-total-value { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; color: var(--primary-text); font-variant-numeric: tabular-nums; }
+.chart-total-label { font-size: 10.5px; color: var(--text-faint); margin-top: 3px; }
 
-.bar-chart-wrap {
-  display: flex;
-  gap: 0;
-}
+.bar-chart-wrap { display: flex; }
 
 .bar-yaxis {
   width: 32px;
@@ -796,12 +916,7 @@ onMounted(load)
   line-height: 1;
 }
 
-.bar-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
+.bar-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
 .bar-area {
   height: 180px;
@@ -845,18 +960,22 @@ onMounted(load)
   transform: translateX(-50%);
   background: var(--text-ink);
   color: var(--bg-surface);
-  font-size: 11.5px;
-  font-weight: 700;
-  padding: 5px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
   border-radius: 8px;
   white-space: nowrap;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
   pointer-events: none;
   z-index: 10;
-  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
+.bar-tooltip-val { font-weight: 800; font-variant-numeric: tabular-nums; }
+.bar-tooltip-sep { opacity: 0.4; }
 
-.bar-val-label {
+.bar-val {
   font-size: 11px;
   font-weight: 700;
   color: var(--text-faint);
@@ -864,7 +983,7 @@ onMounted(load)
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
-.bar-val-label--active { color: var(--text-ink); }
+.bar-val--active { color: var(--text-ink); }
 
 .bar-fill {
   width: 100%;
@@ -874,13 +993,9 @@ onMounted(load)
   transition: background 0.1s;
 }
 .bar-fill--active { background: var(--primary-text) !important; }
-.bar-fill--zero   { background: var(--border) !important; border-radius: 3px; opacity: 0.45; }
+.bar-fill--zero   { background: var(--border) !important; border-radius: 3px; opacity: 0.4; }
 
-.bar-xlabels {
-  display: flex;
-  gap: 8px;
-  padding: 7px 4px 0;
-}
+.bar-xlabels { display: flex; gap: 8px; padding: 7px 4px 0; }
 
 .bar-xl-col {
   flex: 1;
@@ -891,10 +1006,9 @@ onMounted(load)
   gap: 2px;
   min-width: 0;
 }
-
 .bar-xl-day  { font-size: 11.5px; font-weight: 600; color: var(--text-medium); line-height: 1.2; }
-.bar-xl-date { font-size: 10px;   color: var(--text-faint); line-height: 1.2; }
-.bar-xl-active { color: var(--primary-text) !important; }
+.bar-xl-date { font-size: 10px; color: var(--text-faint); line-height: 1.2; }
+.bar-xl--active { color: var(--primary-text) !important; }
 
 .chart-empty {
   height: 180px;
@@ -906,35 +1020,61 @@ onMounted(load)
 }
 
 /* ── Activity feed ──────────────────────────────────────────────────────── */
-.feed-card { padding: 0; }
+.feed-card { padding: 0; display: flex; flex-direction: column; }
 
 .feed-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 12px;
   padding: 20px 22px 14px;
 }
 
 .feed-see-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
   font-weight: 600;
   color: var(--primary-text);
   cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  margin-top: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.feed-see-all:hover { opacity: 0.8; }
+
+.feed-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: var(--primary-light);
+  color: var(--primary-text);
+  font-variant-numeric: tabular-nums;
 }
 
 .feed-list {
-  padding: 0 22px 16px;
+  padding: 0 22px 4px;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  max-height: 290px;
+  flex: 1;
 }
 
 .feed-item {
   display: flex;
   gap: 12px;
   align-items: flex-start;
-  padding: 12px 0;
+  padding: 11px 0;
 }
 .feed-item--sep { border-top: 1px solid var(--border-subtle); }
 
@@ -955,24 +1095,22 @@ onMounted(load)
   flex-direction: column;
   gap: 2px;
 }
-
-.feed-type {
+.feed-action {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.35;
 }
-
-.feed-who {
-  font-size: 12px;
+.feed-meta {
+  font-size: 11.5px;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
 .feed-time {
   font-size: 11px;
   color: var(--text-faint);
@@ -983,28 +1121,43 @@ onMounted(load)
 }
 
 .feed-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 0;
   font-size: 13px;
   color: var(--text-faint);
   text-align: center;
-  padding: 32px 0;
-  margin: 0;
 }
 
-/* ── Event breakdown ────────────────────────────────────────────────────── */
+.feed-footer {
+  padding: 10px 22px 18px;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 4px;
+}
+.feed-footer-btn {
+  width: 100%;
+  padding: 9px;
+  border-radius: 9px;
+  background: var(--bg-field);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-medium);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.1s;
+}
+.feed-footer-btn:hover { background: var(--bg-subtle); }
+
+/* ── Breakdown donut ────────────────────────────────────────────────────── */
 .breakdown-body {
   display: flex;
   align-items: center;
   gap: 40px;
   flex-wrap: wrap;
 }
-
-.donut-wrap {
-  position: relative;
-  width: 192px;
-  height: 192px;
-  flex-shrink: 0;
-}
-
+.donut-wrap { position: relative; width: 192px; height: 192px; flex-shrink: 0; }
 .donut-center {
   position: absolute;
   inset: 0;
@@ -1013,59 +1166,23 @@ onMounted(load)
   align-items: center;
   justify-content: center;
 }
+.donut-total { font-size: 36px; font-weight: 800; color: var(--text-ink); line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.donut-sub   { font-size: 12px; color: var(--text-faint); margin-top: 3px; }
 
-.donut-total {
-  font-size: 36px;
-  font-weight: 800;
-  color: var(--text-ink);
-  line-height: 1;
-  letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums;
-}
-
-.donut-sub {
-  font-size: 12px;
-  color: var(--text-faint);
-  margin-top: 3px;
-}
-
-.breakdown-legend {
-  flex: 1;
-  min-width: 260px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.legend-item { display: flex; flex-direction: column; gap: 6px; }
-
-.legend-row {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-
-.legend-dot  { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
-.legend-name { flex: 1; font-size: 13.5px; font-weight: 600; color: var(--text-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.breakdown-legend { flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 14px; }
+.legend-item  { display: flex; flex-direction: column; gap: 6px; }
+.legend-row   { display: flex; align-items: center; gap: 9px; }
+.legend-dot   { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
+.legend-name  { flex: 1; font-size: 13.5px; font-weight: 600; color: var(--text-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .legend-count { font-size: 13.5px; font-weight: 700; color: var(--text-ink); font-variant-numeric: tabular-nums; flex-shrink: 0; }
 .legend-pct   { font-size: 12px; color: var(--text-faint); min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; flex-shrink: 0; }
-
-.legend-track {
-  height: 5px;
-  border-radius: 4px;
-  background: var(--border);
-  overflow: hidden;
-}
-.legend-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.4s ease;
-}
+.legend-track { height: 5px; border-radius: 4px; background: var(--border); overflow: hidden; }
+.legend-fill  { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
 
 /* ── Top wallets ────────────────────────────────────────────────────────── */
-.wallets-card    { padding: 0; overflow: hidden; }
-.wallets-head    { padding: 18px 22px 14px; border-bottom: 1px solid var(--border-subtle); }
-.wallets-table   { width: 100%; border-collapse: collapse; }
+.wallets-card { padding: 0; overflow: hidden; }
+.wallets-head { padding: 18px 22px 14px; border-bottom: 1px solid var(--border-subtle); }
+.wallets-table { width: 100%; border-collapse: collapse; }
 
 .wth {
   font-size: 10.5px;
@@ -1085,10 +1202,10 @@ onMounted(load)
 .wallets-row { border-top: 1px solid var(--border-subtle); transition: background 0.1s; }
 .wallets-row:hover { background: var(--bg-subtle); }
 
-.wtd      { padding: 14px 10px; }
-.wtd-rank { padding-left: 22px; font-size: 12.5px; font-weight: 700; color: var(--text-faint); }
-.wtd-name { font-size: 13.5px; font-weight: 700; color: var(--text-ink); }
-.wtd-num  { text-align: right; font-size: 13.5px; font-weight: 700; color: var(--text-ink); font-variant-numeric: tabular-nums; }
+.wtd       { padding: 14px 10px; }
+.wtd-rank  { padding-left: 22px; font-size: 12.5px; font-weight: 700; color: var(--text-faint); }
+.wtd-name  { font-size: 13.5px; font-weight: 700; color: var(--text-ink); }
+.wtd-num   { text-align: right; font-size: 13.5px; font-weight: 700; color: var(--text-ink); font-variant-numeric: tabular-nums; }
 .wtd-muted { text-align: right; font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .wtd-last  { text-align: right; padding-right: 22px; }
 
@@ -1106,14 +1223,13 @@ onMounted(load)
   text-transform: capitalize;
 }
 
-/* Mobile wallets */
 .wallets-mobile    { display: none; flex-direction: column; }
 .wallet-mob-item   { display: flex; gap: 10px; align-items: flex-start; padding: 14px 16px; border-top: 1px solid var(--border-subtle); }
 .wallet-mob-rank   { font-size: 12.5px; font-weight: 700; color: var(--text-faint); min-width: 18px; margin-top: 2px; }
 .wallet-mob-body   { flex: 1; min-width: 0; }
 .wallet-mob-top    { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .wallet-mob-meta   { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.wallet-mob-stat   { font-size: 11.5px; color: var(--text-muted); }
+.mob-stat          { font-size: 11.5px; color: var(--text-muted); }
 
 /* ── Empty state ────────────────────────────────────────────────────────── */
 .empty-state {
@@ -1130,6 +1246,119 @@ onMounted(load)
 .empty-title { font-size: 14px; font-weight: 700; color: var(--text-ink); margin: 0; }
 .empty-sub   { font-size: 12.5px; color: var(--text-faint); margin: 0; }
 
+/* ── Drawer body ────────────────────────────────────────────────────────── */
+.drawer-body { display: flex; flex-direction: column; gap: 0; }
+
+.tz-notice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 10px 4px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 4px;
+}
+.tz-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--bg-field);
+  border: 1px solid var(--border);
+  color: var(--text-medium);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  margin-left: 2px;
+}
+
+.drawer-empty {
+  padding: 48px 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+.drawer-groups { display: flex; flex-direction: column; gap: 20px; padding-top: 8px; }
+.drawer-group  { display: flex; flex-direction: column; gap: 0; }
+
+.drawer-day-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  padding: 6px 0 10px;
+}
+
+.drawer-item {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 12px 0;
+}
+.drawer-item--sep { border-top: 1px solid var(--border-subtle); }
+
+.drawer-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.drawer-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+
+.drawer-action {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-ink);
+  line-height: 1.35;
+}
+
+.drawer-sub {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.drawer-kind-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+
+.drawer-wallet {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawer-time-col { flex-shrink: 0; text-align: right; }
+.drawer-time {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  cursor: default;
+  font-variant-numeric: tabular-nums;
+}
+
+.drawer-limit-note {
+  margin: 20px 0 4px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
 /* ── Animations ─────────────────────────────────────────────────────────── */
 @keyframes pulse {
   0%, 100% { opacity: 1; }
@@ -1144,11 +1373,11 @@ onMounted(load)
   .charts-row { grid-template-columns: 1fr; }
 }
 @media (max-width: 768px) {
-  .kpi-grid          { grid-template-columns: repeat(2, 1fr); }
-  .breakdown-body    { flex-direction: column; align-items: flex-start; gap: 24px; }
-  .breakdown-legend  { min-width: 0; width: 100%; }
-  .wallets-table     { display: none; }
-  .wallets-mobile    { display: flex; }
+  .kpi-grid         { grid-template-columns: repeat(2, 1fr); }
+  .breakdown-body   { flex-direction: column; align-items: flex-start; gap: 24px; }
+  .breakdown-legend { min-width: 0; width: 100%; }
+  .wallets-table    { display: none; }
+  .wallets-mobile   { display: flex; }
 }
 @media (max-width: 480px) {
   .kpi-grid { grid-template-columns: 1fr; }
