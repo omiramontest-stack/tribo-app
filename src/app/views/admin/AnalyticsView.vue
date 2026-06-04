@@ -38,52 +38,60 @@ const PERIODS = [
   { key: '1y',  label: '1 año' },
 ]
 const FEED_PREVIEW = 5
-const FEED_MAX     = 10
 
 // ── Activity config ────────────────────────────────────────────────────────
-// Each kind: icon path (Heroicons outline 24px), accent color, human label
-const ACTIVITY_KINDS: Record<string, { color: string; icon: string; label: string }> = {
+// icon = full SVG inner markup (so v-html renders it correctly).
+// bg   = pre-computed rgba background (CSS vars can't have hex alpha appended).
+const ACTIVITY_KINDS: Record<string, { color: string; bg: string; icon: string; label: string }> = {
   stamp_added: {
-    color: 'var(--primary-text)',
-    icon:  'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
+    color: '#22C55E',
+    bg:    'rgba(34,197,94,0.13)',
+    icon:  '<path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>',
     label: 'Sello agregado',
   },
   pass_created: {
     color: '#A78BFA',
-    icon:  'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
+    bg:    'rgba(167,139,250,0.13)',
+    icon:  '<rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
     label: 'Pase creado',
   },
   redemption: {
-    color: 'var(--amber)',
-    icon:  'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z',
+    color: '#F59E0B',
+    bg:    'rgba(245,158,11,0.13)',
+    icon:  '<path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>',
     label: 'Canje realizado',
   },
   scan: {
-    color: '#46B7F0',
-    icon:  'M13 10V3L4 14h7v7l9-11h-7z',
+    color: '#38BDF8',
+    bg:    'rgba(56,189,248,0.13)',
+    icon:  '<path d="M13 10V3L4 14h7v7l9-11h-7z"/>',
     label: 'Escaneo',
   },
   link_sent: {
     color: '#0EA5E9',
-    icon:  'M12 19l9 2-9-18-9 18 9-2zm0 0v-8',
+    bg:    'rgba(14,165,233,0.13)',
+    icon:  '<path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>',
     label: 'Enlace enviado',
   },
   pass_deleted: {
-    color: 'var(--danger)',
-    icon:  'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16',
+    color: '#EF4444',
+    bg:    'rgba(239,68,68,0.13)',
+    icon:  '<path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>',
     label: 'Pase eliminado',
   },
   stamp_redeemed: {
-    color: 'var(--amber)',
-    icon:  'M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7',
+    color: '#F59E0B',
+    bg:    'rgba(245,158,11,0.13)',
+    icon:  '<path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>',
     label: 'Sello canjeado',
   },
 }
 
 function kindConfig(type: string) {
   return ACTIVITY_KINDS[type] ?? {
-    color: 'var(--text-muted)',
-    icon:  'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+    color: '#9CA3AF',
+    bg:    'rgba(156,163,175,0.13)',
+    icon:  '<circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>',
     label: type,
   }
 }
@@ -288,8 +296,8 @@ const donutSegments = computed(() => {
 })
 
 // ── Feed slices ────────────────────────────────────────────────────────────
-const previewFeed = computed(() => (data.value?.recentActivity ?? []).slice(0, FEED_PREVIEW))
-const drawerFeed  = computed(() => (data.value?.recentActivity ?? []).slice(0, FEED_MAX))
+const previewFeed  = computed(() => (data.value?.recentActivity ?? []).slice(0, FEED_PREVIEW))
+const drawerFeed   = computed(() => data.value?.recentActivity ?? [])
 const drawerGroups = computed(() => groupByDay(drawerFeed.value))
 const hasMoreFeed  = computed(() => (data.value?.recentActivity.length ?? 0) > FEED_PREVIEW)
 
@@ -487,7 +495,7 @@ onMounted(load)
                 class="feed-item"
                 :class="{ 'feed-item--sep': i > 0 }"
               >
-                <div class="feed-icon" :style="{ background: kindConfig(evt.type).color + '18' }">
+                <div class="feed-icon" :style="{ background: kindConfig(evt.type).bg }">
                   <svg
                     width="14" height="14" viewBox="0 0 24 24"
                     fill="none" :stroke="kindConfig(evt.type).color"
@@ -684,7 +692,7 @@ onMounted(load)
               >
                 <div
                   class="drawer-icon"
-                  :style="{ background: kindConfig(evt.type).color + '18' }"
+                  :style="{ background: kindConfig(evt.type).bg }"
                 >
                   <svg
                     width="16" height="16" viewBox="0 0 24 24"
@@ -712,8 +720,8 @@ onMounted(load)
           </div>
 
           <!-- Footer note -->
-          <p v-if="drawerFeed.length === FEED_MAX" class="drawer-limit-note">
-            Mostrando los {{ FEED_MAX }} eventos más recientes
+          <p v-if="drawerFeed.length" class="drawer-limit-note">
+            {{ drawerFeed.length }} evento{{ drawerFeed.length !== 1 ? 's' : '' }} en el período
           </p>
         </div>
       </template>
