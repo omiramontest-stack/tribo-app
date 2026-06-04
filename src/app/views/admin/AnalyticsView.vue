@@ -301,6 +301,84 @@ const drawerFeed   = computed(() => data.value?.recentActivity ?? [])
 const drawerGroups = computed(() => groupByDay(drawerFeed.value))
 const hasMoreFeed  = computed(() => (data.value?.recentActivity.length ?? 0) > FEED_PREVIEW)
 
+// ── Export CSV ─────────────────────────────────────────────────────────────
+function exportCSV() {
+  if (!data.value) return
+
+  const d     = data.value
+  const org   = orgStore.activeOrg?.name ?? 'organizacion'
+  const label = PERIODS.find(p => p.key === period.value)?.label ?? period.value
+  const rows: string[][] = []
+
+  const esc = (v: string | number) => {
+    const s = String(v)
+    return s.includes(',') || s.includes('"') || s.includes('\n')
+      ? `"${s.replace(/"/g, '""')}"`
+      : s
+  }
+  const row  = (...cells: (string | number)[]) => rows.push(cells.map(c => esc(c)))
+  const sep  = () => rows.push([])
+  const head = (title: string) => { sep(); rows.push([`## ${title}`]) }
+
+  // ── Resumen ──
+  head('Resumen')
+  row('Métrica', 'Valor')
+  row('Período', label)
+  row('Escaneos totales', d.summary.totalScans)
+  row('Pases activos', d.summary.totalPasses)
+  row('Nuevos pases', d.summary.newPassesInPeriod)
+  row('Canjes totales', d.summary.totalRedemptions)
+  row(`Retención (${label})`, `${d.summary.retentionRate}%`)
+  row('Wallets activas', d.summary.activeWallets)
+
+  // ── Escaneos por día ──
+  head('Escaneos por día')
+  row('Fecha', 'Escaneos')
+  d.chartByDay.forEach(p => row(p.date, p.count))
+
+  // ── Actividad por tipo ──
+  head('Actividad por tipo de evento')
+  row('Tipo', 'Cantidad', 'Porcentaje')
+  d.eventBreakdown.forEach(e =>
+    row(EVENT_LABELS[e.type] ?? e.type, e.count, `${e.percent}%`)
+  )
+
+  // ── Top wallets ──
+  if (d.topWallets.length) {
+    head('Top wallets')
+    row('Posición', 'Wallet', 'Tipo', 'Escaneos', 'Pases activos', 'Δ 7d')
+    d.topWallets.forEach((w, i) =>
+      row(i + 1, w.walletName, w.walletType, w.totalScans, w.activeCount, `${w.delta7d}%`)
+    )
+  }
+
+  // ── Actividad reciente ──
+  if (d.recentActivity.length) {
+    head('Actividad reciente')
+    row('Tipo', 'Nombre', 'Apellido', 'Wallet', 'Fecha/Hora (local)', 'Zona')
+    d.recentActivity.forEach(e =>
+      row(
+        kindConfig(e.type).label,
+        e.passFirstName,
+        e.passLastName,
+        e.walletName,
+        new Date(e.createdAt).toLocaleString('es-MX'),
+        LOCAL_TZ,
+      )
+    )
+  }
+
+  const csv      = rows.map(r => r.join(',')).join('\r\n')
+  const blob     = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url      = URL.createObjectURL(blob)
+  const a        = document.createElement('a')
+  const filename = `analitica-${org.toLowerCase().replace(/\s+/g, '-')}-${period.value}-${new Date().toISOString().slice(0, 10)}.csv`
+  a.href         = url
+  a.download     = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 // ── Fetch ──────────────────────────────────────────────────────────────────
 async function load() {
   const orgId = orgStore.activeOrgId
@@ -335,7 +413,7 @@ onMounted(load)
           @click="period = p.key"
         >{{ p.label }}</button>
       </div>
-      <button class="export-btn">
+      <button class="export-btn" :disabled="!data" @click="exportCSV">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
           <polyline points="7 10 12 15 17 10"/>
@@ -785,7 +863,8 @@ onMounted(load)
   font-family: inherit;
   transition: background 0.1s;
 }
-.export-btn:hover { background: var(--bg-subtle); }
+.export-btn:hover:not(:disabled) { background: var(--bg-subtle); }
+.export-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ── Card base ──────────────────────────────────────────────────────────── */
 .card {
