@@ -30,6 +30,11 @@ if (_googleCode) {
   window.history.replaceState({}, '', window.location.pathname)
   try {
     await authStore.exchangeGoogleSession(_googleCode)
+    // After the exchange, run a full refresh cycle so the refresh token stored
+    // in the browser cookie matches the hash saved in the DB. Without this, the
+    // router guard's switchOrg() call can rotate the token in the DB before the
+    // response cookie reaches the browser, causing a mismatch on the next reload.
+    await authStore.init()
   } catch {
     window.history.replaceState({}, '', '/login?error=google_auth_failed')
   }
