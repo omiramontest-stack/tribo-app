@@ -366,9 +366,9 @@ function formatDate(iso: string): string {
         <div v-else class="tab-group">
           <button
             v-for="tab in [
-              { id: 'active',    label: `Activos (${passStore.passesMetaByStatus.active.total})` },
-              { id: 'completed', label: `Completados (${passStore.passesMetaByStatus.completed.total})` },
-              { id: 'archived',  label: `Archivados (${passStore.passesMetaByStatus.archived.total})` },
+              { id: 'active',    label: `Activos` },
+              { id: 'completed', label: `Completados` },
+              { id: 'archived',  label: `Archivados` },
             ]"
             :key="tab.id"
             class="tab-btn"
