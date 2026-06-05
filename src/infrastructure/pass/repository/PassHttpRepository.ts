@@ -70,4 +70,8 @@ export class PassHttpRepository implements PassRepository {
   async renew(token: string): Promise<Pass> {
     return apiClient.post<Pass>(`/passes/${token}/renew`)
   }
+
+  async unarchive(token: string): Promise<Pass> {
+    return apiClient.post<Pass>(`/passes/${token}/unarchive`)
+  }
 }

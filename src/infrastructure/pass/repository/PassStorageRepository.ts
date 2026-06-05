@@ -83,4 +83,8 @@ export class PassStorageRepository implements PassRepository {
   async renew(_token: string): Promise<Pass> {
     throw new Error('renew not supported in storage repository')
   }
+
+  async unarchive(_token: string): Promise<Pass> {
+    throw new Error('unarchive not supported in storage repository')
+  }
 }

@@ -18,9 +18,11 @@ interface WalletSummary {
   inactiveCount: number
 }
 interface TopCustomer {
+  phone: string
   firstName: string
   lastName: string
   eventCount: number
+  completions: number
 }
 interface WalletInsights {
   bestHour: number | null
@@ -242,10 +244,10 @@ onMounted(load)
         <p style="font-size: 12px; color: var(--text-muted); margin: 2px 0 0;">Clientes con más interacciones en el período</p>
       </div>
 
-      <div v-if="topCustomers.length" style="padding: 16px 20px; display: flex; flex-direction: column; gap: 10px;">
+      <div v-if="topCustomers.length" style="padding: 16px 20px; display: flex; flex-direction: column; gap: 12px;">
         <div
           v-for="(c, i) in topCustomers.slice(0, 10)"
-          :key="i"
+          :key="c.phone"
           style="display: flex; align-items: center; gap: 12px;"
         >
           <!-- Rank/crown -->
@@ -254,9 +256,25 @@ onMounted(load)
             <span v-else style="font-size: 11px; font-weight: 700; color: var(--text-faint);">{{ i + 1 }}</span>
           </div>
 
-          <!-- Name -->
-          <div class="customer-name" style="font-size: 12.5px; font-weight: 600; color: var(--text-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            {{ c.firstName }} {{ c.lastName }}
+          <!-- Name + phone + completions badge -->
+          <div class="customer-name" style="display: flex; flex-direction: column; gap: 2px; overflow: hidden;">
+            <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+              <span style="font-size: 12.5px; font-weight: 600; color: var(--text-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                {{ c.firstName }} {{ c.lastName }}
+              </span>
+              <!-- Completions badge (solo cuando > 0) -->
+              <span
+                v-if="c.completions > 0"
+                style="display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 999px; background: var(--amber-bg); color: var(--amber); white-space: nowrap; flex-shrink: 0;"
+                :title="`${c.completions} completación${c.completions > 1 ? 'es' : ''}`"
+              >
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                {{ c.completions }}
+              </span>
+            </div>
+            <span style="font-size: 11px; color: var(--text-muted);">{{ c.phone }}</span>
           </div>
 
           <!-- Bar -->

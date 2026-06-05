@@ -19,19 +19,21 @@ const props = defineProps<{
   activeTab?: PassStatus
 }>()
 
-const emit = defineEmits<{ renewed: [] }>()
+const emit = defineEmits<{ renewed: []; unarchived: [] }>()
 
 const router        = useRouter()
 const passStore     = usePassStore()
 const whatsappStore = useWhatsAppStore()
 const toast         = useToast()
 
-const sendingWaToken = ref<string | null>(null)
-const copiedToken    = ref<string | null>(null)
-const passToDelete   = ref<Pass | null>(null)
-const deleting       = ref(false)
-const passToRenew    = ref<Pass | null>(null)
-const renewing       = ref(false)
+const sendingWaToken  = ref<string | null>(null)
+const copiedToken     = ref<string | null>(null)
+const passToDelete    = ref<Pass | null>(null)
+const deleting        = ref(false)
+const passToRenew     = ref<Pass | null>(null)
+const renewing        = ref(false)
+const passToUnarchive = ref<Pass | null>(null)
+const unarchiving     = ref(false)
 
 const RENEWABLE_WALLET_TYPES = new Set(['stamps', 'points', 'bundle'])
 
@@ -96,6 +98,22 @@ async function confirmRenew() {
     toast.show(err?.body?.message ?? 'Error al renovar el pase', 'error')
   } finally {
     renewing.value = false
+  }
+}
+
+async function confirmUnarchive() {
+  if (!passToUnarchive.value) return
+  unarchiving.value = true
+  try {
+    await passStore.unarchivePass(passToUnarchive.value.token)
+    passToUnarchive.value = null
+    toast.show('Pase desarchivado correctamente', 'success')
+    emit('unarchived')
+  } catch (e) {
+    const err = e as { body?: { message?: string } }
+    toast.show(err?.body?.message ?? 'Error al desarchivar el pase', 'error')
+  } finally {
+    unarchiving.value = false
   }
 }
 
@@ -341,7 +359,18 @@ const rows = computed(() => props.passes.map(pass => ({
             </button>
           </template>
 
-          <!-- Archivados: solo lectura, sin acciones -->
+          <!-- Archivados: solo desarchivar -->
+          <template v-else-if="isArchived">
+            <button
+              class="pc-action-btn pc-action-btn--unarchive"
+              @click="passToUnarchive = row.pass"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+              Desarchivar
+            </button>
+          </template>
         </div>
       </div>
     </div>
@@ -354,7 +383,7 @@ const rows = computed(() => props.passes.map(pass => ({
             <th>Usuario</th>
             <th>Progreso</th>
             <th>Creado</th>
-            <th v-if="!isArchived">Acciones</th>
+            <th>Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -406,8 +435,21 @@ const rows = computed(() => props.passes.map(pass => ({
             <!-- Fecha -->
             <td class="td-date">{{ row.date }}</td>
 
-            <!-- Acciones: Activos -->
-            <td v-if="!isArchived" class="td-actions">
+            <!-- Acciones: Archivados -->
+            <td v-if="isArchived" class="td-actions">
+              <button
+                class="tbl-icon-btn tbl-icon-btn--unarchive"
+                title="Desarchivar pase"
+                @click="passToUnarchive = row.pass"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+              </button>
+            </td>
+
+            <!-- Acciones: Activos / Completados -->
+            <td v-else class="td-actions">
               <template v-if="!isCompleted">
                 <button
                   class="tbl-icon-btn"
@@ -530,6 +572,38 @@ const rows = computed(() => props.passes.map(pass => ({
                 <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
               </svg>
               {{ renewing ? 'Renovando…' : 'Renovar' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+
+  <!-- ── Unarchive confirmation modal ──────────────────────────────────── -->
+  <Teleport to="body">
+    <Transition name="modal">
+      <div v-if="passToUnarchive" class="modal-backdrop" @click.self="passToUnarchive = null">
+        <div class="modal-card">
+          <div class="modal-icon modal-icon--unarchive">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+          </div>
+          <div>
+            <p class="modal-title">Desarchivar pase</p>
+            <p class="modal-body">
+              ¿Desarchivar el pase de
+              <strong>{{ passToUnarchive.firstName }} {{ passToUnarchive.lastName }}</strong>?
+              Volverá a aparecer como completado.
+            </p>
+          </div>
+          <div class="modal-actions">
+            <button class="modal-btn-cancel" :disabled="unarchiving" @click="passToUnarchive = null">Cancelar</button>
+            <button class="modal-btn-confirm modal-btn-confirm--unarchive" :disabled="unarchiving" @click="confirmUnarchive">
+              <svg v-if="unarchiving" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="spin">
+                <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
+              </svg>
+              {{ unarchiving ? 'Desarchivando…' : 'Desarchivar' }}
             </button>
           </div>
         </div>
@@ -661,8 +735,10 @@ const rows = computed(() => props.passes.map(pass => ({
 .pc-action-btn--copied  { background: var(--primary-light); border-color: var(--primary-light); color: var(--success); }
 .pc-action-btn--wa      { color: var(--success); border-color: var(--success-bg); background: var(--success-bg); }
 .pc-action-btn--wa:hover { background: color-mix(in srgb, var(--success) 18%, transparent); border-color: var(--success); }
-.pc-action-btn--renew   { color: var(--success); border-color: var(--success-bg); background: var(--success-bg); }
+.pc-action-btn--renew     { color: var(--success); border-color: var(--success-bg); background: var(--success-bg); }
 .pc-action-btn--renew:hover { background: color-mix(in srgb, var(--success) 18%, transparent); border-color: var(--success); }
+.pc-action-btn--unarchive   { color: var(--amber); border-color: var(--amber-bg); background: var(--amber-bg); }
+.pc-action-btn--unarchive:hover { background: color-mix(in srgb, var(--amber) 18%, transparent); border-color: var(--amber); }
 .pc-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .pc-delete-btn {
@@ -777,8 +853,10 @@ const rows = computed(() => props.passes.map(pass => ({
 .tbl-icon-btn--copied       { background: var(--primary-light); border-color: var(--primary-light); color: var(--success); }
 .tbl-icon-btn--wa           { color: var(--success); border-color: var(--success-bg); background: var(--success-bg); }
 .tbl-icon-btn--wa:hover     { background: color-mix(in srgb, var(--success) 18%, transparent); border-color: var(--success); }
-.tbl-icon-btn--renew        { color: var(--success); border-color: var(--success-bg); background: var(--success-bg); }
-.tbl-icon-btn--renew:hover  { background: color-mix(in srgb, var(--success) 18%, transparent); border-color: var(--success); }
+.tbl-icon-btn--renew          { color: var(--success); border-color: var(--success-bg); background: var(--success-bg); }
+.tbl-icon-btn--renew:hover    { background: color-mix(in srgb, var(--success) 18%, transparent); border-color: var(--success); }
+.tbl-icon-btn--unarchive      { color: var(--amber); border-color: var(--amber-bg); background: var(--amber-bg); }
+.tbl-icon-btn--unarchive:hover { background: color-mix(in srgb, var(--amber) 18%, transparent); border-color: var(--amber); }
 .tbl-icon-btn--danger:hover { background: var(--danger-bg); border-color: var(--danger-bg); color: var(--danger); }
 .tbl-icon-btn:disabled      { opacity: 0.4; cursor: not-allowed; }
 
@@ -815,7 +893,8 @@ const rows = computed(() => props.passes.map(pass => ({
   place-items: center;
 }
 .modal-icon--danger { background: var(--danger-bg); }
-.modal-icon--renew  { background: var(--primary-light); }
+.modal-icon--renew     { background: var(--primary-light); }
+.modal-icon--unarchive { background: var(--amber-bg); }
 
 .modal-title { font-size: 15px; font-weight: 700; color: var(--text-ink); margin: 0 0 6px; }
 .modal-body  { font-size: 13px; color: var(--text-muted); margin: 0; line-height: 1.55; }
@@ -851,7 +930,8 @@ const rows = computed(() => props.passes.map(pass => ({
   transition: opacity 0.15s;
 }
 .modal-btn-confirm--danger { background: var(--danger); }
-.modal-btn-confirm--renew  { background: var(--success); }
+.modal-btn-confirm--renew      { background: var(--success); }
+.modal-btn-confirm--unarchive  { background: var(--amber); }
 .modal-btn-confirm:hover:not(:disabled) { opacity: 0.88; }
 .modal-btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
 

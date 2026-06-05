@@ -207,6 +207,14 @@ async function onPassRenewed() {
   displayPasses.value = [...passStore.passes]
 }
 
+async function onPassUnarchived() {
+  statusTab.value = 'completed'
+  passesPage.value = 1
+  searchQuery.value = ''
+  await passStore.fetchPassesByWallet(id, 1, '', 'completed')
+  displayPasses.value = [...passStore.passes]
+}
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString('es-MX', {
     day: '2-digit', month: 'short', year: 'numeric',
@@ -416,6 +424,7 @@ function formatDate(iso: string): string {
           :empty-message="searchEmptyMessage"
           :active-tab="isDaypass ? 'active' : statusTab"
           @renewed="onPassRenewed"
+          @unarchived="onPassUnarchived"
         />
         <!-- Sentinel: IntersectionObserver lo detecta en mobile para infinite scroll -->
         <div ref="passesSentinelRef" class="scroll-sentinel" />

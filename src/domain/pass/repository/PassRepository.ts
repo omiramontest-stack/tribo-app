@@ -42,6 +42,7 @@ export interface PassRepository {
   getTransactions(token: string): Promise<CashbackTransaction[]>
   delete(token: string): Promise<void>
   renew(token: string): Promise<Pass>
+  unarchive(token: string): Promise<Pass>
 }
 
 export type { PassStatus }

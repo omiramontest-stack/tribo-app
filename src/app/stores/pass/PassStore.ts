@@ -110,6 +110,10 @@ export const usePassStore = defineStore('PassStore', () => {
     return passRepository.renew(token)
   }
 
+  async function unarchivePass(token: string): Promise<Pass> {
+    return passRepository.unarchive(token)
+  }
+
   return {
     passes,
     currentPass,
@@ -126,5 +130,6 @@ export const usePassStore = defineStore('PassStore', () => {
     fetchScannedPasses,
     sendLink,
     renewPass,
+    unarchivePass,
   }
 })
