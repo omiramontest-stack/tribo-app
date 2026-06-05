@@ -4,15 +4,23 @@ import { useRouter } from 'vue-router'
 import { usePassStore } from '@/app/stores/pass/PassStore'
 import { useWhatsAppStore } from '@/app/stores/whatsapp/WhatsAppStore'
 import { useToast } from '@/app/composables/useToast'
-import type { Pass } from '@/domain/pass/entities/Pass'
+import type { Pass, PassStatus } from '@/domain/pass/entities/Pass'
 import type { Wallet } from '@/domain/wallet/entities/Wallet'
 import type {
   StampsData, PointsData, CashbackData,
   DaypassData, MembershipData, BundleData, GiftcardData,
 } from '@/domain/pass/entities/PassData'
-import type { StampsRules, PointsRules, CashbackRules } from '@/domain/wallet/entities/WalletRules'
+import type { StampsRules, PointsRules, CashbackRules, BundleRules } from '@/domain/wallet/entities/WalletRules'
 
-const props = defineProps<{ passes: Pass[]; wallet: Wallet; emptyMessage?: string }>()
+const props = defineProps<{
+  passes: Pass[]
+  wallet: Wallet
+  emptyMessage?: string
+  activeTab?: PassStatus
+}>()
+
+const emit = defineEmits<{ renewed: [] }>()
+
 const router        = useRouter()
 const passStore     = usePassStore()
 const whatsappStore = useWhatsAppStore()
@@ -22,6 +30,17 @@ const sendingWaToken = ref<string | null>(null)
 const copiedToken    = ref<string | null>(null)
 const passToDelete   = ref<Pass | null>(null)
 const deleting       = ref(false)
+const passToRenew    = ref<Pass | null>(null)
+const renewing       = ref(false)
+
+const RENEWABLE_WALLET_TYPES = new Set(['stamps', 'points', 'bundle'])
+
+const isCompleted = computed(() => props.activeTab === 'completed')
+const isArchived  = computed(() => props.activeTab === 'archived')
+
+function canRenew(pass: Pass): boolean {
+  return pass.status === 'completed' && RENEWABLE_WALLET_TYPES.has(props.wallet.type)
+}
 
 // ── Actions ────────────────────────────────────────────────────────────────
 function copyLink(token: string) {
@@ -64,6 +83,22 @@ async function confirmDelete() {
   }
 }
 
+async function confirmRenew() {
+  if (!passToRenew.value) return
+  renewing.value = true
+  try {
+    await passStore.renewPass(passToRenew.value.token)
+    passToRenew.value = null
+    toast.show('Pase renovado correctamente', 'success')
+    emit('renewed')
+  } catch (e) {
+    const err = e as { body?: { message?: string } }
+    toast.show(err?.body?.message ?? 'Error al renovar el pase', 'error')
+  } finally {
+    renewing.value = false
+  }
+}
+
 // ── Data derivation ────────────────────────────────────────────────────────
 function getProgress(pass: Pass): { value: number; max: number; text: string } | null {
   const { data } = pass
@@ -82,6 +117,13 @@ function getProgress(pass: Pass): { value: number; max: number; text: string } |
     const r = props.wallet.rules as CashbackRules
     return { value: d.balance, max: d.balance, text: `${r.currency} ${d.balance.toFixed(2)}` }
   }
+  if (data.type === 'bundle') {
+    const d = data as BundleData
+    const r = props.wallet.rules as BundleRules
+    const used = r.totalUses - d.remainingUses
+    const text = d.remainingUses === 0 ? 'Sin usos restantes' : `${d.remainingUses} usos restantes`
+    return { value: used, max: r.totalUses, text }
+  }
   return null
 }
 
@@ -95,7 +137,7 @@ function formatExpiresAt(iso: string | null | undefined): { label: string; ok: b
   return { label: `Vence el ${formatted}`, ok: true }
 }
 
-function getStatusBadge(pass: Pass): { label: string; ok: boolean } | null {
+function getDataBadge(pass: Pass): { label: string; ok: boolean } | null {
   if (pass.data.type === 'daypass') {
     const used = (pass.data as DaypassData).used
     return { label: used ? 'Usado' : 'Válido', ok: !used }
@@ -116,6 +158,12 @@ function getStatusBadge(pass: Pass): { label: string; ok: boolean } | null {
   return null
 }
 
+function getStatusBadge(pass: Pass): { label: string; variant: 'completed' | 'archived' } | null {
+  if (pass.status === 'completed') return { label: 'Completado', variant: 'completed' }
+  if (pass.status === 'archived')  return { label: 'Archivado',  variant: 'archived' }
+  return null
+}
+
 function relativeDate(iso: string): string {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
   if (days === 0) return 'Hoy'
@@ -132,7 +180,7 @@ function getInitials(pass: Pass): string {
 function getExpiryLabel(pass: Pass): string | null {
   const { data } = pass
   let expiresAt: string | null | undefined
-  if (data.type === 'stamps')   expiresAt = (data as StampsData).expiresAt
+  if (data.type === 'stamps')        expiresAt = (data as StampsData).expiresAt
   else if (data.type === 'points')   expiresAt = (data as PointsData).expiresAt
   else if (data.type === 'cashback') expiresAt = (data as CashbackData).expiresAt
   else return null
@@ -144,15 +192,16 @@ function getExpiryLabel(pass: Pass): string | null {
   return `Vence el ${date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}`
 }
 
-// Pre-compute once — no repeated calls in the template
 const rows = computed(() => props.passes.map(pass => ({
   pass,
-  progress:   getProgress(pass),
-  badge:      getStatusBadge(pass),
-  expiry:     getExpiryLabel(pass),
-  date:       relativeDate(pass.createdAt),
-  initials:   getInitials(pass),
-  passUrl:    `/w/${pass.token}`,
+  progress:     getProgress(pass),
+  badge:        getDataBadge(pass),
+  statusBadge:  getStatusBadge(pass),
+  expiry:       getExpiryLabel(pass),
+  date:         relativeDate(pass.createdAt),
+  initials:     getInitials(pass),
+  passUrl:      `/w/${pass.token}`,
+  showRenew:    canRenew(pass),
 })))
 </script>
 
@@ -182,6 +231,12 @@ const rows = computed(() => props.passes.map(pass => ({
           <div class="pc-identity">
             <span class="pc-name">{{ row.pass.firstName }} {{ row.pass.lastName }}</span>
             <span v-if="row.pass.phone" class="pc-phone">{{ row.pass.phone }}</span>
+            <!-- Status badge (completed / archived) -->
+            <span
+              v-if="row.statusBadge"
+              class="pc-status-badge"
+              :class="`pc-status-badge--${row.statusBadge.variant}`"
+            >{{ row.statusBadge.label }}</span>
           </div>
           <span class="pc-date">{{ row.date }}</span>
         </div>
@@ -191,7 +246,7 @@ const rows = computed(() => props.passes.map(pass => ({
           <div class="pc-progress-header">
             <span class="pc-progress-text">{{ row.progress.text }}</span>
             <span
-              v-if="row.progress.value >= row.progress.max"
+              v-if="row.progress.value >= row.progress.max && wallet.type !== 'bundle'"
               class="pc-reward"
             >🎉 Recompensa lista</span>
           </div>
@@ -218,51 +273,75 @@ const rows = computed(() => props.passes.map(pass => ({
 
         <!-- Action bar -->
         <div class="pc-actions">
-          <button
-            class="pc-action-btn"
-            :class="{ 'pc-action-btn--copied': copiedToken === row.pass.token }"
-            @click="copyLink(row.pass.token)"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-            </svg>
-            {{ copiedToken === row.pass.token ? '¡Copiado!' : 'Copiar' }}
-          </button>
 
-          <a :href="row.passUrl" target="_blank" class="pc-action-btn">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/>
-            </svg>
-            Ver
-          </a>
+          <!-- Activos: copy + view + WA + delete -->
+          <template v-if="!isCompleted && !isArchived">
+            <button
+              class="pc-action-btn"
+              :class="{ 'pc-action-btn--copied': copiedToken === row.pass.token }"
+              @click="copyLink(row.pass.token)"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+              </svg>
+              {{ copiedToken === row.pass.token ? '¡Copiado!' : 'Copiar' }}
+            </button>
 
-          <button
-            class="pc-action-btn pc-action-btn--wa"
-            :disabled="sendingWaToken === row.pass.token"
-            @click="sendWhatsApp(row.pass)"
-          >
-            <svg v-if="sendingWaToken !== row.pass.token" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
-            </svg>
-            <svg v-else width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="spin">
-              <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
-            </svg>
-            WA
-          </button>
+            <a :href="row.passUrl" target="_blank" class="pc-action-btn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/>
+              </svg>
+              Ver
+            </a>
 
-          <!-- Spacer -->
-          <div style="flex: 1;" />
+            <button
+              class="pc-action-btn pc-action-btn--wa"
+              :disabled="sendingWaToken === row.pass.token"
+              @click="sendWhatsApp(row.pass)"
+            >
+              <svg v-if="sendingWaToken !== row.pass.token" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
+              </svg>
+              <svg v-else width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="spin">
+                <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
+              </svg>
+              WA
+            </button>
 
-          <button
-            class="pc-delete-btn"
-            title="Eliminar pase"
-            @click="passToDelete = row.pass"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
-              <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
-            </svg>
-          </button>
+            <div style="flex: 1;" />
+
+            <button class="pc-delete-btn" title="Eliminar pase" @click="passToDelete = row.pass">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+              </svg>
+            </button>
+          </template>
+
+          <!-- Completados: renew + delete -->
+          <template v-else-if="isCompleted">
+            <button
+              v-if="row.showRenew"
+              class="pc-action-btn pc-action-btn--renew"
+              @click="passToRenew = row.pass"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+              </svg>
+              Renovar
+            </button>
+
+            <div style="flex: 1;" />
+
+            <button class="pc-delete-btn" title="Eliminar pase" @click="passToDelete = row.pass">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+              </svg>
+            </button>
+          </template>
+
+          <!-- Archivados: solo lectura, sin acciones -->
         </div>
       </div>
     </div>
@@ -275,7 +354,7 @@ const rows = computed(() => props.passes.map(pass => ({
             <th>Usuario</th>
             <th>Progreso</th>
             <th>Creado</th>
-            <th>Acciones</th>
+            <th v-if="!isArchived">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -290,6 +369,12 @@ const rows = computed(() => props.passes.map(pass => ({
               <div>
                 <p class="tbl-name">{{ row.pass.firstName }} {{ row.pass.lastName }}</p>
                 <p v-if="row.pass.phone" class="tbl-phone">{{ row.pass.phone }}</p>
+                <!-- Status badge (completed / archived) -->
+                <span
+                  v-if="row.statusBadge"
+                  class="tbl-status-badge"
+                  :class="`tbl-status-badge--${row.statusBadge.variant}`"
+                >{{ row.statusBadge.label }}</span>
               </div>
             </td>
 
@@ -306,7 +391,7 @@ const rows = computed(() => props.passes.map(pass => ({
                     }"
                   />
                 </div>
-                <p v-if="row.progress.value >= row.progress.max" class="tbl-reward">🎉 Recompensa lista</p>
+                <p v-if="row.progress.value >= row.progress.max && wallet.type !== 'bundle'" class="tbl-reward">🎉 Recompensa lista</p>
                 <p v-else-if="row.expiry" class="tbl-expiry" :class="{ 'tbl-expiry--warn': row.expiry === 'Vencido' || row.expiry === 'Vence hoy' }">
                   {{ row.expiry }}
                 </p>
@@ -321,39 +406,54 @@ const rows = computed(() => props.passes.map(pass => ({
             <!-- Fecha -->
             <td class="td-date">{{ row.date }}</td>
 
-            <!-- Acciones -->
-            <td class="td-actions">
+            <!-- Acciones: Activos -->
+            <td v-if="!isArchived" class="td-actions">
+              <template v-if="!isCompleted">
+                <button
+                  class="tbl-icon-btn"
+                  :class="{ 'tbl-icon-btn--copied': copiedToken === row.pass.token }"
+                  :title="copiedToken === row.pass.token ? '¡Copiado!' : 'Copiar enlace'"
+                  @click="copyLink(row.pass.token)"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  </svg>
+                </button>
+
+                <a :href="row.passUrl" target="_blank" class="tbl-icon-btn" title="Ver pase">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/>
+                  </svg>
+                </a>
+
+                <button
+                  class="tbl-icon-btn tbl-icon-btn--wa"
+                  :disabled="sendingWaToken === row.pass.token"
+                  title="Enviar por WhatsApp"
+                  @click="sendWhatsApp(row.pass)"
+                >
+                  <svg v-if="sendingWaToken !== row.pass.token" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
+                  </svg>
+                  <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="spin">
+                    <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
+                  </svg>
+                </button>
+              </template>
+
+              <!-- Completados: renew -->
               <button
-                class="tbl-icon-btn"
-                :class="{ 'tbl-icon-btn--copied': copiedToken === row.pass.token }"
-                :title="copiedToken === row.pass.token ? '¡Copiado!' : 'Copiar enlace'"
-                @click="copyLink(row.pass.token)"
+                v-if="isCompleted && row.showRenew"
+                class="tbl-icon-btn tbl-icon-btn--renew"
+                title="Renovar pase"
+                @click="passToRenew = row.pass"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  <path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
                 </svg>
               </button>
 
-              <a :href="row.passUrl" target="_blank" class="tbl-icon-btn" title="Ver pase">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/>
-                </svg>
-              </a>
-
-              <button
-                class="tbl-icon-btn tbl-icon-btn--wa"
-                :disabled="sendingWaToken === row.pass.token"
-                title="Enviar por WhatsApp"
-                @click="sendWhatsApp(row.pass)"
-              >
-                <svg v-if="sendingWaToken !== row.pass.token" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
-                </svg>
-                <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="spin">
-                  <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
-                </svg>
-              </button>
-
+              <!-- Siempre: delete (excepto archivados) -->
               <button
                 class="tbl-icon-btn tbl-icon-btn--danger"
                 title="Eliminar pase"
@@ -375,13 +475,9 @@ const rows = computed(() => props.passes.map(pass => ({
   <!-- ── Delete confirmation modal ─────────────────────────────────────── -->
   <Teleport to="body">
     <Transition name="modal">
-      <div
-        v-if="passToDelete"
-        class="modal-backdrop"
-        @click.self="passToDelete = null"
-      >
+      <div v-if="passToDelete" class="modal-backdrop" @click.self="passToDelete = null">
         <div class="modal-card">
-          <div class="modal-icon">
+          <div class="modal-icon modal-icon--danger">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
               <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
@@ -396,14 +492,44 @@ const rows = computed(() => props.passes.map(pass => ({
             </p>
           </div>
           <div class="modal-actions">
-            <button class="modal-btn-cancel" :disabled="deleting" @click="passToDelete = null">
-              Cancelar
-            </button>
-            <button class="modal-btn-confirm" :disabled="deleting" @click="confirmDelete">
+            <button class="modal-btn-cancel" :disabled="deleting" @click="passToDelete = null">Cancelar</button>
+            <button class="modal-btn-confirm modal-btn-confirm--danger" :disabled="deleting" @click="confirmDelete">
               <svg v-if="deleting" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="spin">
                 <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
               </svg>
               {{ deleting ? 'Eliminando…' : 'Eliminar' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+
+  <!-- ── Renew confirmation modal ──────────────────────────────────────── -->
+  <Teleport to="body">
+    <Transition name="modal">
+      <div v-if="passToRenew" class="modal-backdrop" @click.self="passToRenew = null">
+        <div class="modal-card">
+          <div class="modal-icon modal-icon--renew">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            </svg>
+          </div>
+          <div>
+            <p class="modal-title">Renovar pase</p>
+            <p class="modal-body">
+              ¿Renovar el pase de
+              <strong>{{ passToRenew.firstName }} {{ passToRenew.lastName }}</strong>?
+              Se creará un nuevo pase en cero y este quedará archivado.
+            </p>
+          </div>
+          <div class="modal-actions">
+            <button class="modal-btn-cancel" :disabled="renewing" @click="passToRenew = null">Cancelar</button>
+            <button class="modal-btn-confirm modal-btn-confirm--renew" :disabled="renewing" @click="confirmRenew">
+              <svg v-if="renewing" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="spin">
+                <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
+              </svg>
+              {{ renewing ? 'Renovando…' : 'Renovar' }}
             </button>
           </div>
         </div>
@@ -425,10 +551,7 @@ const rows = computed(() => props.passes.map(pass => ({
 }
 
 /* ── Mobile cards (default: visible) ── */
-.pass-cards {
-  display: flex;
-  flex-direction: column;
-}
+.pass-cards { display: flex; flex-direction: column; }
 
 .pass-card {
   padding: 16px;
@@ -440,14 +563,9 @@ const rows = computed(() => props.passes.map(pass => ({
   transition: background 0.12s;
 }
 .pass-card:last-child { border-bottom: none; }
-.pass-card:active { background: var(--bg-surface); }
 
 /* Top row */
-.pc-top {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+.pc-top { display: flex; align-items: center; gap: 10px; }
 
 .pc-avatar {
   width: 38px;
@@ -477,16 +595,21 @@ const rows = computed(() => props.passes.map(pass => ({
   text-overflow: ellipsis;
 }
 
-.pc-phone {
-  font-size: 11.5px;
-  color: var(--text-nav-icon);
-}
+.pc-phone { font-size: 11.5px; color: var(--text-nav-icon); }
 
-.pc-date {
-  font-size: 11px;
-  color: var(--text-faint);
-  flex-shrink: 0;
+.pc-date { font-size: 11px; color: var(--text-faint); flex-shrink: 0; }
+
+/* Status badge (mobile) */
+.pc-status-badge {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  width: fit-content;
 }
+.pc-status-badge--completed { background: var(--primary-light); color: var(--success); }
+.pc-status-badge--archived  { background: var(--bg-subtle); color: var(--text-muted); }
 
 /* Progress */
 .pc-progress { display: flex; flex-direction: column; gap: 5px; }
@@ -498,59 +621,24 @@ const rows = computed(() => props.passes.map(pass => ({
   gap: 8px;
 }
 
-.pc-progress-text {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-medium);
-}
+.pc-progress-text { font-size: 12px; font-weight: 600; color: var(--text-medium); }
+.pc-reward { font-size: 11px; font-weight: 600; color: var(--success); }
 
-.pc-reward {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--success);
-}
+.pc-expiry { font-size: 10.5px; font-weight: 500; color: var(--text-faint); }
+.pc-expiry--warn { color: var(--danger); font-weight: 600; }
 
-.pc-expiry {
-  font-size: 10.5px;
-  font-weight: 500;
-  color: var(--text-faint);
-}
-.pc-expiry--warn {
-  color: var(--danger);
-  font-weight: 600;
-}
-
-.pc-bar-track {
-  height: 5px;
-  background: var(--border);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.pc-bar-fill {
-  height: 100%;
-  border-radius: 999px;
-  transition: width 0.4s ease;
-}
+.pc-bar-track { height: 5px; background: var(--border); border-radius: 999px; overflow: hidden; }
+.pc-bar-fill  { height: 100%; border-radius: 999px; transition: width 0.4s ease; }
 
 /* Badge */
 .pc-badge-row { display: flex; }
 
-.pc-badge {
-  font-size: 11.5px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 999px;
-}
+.pc-badge { font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
 .pc-badge--ok   { background: var(--primary-light); color: var(--success); }
 .pc-badge--warn { background: var(--danger-bg); color: var(--danger); }
 
 /* Action bar */
-.pc-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
+.pc-actions { display: flex; align-items: center; gap: 4px; }
 
 .pc-action-btn {
   display: inline-flex;
@@ -570,9 +658,11 @@ const rows = computed(() => props.passes.map(pass => ({
   -webkit-tap-highlight-color: transparent;
 }
 .pc-action-btn:hover { background: var(--bg-subtle); }
-.pc-action-btn--copied { background: var(--primary-light); border-color: var(--primary-light); color: var(--success); }
-.pc-action-btn--wa { color: var(--success); border-color: var(--success-bg); background: var(--success-bg); }
+.pc-action-btn--copied  { background: var(--primary-light); border-color: var(--primary-light); color: var(--success); }
+.pc-action-btn--wa      { color: var(--success); border-color: var(--success-bg); background: var(--success-bg); }
 .pc-action-btn--wa:hover { background: color-mix(in srgb, var(--success) 18%, transparent); border-color: var(--success); }
+.pc-action-btn--renew   { color: var(--success); border-color: var(--success-bg); background: var(--success-bg); }
+.pc-action-btn--renew:hover { background: color-mix(in srgb, var(--success) 18%, transparent); border-color: var(--success); }
 .pc-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .pc-delete-btn {
@@ -590,23 +680,18 @@ const rows = computed(() => props.passes.map(pass => ({
   transition: background 0.12s;
   -webkit-tap-highlight-color: transparent;
 }
-.pc-delete-btn:hover { background: var(--danger-bg); }
+.pc-delete-btn:hover { background: color-mix(in srgb, var(--danger) 18%, transparent); }
 
 /* ── Desktop table (hidden on mobile) ── */
 .pass-table-wrap { display: none; overflow-x: auto; }
 
-/* ── Responsive breakpoint ── */
 @media (min-width: 768px) {
   .pass-cards      { display: none; }
   .pass-table-wrap { display: block; }
 }
 
 /* Table */
-.pass-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
+.pass-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 
 .pass-table thead tr {
   font-size: 10.5px;
@@ -618,26 +703,14 @@ const rows = computed(() => props.passes.map(pass => ({
   border-bottom: 1px solid var(--border);
 }
 
-.pass-table thead th {
-  text-align: left;
-  padding: 10px 16px;
-  white-space: nowrap;
-}
+.pass-table thead th { text-align: left; padding: 10px 16px; white-space: nowrap; }
 
-.pass-row {
-  border-bottom: 1px solid var(--bg-subtle);
-  transition: background 0.1s;
-}
+.pass-row { border-bottom: 1px solid var(--bg-subtle); transition: background 0.1s; }
 .pass-row:hover { background: var(--bg-surface); }
 .pass-row:last-child { border-bottom: none; }
 
 /* Cells */
-.td-user {
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+.td-user { padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
 
 .tbl-avatar {
   width: 32px;
@@ -650,75 +723,38 @@ const rows = computed(() => props.passes.map(pass => ({
   flex-shrink: 0;
 }
 
-.tbl-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-ink);
-  margin: 0;
-}
+.tbl-name  { font-size: 13px; font-weight: 600; color: var(--text-ink); margin: 0; }
+.tbl-phone { font-size: 11px; color: var(--text-nav-icon); margin: 2px 0 0; }
 
-.tbl-phone {
-  font-size: 11px;
-  color: var(--text-nav-icon);
-  margin: 2px 0 0;
+/* Status badge (desktop) */
+.tbl-status-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 999px;
+  margin-top: 4px;
 }
+.tbl-status-badge--completed { background: var(--primary-light); color: var(--success); }
+.tbl-status-badge--archived  { background: var(--bg-subtle); color: var(--text-muted); }
 
 .td-progress { padding: 12px 16px; min-width: 160px; }
 
-.tbl-progress-text {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--text-medium);
-  margin: 0 0 5px;
-}
+.tbl-progress-text { font-size: 11.5px; font-weight: 600; color: var(--text-medium); margin: 0 0 5px; }
 
-.tbl-bar-track {
-  height: 5px;
-  background: var(--border);
-  border-radius: 999px;
-  overflow: hidden;
-}
+.tbl-bar-track { height: 5px; background: var(--border); border-radius: 999px; overflow: hidden; }
+.tbl-bar-fill  { height: 100%; border-radius: 999px; transition: width 0.4s ease; }
 
-.tbl-bar-fill {
-  height: 100%;
-  border-radius: 999px;
-  transition: width 0.4s ease;
-}
+.tbl-reward { font-size: 10.5px; color: var(--success); font-weight: 600; margin: 4px 0 0; }
 
-.tbl-reward {
-  font-size: 10.5px;
-  color: var(--success);
-  font-weight: 600;
-  margin: 4px 0 0;
-}
+.tbl-expiry { font-size: 10.5px; color: var(--text-faint); font-weight: 500; margin: 4px 0 0; }
+.tbl-expiry--warn { color: var(--danger); font-weight: 600; }
 
-.tbl-expiry {
-  font-size: 10.5px;
-  color: var(--text-faint);
-  font-weight: 500;
-  margin: 4px 0 0;
-}
-.tbl-expiry--warn {
-  color: var(--danger);
-  font-weight: 600;
-}
-
-.tbl-badge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 999px;
-}
+.tbl-badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
 .tbl-badge--ok   { background: var(--primary-light); color: var(--success); }
 .tbl-badge--warn { background: var(--danger-bg); color: var(--danger); }
 
-.td-date {
-  padding: 12px 16px;
-  color: var(--text-nav-icon);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
+.td-date    { padding: 12px 16px; color: var(--text-nav-icon); font-size: 12px; white-space: nowrap; }
 .td-actions { padding: 12px 16px; }
 
 /* Icon action buttons */
@@ -737,14 +773,16 @@ const rows = computed(() => props.passes.map(pass => ({
   transition: background 0.12s, color 0.12s, border-color 0.12s;
   margin-right: 4px;
 }
-.tbl-icon-btn:hover { background: var(--bg-page); color: var(--text-ink); }
-.tbl-icon-btn--copied { background: var(--primary-light); border-color: var(--primary-light); color: var(--success); }
-.tbl-icon-btn--wa { color: var(--success); border-color: var(--success-bg); background: var(--success-bg); }
-.tbl-icon-btn--wa:hover { background: color-mix(in srgb, var(--success) 18%, transparent); border-color: var(--success); }
+.tbl-icon-btn:hover         { background: var(--bg-page); color: var(--text-ink); }
+.tbl-icon-btn--copied       { background: var(--primary-light); border-color: var(--primary-light); color: var(--success); }
+.tbl-icon-btn--wa           { color: var(--success); border-color: var(--success-bg); background: var(--success-bg); }
+.tbl-icon-btn--wa:hover     { background: color-mix(in srgb, var(--success) 18%, transparent); border-color: var(--success); }
+.tbl-icon-btn--renew        { color: var(--success); border-color: var(--success-bg); background: var(--success-bg); }
+.tbl-icon-btn--renew:hover  { background: color-mix(in srgb, var(--success) 18%, transparent); border-color: var(--success); }
 .tbl-icon-btn--danger:hover { background: var(--danger-bg); border-color: var(--danger-bg); color: var(--danger); }
-.tbl-icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.tbl-icon-btn:disabled      { opacity: 0.4; cursor: not-allowed; }
 
-/* ── Delete modal ── */
+/* ── Modals ── */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -773,30 +811,16 @@ const rows = computed(() => props.passes.map(pass => ({
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: var(--danger-bg);
   display: grid;
   place-items: center;
 }
+.modal-icon--danger { background: var(--danger-bg); }
+.modal-icon--renew  { background: var(--primary-light); }
 
-.modal-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-ink);
-  margin: 0 0 6px;
-}
+.modal-title { font-size: 15px; font-weight: 700; color: var(--text-ink); margin: 0 0 6px; }
+.modal-body  { font-size: 13px; color: var(--text-muted); margin: 0; line-height: 1.55; }
 
-.modal-body {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin: 0;
-  line-height: 1.55;
-}
-
-.modal-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-}
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
 .modal-btn-cancel {
   padding: 9px 18px;
@@ -808,15 +832,16 @@ const rows = computed(() => props.passes.map(pass => ({
   color: var(--text-medium);
   cursor: pointer;
   font-family: inherit;
+  transition: background 0.15s;
 }
+.modal-btn-cancel:hover:not(:disabled) { background: var(--bg-page); }
 
 .modal-btn-confirm {
   padding: 9px 18px;
   border-radius: 9px;
   border: none;
-  background: var(--danger);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: #fff;
   cursor: pointer;
   font-family: inherit;
@@ -825,6 +850,9 @@ const rows = computed(() => props.passes.map(pass => ({
   gap: 6px;
   transition: opacity 0.15s;
 }
+.modal-btn-confirm--danger { background: var(--danger); }
+.modal-btn-confirm--renew  { background: var(--success); }
+.modal-btn-confirm:hover:not(:disabled) { opacity: 0.88; }
 .modal-btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* ── Transitions ── */
@@ -835,7 +863,6 @@ const rows = computed(() => props.passes.map(pass => ({
 .modal-enter-from   .modal-card,
 .modal-leave-to     .modal-card          { transform: scale(0.96); }
 
-/* ── Spinner ── */
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin 0.8s linear infinite; }
 </style>
