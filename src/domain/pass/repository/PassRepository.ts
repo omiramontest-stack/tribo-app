@@ -1,4 +1,4 @@
-import type { Pass } from '@/domain/pass/entities/Pass'
+import type { Pass, PassStatus } from '@/domain/pass/entities/Pass'
 import type { Wallet } from '@/domain/wallet/entities/Wallet'
 
 export type PassAction = 'add_stamp' | 'add_points' | 'renew_membership' | 'add_cashback' | 'subtract_cashback' | 'use_bundle' | 'add_giftcard' | 'subtract_giftcard' | 'redeem_coupon'
@@ -34,11 +34,14 @@ export interface PaginationMeta {
 
 export interface PassRepository {
   findByToken(token: string, dl?: string): Promise<PassWithWalletRaw | null>
-  findByWalletId(walletId: string, page?: number, search?: string): Promise<{ data: Pass[]; meta: PaginationMeta }>
+  findByWalletId(walletId: string, page?: number, search?: string, status?: PassStatus): Promise<{ data: Pass[]; meta: PaginationMeta }>
   findScanned(walletId: string, page?: number): Promise<{ data: Pass[]; meta: PaginationMeta }>
   save(pass: Pass): Promise<Pass>
   update(pass: Pass): Promise<Pass>
   applyAction(token: string, action: PassAction, options?: ApplyActionOptions): Promise<Pass>
   getTransactions(token: string): Promise<CashbackTransaction[]>
   delete(token: string): Promise<void>
+  renew(token: string): Promise<Pass>
 }
+
+export type { PassStatus }

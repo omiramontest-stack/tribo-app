@@ -21,7 +21,7 @@ export class PassStorageRepository implements PassRepository {
     return null
   }
 
-  async findByWalletId(walletId: string, _page = 1): Promise<{ data: Pass[]; meta: PaginationMeta }> {
+  async findByWalletId(walletId: string, _page = 1, _search = '', _status = 'active'): Promise<{ data: Pass[]; meta: PaginationMeta }> {
     const passes = this._storage.getItem<Pass[]>(this.STORAGE_KEY, [])
     const data = passes.filter((p) => p.walletId === walletId)
     return { data, meta: { total: data.length, page: 1, limit: 20, totalPages: 1 } }
@@ -78,5 +78,9 @@ export class PassStorageRepository implements PassRepository {
   async delete(token: string): Promise<void> {
     const passes = this._storage.getItem<Pass[]>(this.STORAGE_KEY, [])
     this._storage.setItem(this.STORAGE_KEY, passes.filter((p) => p.token !== token))
+  }
+
+  async renew(_token: string): Promise<Pass> {
+    throw new Error('renew not supported in storage repository')
   }
 }

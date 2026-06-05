@@ -11,7 +11,7 @@ import { walletTypeConfig } from '@/app/config/walletTypeConfig'
 import PassTable from '@/app/components/Admin/PassTable.vue'
 import GeneratePassModal from '@/app/components/Admin/GeneratePassModal.vue'
 import WalletEditModal from '@/app/components/Wallet/WalletEditModal.vue'
-import type { Pass } from '@/domain/pass/entities/Pass'
+import type { Pass, PassStatus } from '@/domain/pass/entities/Pass'
 
 const route = useRoute()
 const router = useRouter()
@@ -23,9 +23,9 @@ const orgStore      = useOrganizationStore()
 const id = route.params.id as string
 
 // Modals
-const showModal       = ref(false)   // Generate pass
-const showEditModal   = ref(false)   // Edit wallet
-const showDeleteModal = ref(false)   // Delete confirm
+const showModal       = ref(false)
+const showEditModal   = ref(false)
+const showDeleteModal = ref(false)
 const deleting = ref(false)
 
 // Role gate: only owners and admins can edit wallets
@@ -33,11 +33,17 @@ const canEdit = computed(() => {
   const myMember = orgStore.members.find(m => m.adminId === authStore.admin?.id)
   return myMember?.role === 'owner' || myMember?.role === 'admin'
 })
+
+// Daypass tabs (Activos / Canjeados)
 const activeTab = ref<'pases' | 'canjeados'>('pases')
 const scannedPasses = ref<Pass[]>([])
 const loadingScanned = ref(false)
-const passesPage = ref(1)
 const scannedPage = ref(1)
+
+// Status tabs for non-daypass wallets (Activos / Completados / Archivados)
+const statusTab = ref<PassStatus>('active')
+
+const passesPage = ref(1)
 const displayPasses = ref<Pass[]>([])
 const loadingMore   = ref(false)
 const searching     = ref(false)
@@ -50,18 +56,26 @@ watch(debouncedSearch, async (query) => {
   passesPage.value = 1
   searching.value = true
   try {
-    await passStore.fetchPassesByWallet(id, 1, query)
+    const status = isDaypass.value ? 'active' : statusTab.value
+    await passStore.fetchPassesByWallet(id, 1, query, status)
     displayPasses.value = [...passStore.passes]
   } finally {
     searching.value = false
   }
 })
 
-const searchEmptyMessage = computed(() =>
-  debouncedSearch.value.trim()
-    ? `Sin resultados para "${debouncedSearch.value.trim()}"`
-    : 'No hay pases generados aún.'
-)
+const EMPTY_BY_STATUS: Record<PassStatus, string> = {
+  active:    'No hay pases generados aún.',
+  completed: 'Ningún pase completado aún.',
+  archived:  'No hay pases archivados.',
+}
+
+const searchEmptyMessage = computed(() => {
+  if (debouncedSearch.value.trim()) {
+    return `Sin resultados para "${debouncedSearch.value.trim()}"`
+  }
+  return isDaypass.value ? EMPTY_BY_STATUS.active : EMPTY_BY_STATUS[statusTab.value]
+})
 
 const isDaypass = computed(() => walletStore.currentWallet?.type === 'daypass')
 
@@ -101,8 +115,7 @@ const stats = computed(() => [
 onMounted(async () => {
   await Promise.all([
     walletStore.fetchWalletById(id),
-    passStore.fetchPassesByWallet(id, 1),
-    // Load members only if not already populated (needed for role check)
+    passStore.fetchPassesByWallet(id, 1, '', 'active'),
     orgStore.members.length === 0 && orgStore.activeOrgId
       ? orgStore.fetchMembers(orgStore.activeOrgId)
       : Promise.resolve(),
@@ -112,7 +125,8 @@ onMounted(async () => {
 
 async function goToPassesPage(page: number) {
   passesPage.value = page
-  await passStore.fetchPassesByWallet(id, page, debouncedSearch.value)
+  const status = isDaypass.value ? 'active' : statusTab.value
+  await passStore.fetchPassesByWallet(id, page, debouncedSearch.value, status)
   displayPasses.value = [...passStore.passes]
 }
 
@@ -122,7 +136,8 @@ async function loadMorePasses() {
   loadingMore.value = true
   passesPage.value++
   try {
-    await passStore.fetchPassesByWallet(id, passesPage.value, debouncedSearch.value)
+    const status = isDaypass.value ? 'active' : statusTab.value
+    await passStore.fetchPassesByWallet(id, passesPage.value, debouncedSearch.value, status)
     displayPasses.value = [...displayPasses.value, ...passStore.passes]
   } finally {
     loadingMore.value = false
@@ -130,6 +145,18 @@ async function loadMorePasses() {
 }
 
 useInfiniteScroll(passesSentinelRef, loadMorePasses)
+
+async function switchStatusTab(tab: PassStatus) {
+  statusTab.value = tab
+  passesPage.value = 1
+  searching.value = true
+  try {
+    await passStore.fetchPassesByWallet(id, 1, debouncedSearch.value, tab)
+    displayPasses.value = [...passStore.passes]
+  } finally {
+    searching.value = false
+  }
+}
 
 async function switchTab(tab: 'pases' | 'canjeados') {
   activeTab.value = tab
@@ -168,7 +195,15 @@ async function confirmDelete() {
 
 async function onPassGenerated() {
   passesPage.value = 1
-  await passStore.fetchPassesByWallet(id, 1)
+  await passStore.fetchPassesByWallet(id, 1, '', 'active')
+  displayPasses.value = [...passStore.passes]
+}
+
+async function onPassRenewed() {
+  statusTab.value = 'active'
+  passesPage.value = 1
+  searchQuery.value = ''
+  await passStore.fetchPassesByWallet(id, 1, '', 'active')
   displayPasses.value = [...passStore.passes]
 }
 
@@ -303,10 +338,11 @@ function formatDate(iso: string): string {
 
       <!-- Tab bar / header -->
       <div class="passes-header">
+        <!-- Daypass: Activos / Canjeados -->
         <div v-if="isDaypass" class="tab-group">
           <button
             v-for="tab in [
-              { id: 'pases', label: `Activos (${passStore.passesMeta.total})` },
+              { id: 'pases', label: `Activos (${passStore.passesMetaByStatus.active.total})` },
               { id: 'canjeados', label: 'Canjeados' },
             ]"
             :key="tab.id"
@@ -318,13 +354,25 @@ function formatDate(iso: string): string {
           </button>
         </div>
 
-        <p v-else class="passes-title">
-          Pases
-          <span class="passes-count">{{ passStore.passesMeta.total }}</span>
-        </p>
+        <!-- Non-daypass: Activos / Completados / Archivados -->
+        <div v-else class="tab-group">
+          <button
+            v-for="tab in [
+              { id: 'active',    label: `Activos (${passStore.passesMetaByStatus.active.total})` },
+              { id: 'completed', label: `Completados (${passStore.passesMetaByStatus.completed.total})` },
+              { id: 'archived',  label: `Archivados (${passStore.passesMetaByStatus.archived.total})` },
+            ]"
+            :key="tab.id"
+            class="tab-btn"
+            :class="{ 'tab-btn--active': statusTab === tab.id }"
+            @click="switchStatusTab(tab.id as 'active' | 'completed' | 'archived')"
+          >
+            {{ tab.label }}
+          </button>
+        </div>
 
         <button
-          v-if="activeTab === 'pases'"
+          v-if="isDaypass ? activeTab === 'pases' : statusTab === 'active'"
           class="btn-generate"
           @click="showModal = true"
         >
@@ -335,8 +383,8 @@ function formatDate(iso: string): string {
         </button>
       </div>
 
-      <!-- Search bar (solo tab pases) -->
-      <div v-if="activeTab === 'pases'" class="passes-search">
+      <!-- Search bar (always visible for non-daypass; solo tab pases para daypass) -->
+      <div v-if="isDaypass ? activeTab === 'pases' : true" class="passes-search">
         <div class="search-wrap">
           <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
@@ -361,11 +409,13 @@ function formatDate(iso: string): string {
       </div>
 
       <!-- Active passes -->
-      <template v-if="activeTab === 'pases'">
+      <template v-if="isDaypass ? activeTab === 'pases' : true">
         <PassTable
           :passes="displayPasses"
           :wallet="walletStore.currentWallet!"
           :empty-message="searchEmptyMessage"
+          :active-tab="isDaypass ? 'active' : statusTab"
+          @renewed="onPassRenewed"
         />
         <!-- Sentinel: IntersectionObserver lo detecta en mobile para infinite scroll -->
         <div ref="passesSentinelRef" class="scroll-sentinel" />

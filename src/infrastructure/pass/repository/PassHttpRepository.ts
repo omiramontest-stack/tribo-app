@@ -2,7 +2,7 @@ import 'reflect-metadata'
 import { injectable } from 'inversify'
 
 import type { PassRepository, PassAction, PassWithWalletRaw, CashbackTransaction, ApplyActionOptions, PaginationMeta } from '@/domain/pass/repository/PassRepository'
-import type { Pass } from '@/domain/pass/entities/Pass'
+import type { Pass, PassStatus } from '@/domain/pass/entities/Pass'
 import { apiClient, ApiError } from '@/infrastructure/http/ApiClient'
 
 @injectable()
@@ -17,8 +17,8 @@ export class PassHttpRepository implements PassRepository {
     }
   }
 
-  async findByWalletId(walletId: string, page = 1, search = ''): Promise<{ data: Pass[]; meta: PaginationMeta }> {
-    const params = new URLSearchParams({ page: String(page), limit: '20' })
+  async findByWalletId(walletId: string, page = 1, search = '', status: PassStatus = 'active'): Promise<{ data: Pass[]; meta: PaginationMeta }> {
+    const params = new URLSearchParams({ page: String(page), limit: '20', status })
     if (search.trim()) params.set('search', search.trim())
     return apiClient.get<{ data: Pass[]; meta: PaginationMeta }>(`/wallets/${walletId}/passes?${params}`)
   }
@@ -65,5 +65,9 @@ export class PassHttpRepository implements PassRepository {
 
   async delete(token: string): Promise<void> {
     await apiClient.delete(`/passes/${token}`)
+  }
+
+  async renew(token: string): Promise<Pass> {
+    return apiClient.post<Pass>(`/passes/${token}/renew`)
   }
 }

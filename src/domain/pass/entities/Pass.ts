@@ -1,5 +1,7 @@
 import type { PassData } from './PassData'
 
+export type PassStatus = 'active' | 'completed' | 'archived'
+
 export interface Pass {
   id: string
   walletId: string
@@ -12,6 +14,7 @@ export interface Pass {
   customerName: string
   createdAt: string
   data: PassData
+  status: PassStatus
   dlExpiresAt?: string
   scannedAt?: string
 }

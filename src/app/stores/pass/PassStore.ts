@@ -4,7 +4,7 @@ import { defineStore } from 'pinia'
 import { container } from '@/container'
 import passTypes from '@/infrastructure/pass/di/types'
 import { useOrganizationStore } from '@/app/stores/organization/OrganizationStore'
-import type { Pass } from '@/domain/pass/entities/Pass'
+import type { Pass, PassStatus } from '@/domain/pass/entities/Pass'
 import type { Wallet } from '@/domain/wallet/entities/Wallet'
 import type { GeneratePassDto } from '@/application/pass/dto/GeneratePassDto'
 import type { UpdatePassDataDto } from '@/application/pass/dto/UpdatePassDataDto'
@@ -16,7 +16,6 @@ export const usePassStore = defineStore('PassStore', () => {
   const orgStore = useOrganizationStore()
   const generatePassUseCase = container.get<UseCase<GeneratePassDto, Pass>>(passTypes.generatePassUseCase)
   const getPassByTokenUseCase = container.get<UseCase<string, PassWithWallet>>(passTypes.getPassByTokenUseCase)
-  const getPassesByWalletUseCase = container.get<UseCase<string, Pass[]>>(passTypes.getPassesByWalletUseCase)
   const updatePassDataUseCase = container.get<UseCase<UpdatePassDataDto, PassWithWallet>>(passTypes.updatePassDataUseCase)
   const deletePassUseCase = container.get<UseCase<string, void>>(passTypes.deletePassUseCase)
   const passRepository = container.get<PassRepository>(passTypes.passRepository)
@@ -28,12 +27,18 @@ export const usePassStore = defineStore('PassStore', () => {
     _currentPass: Pass | null
     _currentPassWallet: Wallet | null
     _passesMeta: PaginationMeta
+    _passesMetaByStatus: Record<PassStatus, PaginationMeta>
     _scannedMeta: PaginationMeta
   }>({
     _passes: [],
     _currentPass: null,
     _currentPassWallet: null,
     _passesMeta: { ...defaultMeta },
+    _passesMetaByStatus: {
+      active:    { ...defaultMeta },
+      completed: { ...defaultMeta },
+      archived:  { ...defaultMeta },
+    },
     _scannedMeta: { ...defaultMeta },
   })
 
@@ -41,6 +46,7 @@ export const usePassStore = defineStore('PassStore', () => {
   const currentPass = computed(() => state._currentPass)
   const currentPassWallet = computed(() => state._currentPassWallet)
   const passesMeta = computed(() => state._passesMeta)
+  const passesMetaByStatus = computed(() => state._passesMetaByStatus)
   const scannedMeta = computed(() => state._scannedMeta)
 
   async function generatePass(dto: Omit<GeneratePassDto, 'orgId'>): Promise<Pass> {
@@ -51,10 +57,11 @@ export const usePassStore = defineStore('PassStore', () => {
     return pass
   }
 
-  async function fetchPassesByWallet(walletId: string, page = 1, search = '') {
-    const { data, meta } = await passRepository.findByWalletId(walletId, page, search)
+  async function fetchPassesByWallet(walletId: string, page = 1, search = '', status: PassStatus = 'active') {
+    const { data, meta } = await passRepository.findByWalletId(walletId, page, search, status)
     state._passes = data
     state._passesMeta = meta
+    state._passesMetaByStatus[status] = meta
   }
 
   async function fetchPassByToken(token: string, dl?: string) {
@@ -99,11 +106,16 @@ export const usePassStore = defineStore('PassStore', () => {
     await apiClient.post(`/passes/${token}/send-link`)
   }
 
+  async function renewPass(token: string): Promise<Pass> {
+    return passRepository.renew(token)
+  }
+
   return {
     passes,
     currentPass,
     currentPassWallet,
     passesMeta,
+    passesMetaByStatus,
     scannedMeta,
     generatePass,
     fetchPassesByWallet,
@@ -113,5 +125,6 @@ export const usePassStore = defineStore('PassStore', () => {
     fetchTransactions,
     fetchScannedPasses,
     sendLink,
+    renewPass,
   }
 })
