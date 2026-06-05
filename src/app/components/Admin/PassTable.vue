@@ -117,6 +117,33 @@ async function confirmUnarchive() {
   }
 }
 
+// ── Delete progress message ────────────────────────────────────────────────
+function getDeleteProgressMessage(pass: Pass): string | null {
+  const { data } = pass
+  if (data.type === 'stamps') {
+    const d = data as StampsData
+    const r = props.wallet.rules as StampsRules
+    if (d.currentStamps === 0) return null
+    return `Este pase tiene ${d.currentStamps}/${r.totalStamps} sellos acumulados.`
+  }
+  if (data.type === 'points') {
+    const d = data as PointsData
+    if (d.currentPoints === 0) return null
+    return `Este pase tiene ${d.currentPoints} puntos acumulados.`
+  }
+  if (data.type === 'bundle') {
+    const d = data as BundleData
+    const r = props.wallet.rules as BundleRules
+    if (d.remainingUses === r.totalUses) return null
+    return `Este pase tiene ${d.remainingUses} usos restantes de ${r.totalUses}.`
+  }
+  return null
+}
+
+const deleteProgressMessage = computed(() =>
+  passToDelete.value ? getDeleteProgressMessage(passToDelete.value) : null,
+)
+
 // ── Data derivation ────────────────────────────────────────────────────────
 function getProgress(pass: Pass): { value: number; max: number; text: string } | null {
   const { data } = pass
@@ -530,7 +557,10 @@ const rows = computed(() => props.passes.map(pass => ({
             <p class="modal-body">
               ¿Eliminar el pase de
               <strong>{{ passToDelete.firstName }} {{ passToDelete.lastName }}</strong>?
-              Esta acción no se puede deshacer.
+              <template v-if="deleteProgressMessage">
+                <br><span class="modal-progress-warn">{{ deleteProgressMessage }}</span>
+              </template>
+              <br>Esta acción no se puede deshacer.
             </p>
           </div>
           <div class="modal-actions">
@@ -896,8 +926,9 @@ const rows = computed(() => props.passes.map(pass => ({
 .modal-icon--renew     { background: var(--primary-light); }
 .modal-icon--unarchive { background: var(--amber-bg); }
 
-.modal-title { font-size: 15px; font-weight: 700; color: var(--text-ink); margin: 0 0 6px; }
-.modal-body  { font-size: 13px; color: var(--text-muted); margin: 0; line-height: 1.55; }
+.modal-title         { font-size: 15px; font-weight: 700; color: var(--text-ink); margin: 0 0 6px; }
+.modal-body          { font-size: 13px; color: var(--text-muted); margin: 0; line-height: 1.7; }
+.modal-progress-warn { font-weight: 600; color: var(--text-medium); }
 
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
