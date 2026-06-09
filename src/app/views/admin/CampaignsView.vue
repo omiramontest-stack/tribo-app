@@ -44,13 +44,15 @@ function deliveredCount(c: Campaign): number | null {
 }
 
 interface SmsCost { segmentsPerMessage: number; creditsNeeded: number; creditsAvailable: number; hasEnough: boolean; exceedsLimit?: boolean }
-interface AudiencePreview { count: number; sample: { firstName: string; lastName: string; phone?: string }[]; smsCost?: SmsCost }
+interface SamplePerson { passToken: string; firstName: string; lastName: string; phone?: string }
+interface AudiencePreview { count: number; sample: SamplePerson[]; smsCost?: SmsCost }
 
 const loading = ref(false)
 const campaigns = ref<Campaign[]>([])
 const activeFilter = ref<string>('all')
 const campaignsPage = ref(1)
 const campaignsMeta = ref({ total: 0, page: 1, limit: 20, totalPages: 1 })
+
 
 const filters = [
   { key: 'all',       label: 'Todas' },
@@ -147,6 +149,24 @@ const creating = ref(false)
 const createError = ref('')
 const audiencePreview = ref<AudiencePreview | null>(null)
 const loadingPreview = ref(false)
+const excludedPeople = ref<SamplePerson[]>([])
+
+const excludedTokens = computed(() => excludedPeople.value.map(p => p.passToken))
+const visibleSample  = computed(() =>
+  (audiencePreview.value?.sample ?? []).filter(p => !excludedTokens.value.includes(p.passToken))
+)
+const adjustedCount  = computed(() =>
+  Math.max(0, (audiencePreview.value?.count ?? 0) - excludedPeople.value.length)
+)
+
+function excludePerson(person: SamplePerson) {
+  if (!excludedPeople.value.some(p => p.passToken === person.passToken)) {
+    excludedPeople.value.push(person)
+  }
+}
+function includePerson(passToken: string) {
+  excludedPeople.value = excludedPeople.value.filter(p => p.passToken !== passToken)
+}
 
 const form = reactive({
   name: '',
@@ -188,6 +208,7 @@ function buildSegment(): Record<string, unknown> {
     base.minEvents = form.minEvents
     if (form.withinDays) base.withinDays = Number(form.withinDays)
   }
+  if (excludedTokens.value.length) base.excludedPassTokens = excludedTokens.value
   return base
 }
 
@@ -253,10 +274,13 @@ async function loadPreview() {
   loadingPreview.value = true
   createError.value = ''
   try {
-    audiencePreview.value = await apiClient.post<AudiencePreview>(
-      '/campaigns/preview-audience',
-      { segment: buildSegment(), channel: form.channel, messageTemplate: form.messageTemplate.trim() || undefined }
-    )
+    const body: Record<string, unknown> = {
+      segment: buildSegment(),
+      channel: form.channel,
+      messageTemplate: form.messageTemplate.trim() || undefined,
+    }
+    if (excludedTokens.value.length) body.excludedPassTokens = excludedTokens.value
+    audiencePreview.value = await apiClient.post<AudiencePreview>('/campaigns/preview-audience', body)
   } catch (e) {
     audiencePreview.value = null
     createError.value = extractApiMessage(e)
@@ -269,6 +293,7 @@ function openModal() {
   step.value = 1
   createError.value = ''
   audiencePreview.value = null
+  excludedPeople.value = []
   form.name = ''
   form.channel = 'sms'
   form.segmentType = 'all_org'
@@ -662,17 +687,26 @@ function closeDetail() { detailCampaign.value = null }
                   </svg>
                 </div>
                 <div>
-                  <div class="audience-count">{{ audiencePreview?.count?.toLocaleString() ?? '—' }}</div>
-                  <div class="audience-label">contactos recibirán esta campaña</div>
+                  <div class="audience-count">{{ adjustedCount.toLocaleString() }}</div>
+                  <div class="audience-label">
+                    contactos recibirán esta campaña
+                    <span v-if="excludedPeople.length" class="excluded-badge">
+                      {{ excludedPeople.length }} excluido{{ excludedPeople.length !== 1 ? 's' : '' }}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div v-if="audiencePreview?.sample?.length" class="audience-sample">
-                <div class="sample-header">Muestra de audiencia</div>
+              <!-- Active audience sample -->
+              <div v-if="visibleSample.length" class="audience-sample">
+                <div class="sample-header">
+                  <span>Audiencia</span>
+                  <span class="sample-hint">Toca × para excluir</span>
+                </div>
                 <div class="sample-list">
                   <div
-                    v-for="(person, i) in audiencePreview.sample.slice(0, 5)"
-                    :key="i"
+                    v-for="(person, i) in visibleSample"
+                    :key="person.passToken"
                     class="sample-row"
                     :class="{ 'sample-row--border': i > 0 }"
                   >
@@ -681,6 +715,30 @@ function closeDetail() { detailCampaign.value = null }
                       <div class="sample-name">{{ person.firstName }} {{ person.lastName }}</div>
                       <div v-if="person.phone" class="sample-phone">{{ person.phone }}</div>
                     </div>
+                    <button class="exclude-btn" title="Excluir de la campaña" @click="excludePerson(person)">×</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Excluded people -->
+              <div v-if="excludedPeople.length" class="audience-sample excluded-section">
+                <div class="sample-header">
+                  <span>Excluidos</span>
+                  <span class="sample-hint">{{ excludedPeople.length }} persona{{ excludedPeople.length !== 1 ? 's' : '' }}</span>
+                </div>
+                <div class="sample-list">
+                  <div
+                    v-for="(person, i) in excludedPeople"
+                    :key="person.passToken"
+                    class="sample-row sample-row--excluded"
+                    :class="{ 'sample-row--border': i > 0 }"
+                  >
+                    <div class="sample-avatar sample-avatar--excluded">{{ (person.firstName || '?')[0].toUpperCase() }}</div>
+                    <div class="sample-info">
+                      <div class="sample-name sample-name--excluded">{{ person.firstName }} {{ person.lastName }}</div>
+                      <div v-if="person.phone" class="sample-phone">{{ person.phone }}</div>
+                    </div>
+                    <button class="undo-btn" title="Deshacer exclusión" @click="includePerson(person.passToken)">↩</button>
                   </div>
                 </div>
               </div>
@@ -1271,8 +1329,9 @@ function closeDetail() { detailCampaign.value = null }
 .audience-label { font-size: 13px; color: var(--text-muted); margin-top: 3px; font-weight: 500; }
 
 .audience-sample { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.excluded-section { opacity: 0.75; }
 .sample-header {
-  padding: 12px 14px;
+  padding: 10px 14px;
   background: var(--bg-page);
   border-bottom: 1px solid var(--border);
   font-size: 11px;
@@ -1280,10 +1339,15 @@ function closeDetail() { detailCampaign.value = null }
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
+.sample-hint { font-size: 10.5px; text-transform: none; letter-spacing: 0; font-weight: 500; opacity: 0.65; }
 .sample-list  { display: flex; flex-direction: column; }
 .sample-row   { display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
 .sample-row--border { border-top: 1px solid var(--bg-subtle); }
+.sample-row--excluded { background: var(--bg-subtle); }
 .sample-avatar {
   width: 28px;
   height: 28px;
@@ -1297,9 +1361,41 @@ function closeDetail() { detailCampaign.value = null }
   color: #fff;
   flex-shrink: 0;
 }
+.sample-avatar--excluded { background: var(--text-faint); }
 .sample-info  { flex: 1; min-width: 0; }
 .sample-name  { font-size: 13px; color: var(--text-ink); font-weight: 500; }
+.sample-name--excluded { color: var(--text-muted); text-decoration: line-through; }
 .sample-phone { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+.exclude-btn {
+  width: 24px; height: 24px;
+  border-radius: 6px; border: none;
+  background: var(--danger-bg); color: var(--danger);
+  font-size: 16px; line-height: 1;
+  cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.15s;
+}
+.sample-row:hover .exclude-btn { opacity: 1; }
+.exclude-btn:hover { opacity: 1 !important; filter: brightness(0.9); }
+
+.undo-btn {
+  width: 24px; height: 24px;
+  border-radius: 6px; border: none;
+  background: var(--bg-subtle); color: var(--text-muted);
+  font-size: 13px; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.undo-btn:hover { background: var(--primary-light, #e0f0ff); color: var(--primary); }
+
+.excluded-badge {
+  display: inline-block;
+  background: var(--danger-bg); color: var(--danger);
+  font-size: 11px; font-weight: 600;
+  padding: 2px 8px; border-radius: 999px;
+  margin-left: 8px; vertical-align: middle;
+}
 
 /* SMS cost */
 .sms-cost-card { border-radius: 10px; overflow: hidden; }
