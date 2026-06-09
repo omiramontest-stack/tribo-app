@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive, nextTick } from 'vue'
+import { ref, computed, onMounted, reactive, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { apiClient, ApiError } from '@/infrastructure/http/ApiClient'
 import { useWalletStore } from '@/app/stores/wallet/WalletStore'
@@ -149,24 +149,39 @@ const creating = ref(false)
 const createError = ref('')
 const audiencePreview = ref<AudiencePreview | null>(null)
 const loadingPreview = ref(false)
-const excludedPeople = ref<SamplePerson[]>([])
+const excludedPeople    = ref<SamplePerson[]>([])
+const selectAllCheckbox = ref<HTMLInputElement | null>(null)
 
 const excludedTokens = computed(() => excludedPeople.value.map(p => p.passToken))
-const visibleSample  = computed(() =>
-  (audiencePreview.value?.sample ?? []).filter(p => !excludedTokens.value.includes(p.passToken))
-)
+const totalSample    = computed(() => audiencePreview.value?.sample?.length ?? 0)
+const allSelected    = computed(() => totalSample.value > 0 && excludedPeople.value.length === 0)
 const adjustedCount  = computed(() =>
   Math.max(0, (audiencePreview.value?.count ?? 0) - excludedPeople.value.length)
 )
 
-function excludePerson(person: SamplePerson) {
-  if (!excludedPeople.value.some(p => p.passToken === person.passToken)) {
+function isPersonSelected(passToken: string): boolean {
+  return !excludedTokens.value.includes(passToken)
+}
+function togglePerson(person: SamplePerson) {
+  if (isPersonSelected(person.passToken)) {
     excludedPeople.value.push(person)
+  } else {
+    excludedPeople.value = excludedPeople.value.filter(p => p.passToken !== person.passToken)
   }
 }
-function includePerson(passToken: string) {
-  excludedPeople.value = excludedPeople.value.filter(p => p.passToken !== passToken)
+function toggleSelectAll() {
+  excludedPeople.value = allSelected.value ? [...(audiencePreview.value?.sample ?? [])] : []
 }
+
+watch(
+  [excludedPeople, totalSample],
+  () => {
+    if (!selectAllCheckbox.value) return
+    const n = excludedPeople.value.length
+    selectAllCheckbox.value.indeterminate = n > 0 && n < totalSample.value
+  },
+  { flush: 'post' },
+)
 
 const form = reactive({
   name: '',
@@ -697,48 +712,44 @@ function closeDetail() { detailCampaign.value = null }
                 </div>
               </div>
 
-              <!-- Active audience sample -->
-              <div v-if="visibleSample.length" class="audience-sample">
+              <!-- Audience sample with checkboxes -->
+              <div v-if="audiencePreview?.sample?.length" class="audience-sample">
                 <div class="sample-header">
-                  <span>Audiencia</span>
-                  <span class="sample-hint">Toca × para excluir</span>
+                  <label class="select-all-label">
+                    <input
+                      ref="selectAllCheckbox"
+                      type="checkbox"
+                      class="sample-checkbox"
+                      :checked="allSelected"
+                      @change="toggleSelectAll"
+                    />
+                    Seleccionar todos
+                  </label>
+                  <span class="sample-hint">{{ totalSample - excludedPeople.length }} / {{ totalSample }}</span>
                 </div>
                 <div class="sample-list">
                   <div
-                    v-for="(person, i) in visibleSample"
+                    v-for="(person, i) in audiencePreview.sample"
                     :key="person.passToken"
-                    class="sample-row"
-                    :class="{ 'sample-row--border': i > 0 }"
+                    class="sample-row sample-row--selectable"
+                    :class="{ 'sample-row--border': i > 0, 'sample-row--excluded': !isPersonSelected(person.passToken) }"
+                    @click="togglePerson(person)"
                   >
-                    <div class="sample-avatar">{{ (person.firstName || '?')[0].toUpperCase() }}</div>
+                    <input
+                      type="checkbox"
+                      class="sample-checkbox"
+                      :checked="isPersonSelected(person.passToken)"
+                      @click.stop.prevent="togglePerson(person)"
+                    />
+                    <div class="sample-avatar" :class="{ 'sample-avatar--excluded': !isPersonSelected(person.passToken) }">
+                      {{ (person.firstName || '?')[0].toUpperCase() }}
+                    </div>
                     <div class="sample-info">
-                      <div class="sample-name">{{ person.firstName }} {{ person.lastName }}</div>
+                      <div class="sample-name" :class="{ 'sample-name--excluded': !isPersonSelected(person.passToken) }">
+                        {{ person.firstName }} {{ person.lastName }}
+                      </div>
                       <div v-if="person.phone" class="sample-phone">{{ person.phone }}</div>
                     </div>
-                    <button class="exclude-btn" title="Excluir de la campaña" @click="excludePerson(person)">×</button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Excluded people -->
-              <div v-if="excludedPeople.length" class="audience-sample excluded-section">
-                <div class="sample-header">
-                  <span>Excluidos</span>
-                  <span class="sample-hint">{{ excludedPeople.length }} persona{{ excludedPeople.length !== 1 ? 's' : '' }}</span>
-                </div>
-                <div class="sample-list">
-                  <div
-                    v-for="(person, i) in excludedPeople"
-                    :key="person.passToken"
-                    class="sample-row sample-row--excluded"
-                    :class="{ 'sample-row--border': i > 0 }"
-                  >
-                    <div class="sample-avatar sample-avatar--excluded">{{ (person.firstName || '?')[0].toUpperCase() }}</div>
-                    <div class="sample-info">
-                      <div class="sample-name sample-name--excluded">{{ person.firstName }} {{ person.lastName }}</div>
-                      <div v-if="person.phone" class="sample-phone">{{ person.phone }}</div>
-                    </div>
-                    <button class="undo-btn" title="Deshacer exclusión" @click="includePerson(person.passToken)">↩</button>
                   </div>
                 </div>
               </div>
@@ -1195,6 +1206,7 @@ function closeDetail() { detailCampaign.value = null }
   padding: 22px;
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1329,65 +1341,54 @@ function closeDetail() { detailCampaign.value = null }
 .audience-label { font-size: 13px; color: var(--text-muted); margin-top: 3px; font-weight: 500; }
 
 .audience-sample { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-.excluded-section { opacity: 0.75; }
 .sample-header {
   padding: 10px 14px;
   background: var(--bg-page);
   border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.select-all-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
   font-size: 11px;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  user-select: none;
 }
-.sample-hint { font-size: 10.5px; text-transform: none; letter-spacing: 0; font-weight: 500; opacity: 0.65; }
+.sample-hint  { font-size: 11px; color: var(--text-faint); }
 .sample-list  { display: flex; flex-direction: column; }
 .sample-row   { display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
-.sample-row--border { border-top: 1px solid var(--bg-subtle); }
-.sample-row--excluded { background: var(--bg-subtle); }
+.sample-row--border    { border-top: 1px solid var(--bg-subtle); }
+.sample-row--selectable { cursor: pointer; transition: background 0.1s; }
+.sample-row--selectable:hover { background: var(--bg-subtle); }
+.sample-row--excluded  { opacity: 0.45; }
 .sample-avatar {
-  width: 28px;
-  height: 28px;
+  width: 28px; height: 28px;
   border-radius: 8px;
   background: var(--primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff;
   flex-shrink: 0;
 }
 .sample-avatar--excluded { background: var(--text-faint); }
 .sample-info  { flex: 1; min-width: 0; }
 .sample-name  { font-size: 13px; color: var(--text-ink); font-weight: 500; }
-.sample-name--excluded { color: var(--text-muted); text-decoration: line-through; }
+.sample-name--excluded { text-decoration: line-through; color: var(--text-muted); }
 .sample-phone { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
 
-.exclude-btn {
-  width: 24px; height: 24px;
-  border-radius: 6px; border: none;
-  background: var(--danger-bg); color: var(--danger);
-  font-size: 16px; line-height: 1;
-  cursor: pointer; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  opacity: 0; transition: opacity 0.15s;
+.sample-checkbox {
+  width: 15px; height: 15px;
+  border-radius: 3px;
+  accent-color: var(--primary);
+  cursor: pointer;
+  flex-shrink: 0;
 }
-.sample-row:hover .exclude-btn { opacity: 1; }
-.exclude-btn:hover { opacity: 1 !important; filter: brightness(0.9); }
-
-.undo-btn {
-  width: 24px; height: 24px;
-  border-radius: 6px; border: none;
-  background: var(--bg-subtle); color: var(--text-muted);
-  font-size: 13px; cursor: pointer; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  transition: background 0.15s, color 0.15s;
-}
-.undo-btn:hover { background: var(--primary-light, #e0f0ff); color: var(--primary); }
 
 .excluded-badge {
   display: inline-block;
