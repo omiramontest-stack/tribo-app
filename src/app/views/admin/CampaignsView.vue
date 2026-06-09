@@ -100,13 +100,13 @@ const statusConfig: Record<CampaignStatus, { label: string; bg: string; color: s
 const channelLabels: Record<Channel, string> = {
   sms:         'SMS',
   email:       'Email',
-  wallet_push: 'WhatsApp',
+  wallet_push: 'Apple Wallet',
 }
 
 const channelIcons: Record<Channel, string> = {
   sms:         '<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>',
   email:       '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>',
-  wallet_push: '<path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.532 5.855L.054 23.454a.5.5 0 0 0 .492.592l5.797-1.52A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.028-1.384l-.36-.214-3.733.979 1-3.64-.235-.374A9.818 9.818 0 1 1 12 21.818z"/>',
+  wallet_push: '<rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>',
 }
 
 const segmentLabels: Record<SegmentType, string> = {
@@ -197,20 +197,23 @@ const selectedWallet = computed(() => walletStore.wallets.find((w) => w.id === f
 
 interface MsgVar { label: string; desc: string }
 const messageVars = computed<MsgVar[]>(() => {
-  const base: MsgVar[] = [
+  const isWalletPush = form.channel === 'wallet_push'
+  const vars: MsgVar[] = [
     { label: '{{firstName}}',       desc: 'Nombre' },
     { label: '{{lastName}}',        desc: 'Apellido' },
     { label: '{{fullName}}',        desc: 'Nombre completo' },
-    { label: '{{phone}}',           desc: 'Teléfono' },
+  ]
+  if (!isWalletPush) vars.push({ label: '{{phone}}', desc: 'Teléfono' })
+  vars.push(
     { label: '{{businessName}}',    desc: 'Negocio' },
     { label: '{{organizationName}}',desc: 'Organización' },
-    { label: '{{passUrl}}',         desc: 'Link al pase' },
-  ]
+  )
+  if (!isWalletPush) vars.push({ label: '{{passUrl}}', desc: 'Link al pase' })
   const type = selectedWallet.value?.type
-  if (type === 'stamps')   base.push({ label: '{{stamps}}',  desc: 'Sellos actuales' })
-  if (type === 'points')   base.push({ label: '{{points}}',  desc: 'Puntos actuales' })
-  if (type === 'cashback') base.push({ label: '{{balance}}', desc: 'Saldo cashback' })
-  return base
+  if (type === 'stamps')   vars.push({ label: '{{stamps}}',  desc: 'Sellos actuales' })
+  if (type === 'points')   vars.push({ label: '{{points}}',  desc: 'Puntos actuales' })
+  if (type === 'cashback') vars.push({ label: '{{balance}}', desc: 'Saldo cashback' })
+  return vars
 })
 
 const messagePreview = computed(() =>
@@ -243,6 +246,8 @@ function insertVar(v: string) {
 }
 
 const msgTooLong = computed(() => form.messageTemplate.length > MSG_MAX)
+const WALLET_PUSH_SOFT_LIMIT = 100
+const msgOverSoftLimit = computed(() => form.channel === 'wallet_push' && form.messageTemplate.length > WALLET_PUSH_SOFT_LIMIT)
 
 async function loadPreview() {
   loadingPreview.value = true
@@ -524,22 +529,20 @@ function closeDetail() { detailCampaign.value = null }
                 <button
                   v-for="ch in (['sms', 'email', 'wallet_push'] as Channel[])"
                   :key="ch"
-                  :disabled="ch === 'wallet_push'"
                   class="channel-btn"
-                  :class="{ 'channel-btn--selected': form.channel === ch, 'channel-btn--disabled': ch === 'wallet_push' }"
-                  @click="ch !== 'wallet_push' && (form.channel = ch)"
+                  :class="{ 'channel-btn--selected': form.channel === ch }"
+                  @click="form.channel = ch"
                 >
                   <svg
                     width="18" height="18" viewBox="0 0 24 24"
-                    :fill="ch === 'wallet_push' ? 'currentColor' : 'none'"
-                    :stroke="ch === 'wallet_push' ? 'none' : (form.channel === ch ? 'var(--primary)' : 'var(--text-faint)')"
+                    fill="none"
+                    :stroke="form.channel === ch ? 'var(--primary)' : 'var(--text-faint)'"
                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                    :style="{ color: ch === 'wallet_push' ? 'var(--text-faint)' : 'inherit' }"
                     v-html="channelIcons[ch]"
                   />
                   <span
                     class="channel-label"
-                    :class="{ 'channel-label--selected': form.channel === ch, 'channel-label--disabled': ch === 'wallet_push' }"
+                    :class="{ 'channel-label--selected': form.channel === ch }"
                   >{{ channelLabels[ch] }}</span>
                 </button>
               </div>
@@ -594,16 +597,29 @@ function closeDetail() { detailCampaign.value = null }
 
           <!-- Step 2: Message -->
           <template v-else-if="step === 2">
+            <div v-if="form.channel === 'wallet_push'" class="info-banner">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink: 0; margin-top: 1px;">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <span>Este mensaje aparece como notificación push en el iPhone. Apple Wallet pone automáticamente el nombre de tu organización como título. Solo llega a usuarios con el pase descargado.</span>
+            </div>
             <div class="field">
               <div class="field-header-row">
                 <label class="field-label">Mensaje <span class="required">*</span></label>
-                <span class="char-count" :class="{ 'char-count--warn': msgTooLong }">{{ form.messageTemplate.length }} / {{ MSG_MAX }}</span>
+                <span
+                  class="char-count"
+                  :class="{ 'char-count--warn': msgTooLong || msgOverSoftLimit }"
+                >
+                  {{ form.messageTemplate.length }} / {{ form.channel === 'wallet_push' ? `${WALLET_PUSH_SOFT_LIMIT} rec.` : MSG_MAX }}
+                </span>
               </div>
               <textarea
                 ref="textareaRef"
                 v-model="form.messageTemplate"
                 class="field-input field-textarea"
-                placeholder="Hola {{firstName}}, tienes una oferta especial esperándote en {{businessName}}…"
+                :placeholder="form.channel === 'wallet_push'
+                  ? '{{firstName}}, tenemos una oferta especial para ti hoy 🎉'
+                  : 'Hola {{firstName}}, tienes una oferta especial esperándote en {{businessName}}…'"
                 maxlength="320"
                 rows="5"
               />
@@ -1341,6 +1357,20 @@ function closeDetail() { detailCampaign.value = null }
 }
 .warn-card--red    { background: var(--danger-bg); border: 1px solid var(--danger-bg); color: var(--danger); }
 .warn-card--yellow { background: var(--warning-bg); border: 1px solid var(--warning-bg); color: var(--warning); }
+
+.info-banner {
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--info-bg, #e8f4fd);
+  border: 1px solid var(--info-border, #b3d9f5);
+  color: var(--info, #0070c9);
+  margin-bottom: 4px;
+}
 
 /* Form error */
 .form-error {

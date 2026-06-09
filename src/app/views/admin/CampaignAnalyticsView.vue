@@ -115,7 +115,7 @@ const statusConfig: Record<CampaignStatus, { label: string; bg: string; color: s
   cancelled: { label: 'Cancelada',  bg: 'var(--danger-bg)', color: 'var(--danger)' },
 }
 
-const channelLabels: Record<Channel, string>   = { sms: 'SMS', email: 'Email', wallet_push: 'WhatsApp' }
+const channelLabels: Record<Channel, string>   = { sms: 'SMS', email: 'Email', wallet_push: 'Apple Wallet' }
 const segmentLabels: Record<SegmentType, string> = {
   all_org:              'Toda la organización',
   all_wallet:           'Todos los clientes del wallet',
