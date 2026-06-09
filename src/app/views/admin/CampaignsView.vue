@@ -102,7 +102,7 @@ const statusConfig: Record<CampaignStatus, { label: string; bg: string; color: s
 const channelLabels: Record<Channel, string> = {
   sms:         'SMS',
   email:       'Email',
-  wallet_push: 'Apple Wallet',
+  wallet_push: 'Push',
 }
 
 const channelIcons: Record<Channel, string> = {
@@ -149,36 +149,43 @@ const creating = ref(false)
 const createError = ref('')
 const audiencePreview = ref<AudiencePreview | null>(null)
 const loadingPreview = ref(false)
-const excludedPeople    = ref<SamplePerson[]>([])
+// selectedTokens tracks who WILL receive (selected = included).
+// Using a Set with full reference replacement so Vue detects every change.
+const selectedTokens    = ref<Set<string>>(new Set())
 const selectAllCheckbox = ref<HTMLInputElement | null>(null)
 
+const excludedPeople = computed(() =>
+  (audiencePreview.value?.sample ?? []).filter(p => !selectedTokens.value.has(p.passToken))
+)
 const excludedTokens = computed(() => excludedPeople.value.map(p => p.passToken))
 const totalSample    = computed(() => audiencePreview.value?.sample?.length ?? 0)
-const allSelected    = computed(() => totalSample.value > 0 && excludedPeople.value.length === 0)
+const allSelected    = computed(() =>
+  totalSample.value > 0 && selectedTokens.value.size === totalSample.value
+)
 const adjustedCount  = computed(() =>
   Math.max(0, (audiencePreview.value?.count ?? 0) - excludedPeople.value.length)
 )
 
 function isPersonSelected(passToken: string): boolean {
-  return !excludedTokens.value.includes(passToken)
+  return selectedTokens.value.has(passToken)
 }
-function togglePerson(person: SamplePerson) {
-  if (isPersonSelected(person.passToken)) {
-    excludedPeople.value.push(person)
-  } else {
-    excludedPeople.value = excludedPeople.value.filter(p => p.passToken !== person.passToken)
-  }
+function togglePerson(passToken: string) {
+  const next = new Set(selectedTokens.value)
+  next.has(passToken) ? next.delete(passToken) : next.add(passToken)
+  selectedTokens.value = next
 }
 function toggleSelectAll() {
-  excludedPeople.value = allSelected.value ? [...(audiencePreview.value?.sample ?? [])] : []
+  selectedTokens.value = allSelected.value
+    ? new Set()
+    : new Set((audiencePreview.value?.sample ?? []).map(p => p.passToken))
 }
 
 watch(
-  [excludedPeople, totalSample],
+  () => selectedTokens.value.size,
   () => {
     if (!selectAllCheckbox.value) return
-    const n = excludedPeople.value.length
-    selectAllCheckbox.value.indeterminate = n > 0 && n < totalSample.value
+    const size = selectedTokens.value.size
+    selectAllCheckbox.value.indeterminate = size > 0 && size < totalSample.value
   },
   { flush: 'post' },
 )
@@ -296,6 +303,7 @@ async function loadPreview() {
     }
     if (excludedTokens.value.length) body.excludedPassTokens = excludedTokens.value
     audiencePreview.value = await apiClient.post<AudiencePreview>('/campaigns/preview-audience', body)
+    selectedTokens.value = new Set((audiencePreview.value?.sample ?? []).map(p => p.passToken))
   } catch (e) {
     audiencePreview.value = null
     createError.value = extractApiMessage(e)
@@ -308,7 +316,7 @@ function openModal() {
   step.value = 1
   createError.value = ''
   audiencePreview.value = null
-  excludedPeople.value = []
+  selectedTokens.value = new Set()
   form.name = ''
   form.channel = 'sms'
   form.segmentType = 'all_org'
@@ -641,7 +649,7 @@ function closeDetail() { detailCampaign.value = null }
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink: 0; margin-top: 1px;">
                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
               </svg>
-              <span>Este mensaje aparece como notificación push en el iPhone. Apple Wallet pone automáticamente el nombre de tu organización como título. Solo llega a usuarios con el pase descargado.</span>
+              <span>Este mensaje aparece como notificación push en el iPhone. El nombre de tu organización se usa automáticamente como título. Solo llega a usuarios con el pase descargado.</span>
             </div>
             <div class="field">
               <div class="field-header-row">
@@ -733,13 +741,13 @@ function closeDetail() { detailCampaign.value = null }
                     :key="person.passToken"
                     class="sample-row sample-row--selectable"
                     :class="{ 'sample-row--border': i > 0, 'sample-row--excluded': !isPersonSelected(person.passToken) }"
-                    @click="togglePerson(person)"
+                    @click="togglePerson(person.passToken)"
                   >
                     <input
                       type="checkbox"
                       class="sample-checkbox"
                       :checked="isPersonSelected(person.passToken)"
-                      @click.stop.prevent="togglePerson(person)"
+                      @click.stop.prevent="togglePerson(person.passToken)"
                     />
                     <div class="sample-avatar" :class="{ 'sample-avatar--excluded': !isPersonSelected(person.passToken) }">
                       {{ (person.firstName || '?')[0].toUpperCase() }}
@@ -1207,10 +1215,8 @@ function closeDetail() { detailCampaign.value = null }
   overflow-y: auto;
   flex: 1;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
 }
+.modal-body > * + * { margin-top: 16px; }
 .modal-footer {
   padding: 16px 22px;
   border-top: 1px solid var(--border);
