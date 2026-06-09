@@ -44,7 +44,7 @@ function deliveredCount(c: Campaign): number | null {
 }
 
 interface SmsCost { segmentsPerMessage: number; creditsNeeded: number; creditsAvailable: number; hasEnough: boolean; exceedsLimit?: boolean }
-interface SamplePerson { passToken: string; firstName: string; lastName: string; phone?: string }
+interface SamplePerson { id: string; firstName: string; lastName: string; phone?: string }
 interface AudiencePreview { count: number; sample: SamplePerson[]; smsCost?: SmsCost }
 
 const loading = ref(false)
@@ -154,9 +154,9 @@ const selectedTokens    = ref<Set<string>>(new Set())
 const selectAllCheckbox = ref<HTMLInputElement | null>(null)
 
 const excludedPeople = computed(() =>
-  (audiencePreview.value?.sample ?? []).filter(p => selectedTokens.value.has(p.passToken))
+  (audiencePreview.value?.sample ?? []).filter(p => selectedTokens.value.has(p.id))
 )
-const excludedTokens = computed(() => excludedPeople.value.map(p => p.passToken))
+const excludedIds    = computed(() => excludedPeople.value.map(p => p.id))
 const totalSample    = computed(() => audiencePreview.value?.sample?.length ?? 0)
 const allSelected    = computed(() =>
   totalSample.value > 0 && selectedTokens.value.size === totalSample.value
@@ -165,18 +165,18 @@ const adjustedCount  = computed(() =>
   Math.max(0, (audiencePreview.value?.count ?? 0) - excludedPeople.value.length)
 )
 
-function isPersonSelected(passToken: string): boolean {
-  return selectedTokens.value.has(passToken)
+function isPersonSelected(id: string): boolean {
+  return selectedTokens.value.has(id)
 }
-function togglePerson(passToken: string) {
+function togglePerson(id: string) {
   const next = new Set(selectedTokens.value)
-  next.has(passToken) ? next.delete(passToken) : next.add(passToken)
+  next.has(id) ? next.delete(id) : next.add(id)
   selectedTokens.value = next
 }
 function toggleSelectAll() {
   selectedTokens.value = allSelected.value
     ? new Set()
-    : new Set((audiencePreview.value?.sample ?? []).map(p => p.passToken))
+    : new Set((audiencePreview.value?.sample ?? []).map(p => p.id))
 }
 
 watch(
@@ -229,7 +229,7 @@ function buildSegment(): Record<string, unknown> {
     base.minEvents = form.minEvents
     if (form.withinDays) base.withinDays = Number(form.withinDays)
   }
-  if (excludedTokens.value.length) base.excludedPassTokens = excludedTokens.value
+  if (excludedIds.value.length) base.excludedIds = excludedIds.value
   return base
 }
 
@@ -738,22 +738,22 @@ function closeDetail() { detailCampaign.value = null }
                 <div class="sample-list">
                   <div
                     v-for="(person, i) in audiencePreview.sample"
-                    :key="person.passToken"
+                    :key="person.id"
                     class="sample-row sample-row--selectable"
-                    :class="{ 'sample-row--border': i > 0, 'sample-row--excluded': isPersonSelected(person.passToken) }"
-                    @click="togglePerson(person.passToken)"
+                    :class="{ 'sample-row--border': i > 0, 'sample-row--excluded': isPersonSelected(person.id) }"
+                    @click="togglePerson(person.id)"
                   >
                     <input
                       type="checkbox"
                       class="sample-checkbox"
-                      :checked="isPersonSelected(person.passToken)"
-                      @click.stop.prevent="togglePerson(person.passToken)"
+                      :checked="isPersonSelected(person.id)"
+                      @click.stop.prevent="togglePerson(person.id)"
                     />
-                    <div class="sample-avatar" :class="{ 'sample-avatar--excluded': isPersonSelected(person.passToken) }">
+                    <div class="sample-avatar" :class="{ 'sample-avatar--excluded': isPersonSelected(person.id) }">
                       {{ (person.firstName || '?')[0].toUpperCase() }}
                     </div>
                     <div class="sample-info">
-                      <div class="sample-name" :class="{ 'sample-name--excluded': isPersonSelected(person.passToken) }">
+                      <div class="sample-name" :class="{ 'sample-name--excluded': isPersonSelected(person.id) }">
                         {{ person.firstName }} {{ person.lastName }}
                       </div>
                       <div v-if="person.phone" class="sample-phone">{{ person.phone }}</div>
