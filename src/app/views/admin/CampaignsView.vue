@@ -149,13 +149,12 @@ const creating = ref(false)
 const createError = ref('')
 const audiencePreview = ref<AudiencePreview | null>(null)
 const loadingPreview = ref(false)
-// selectedTokens tracks who WILL receive (selected = included).
-// Using a Set with full reference replacement so Vue detects every change.
+// selectedTokens tracks who will be EXCLUDED (checked checkbox = excluded from send).
 const selectedTokens    = ref<Set<string>>(new Set())
 const selectAllCheckbox = ref<HTMLInputElement | null>(null)
 
 const excludedPeople = computed(() =>
-  (audiencePreview.value?.sample ?? []).filter(p => !selectedTokens.value.has(p.passToken))
+  (audiencePreview.value?.sample ?? []).filter(p => selectedTokens.value.has(p.passToken))
 )
 const excludedTokens = computed(() => excludedPeople.value.map(p => p.passToken))
 const totalSample    = computed(() => audiencePreview.value?.sample?.length ?? 0)
@@ -301,9 +300,8 @@ async function loadPreview() {
       channel: form.channel,
       messageTemplate: form.messageTemplate.trim() || undefined,
     }
-    if (excludedTokens.value.length) body.excludedPassTokens = excludedTokens.value
     audiencePreview.value = await apiClient.post<AudiencePreview>('/campaigns/preview-audience', body)
-    selectedTokens.value = new Set((audiencePreview.value?.sample ?? []).map(p => p.passToken))
+    selectedTokens.value = new Set()
   } catch (e) {
     audiencePreview.value = null
     createError.value = extractApiMessage(e)
@@ -343,8 +341,8 @@ async function nextStep() {
   } else if (step.value === 2) {
     if (!form.messageTemplate.trim()) { createError.value = 'El mensaje es requerido'; return }
     if (msgTooLong.value) { createError.value = `El mensaje supera los ${MSG_MAX} caracteres`; return }
-    await loadPreview()
     step.value = 3
+    await loadPreview()
   }
 }
 
@@ -731,16 +729,18 @@ function closeDetail() { detailCampaign.value = null }
                       :checked="allSelected"
                       @change="toggleSelectAll"
                     />
-                    Seleccionar todos
+                    {{ allSelected ? 'Quitar exclusiones' : 'Excluir todos' }}
                   </label>
-                  <span class="sample-hint">{{ totalSample - excludedPeople.length }} / {{ totalSample }}</span>
+                  <span class="sample-hint">
+                    {{ excludedPeople.length > 0 ? `${excludedPeople.length} excluido${excludedPeople.length !== 1 ? 's' : ''}` : 'Todos incluidos' }}
+                  </span>
                 </div>
                 <div class="sample-list">
                   <div
                     v-for="(person, i) in audiencePreview.sample"
                     :key="person.passToken"
                     class="sample-row sample-row--selectable"
-                    :class="{ 'sample-row--border': i > 0, 'sample-row--excluded': !isPersonSelected(person.passToken) }"
+                    :class="{ 'sample-row--border': i > 0, 'sample-row--excluded': isPersonSelected(person.passToken) }"
                     @click="togglePerson(person.passToken)"
                   >
                     <input
@@ -749,11 +749,11 @@ function closeDetail() { detailCampaign.value = null }
                       :checked="isPersonSelected(person.passToken)"
                       @click.stop.prevent="togglePerson(person.passToken)"
                     />
-                    <div class="sample-avatar" :class="{ 'sample-avatar--excluded': !isPersonSelected(person.passToken) }">
+                    <div class="sample-avatar" :class="{ 'sample-avatar--excluded': isPersonSelected(person.passToken) }">
                       {{ (person.firstName || '?')[0].toUpperCase() }}
                     </div>
                     <div class="sample-info">
-                      <div class="sample-name" :class="{ 'sample-name--excluded': !isPersonSelected(person.passToken) }">
+                      <div class="sample-name" :class="{ 'sample-name--excluded': isPersonSelected(person.passToken) }">
                         {{ person.firstName }} {{ person.lastName }}
                       </div>
                       <div v-if="person.phone" class="sample-phone">{{ person.phone }}</div>
@@ -794,7 +794,7 @@ function closeDetail() { detailCampaign.value = null }
               </div>
 
               <div class="warn-card warn-card--yellow">
-                Al confirmar, la campaña se creará en estado <strong>borrador</strong> y podrás programar o enviar manualmente desde el panel.
+                <span>Al confirmar, la campaña se creará en estado <strong>borrador</strong> y podrás programar o enviar manualmente desde el panel.</span>
               </div>
             </template>
           </template>
@@ -1368,7 +1368,7 @@ function closeDetail() { detailCampaign.value = null }
   user-select: none;
 }
 .sample-hint  { font-size: 11px; color: var(--text-faint); }
-.sample-list  { display: flex; flex-direction: column; }
+.sample-list  { display: flex; flex-direction: column; max-height: 260px; overflow-y: auto; }
 .sample-row   { display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
 .sample-row--border    { border-top: 1px solid var(--bg-subtle); }
 .sample-row--selectable { cursor: pointer; transition: background 0.1s; }
