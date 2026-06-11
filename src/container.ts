@@ -15,6 +15,7 @@ import passContainer from '@/infrastructure/pass/di/pass.container'
 import authContainer from '@/infrastructure/auth/di/auth.container'
 import organizationContainer from '@/infrastructure/organization/di/organization.container'
 import billingContainer from '@/infrastructure/billing/di/billing.container'
+import geofenceContainer from '@/infrastructure/geofence/di/geofence.container'
 
 container.load(
   ...[
@@ -26,6 +27,7 @@ container.load(
     authContainer,
     organizationContainer,
     billingContainer,
+    geofenceContainer,
   ],
 )
 

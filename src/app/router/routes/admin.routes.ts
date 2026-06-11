@@ -36,6 +36,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: 'wallets/:id/geofences',
+    name: 'WalletGeofences',
+    component: () => import('@/app/views/admin/WalletGeofencesView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: 'scan',
     name: 'Scan',
     component: () => import('@/app/views/admin/ScanView.vue'),

@@ -238,6 +238,15 @@ function formatDate(iso: string): string {
       <div class="header-actions">
         <button
           class="btn-action"
+          @click="router.push({ name: 'WalletGeofences', params: { id } })"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s-8-4.5-8-11.8A8 8 0 0112 2a8 8 0 018 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+          Ubicaciones
+        </button>
+        <button
+          class="btn-action"
           @click="router.push({ name: 'WalletAnalytics', params: { id } })"
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

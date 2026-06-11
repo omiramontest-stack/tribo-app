@@ -21,6 +21,7 @@ export interface BillingPlan {
   emailCampaigns: boolean
   smsCampaigns: boolean
   analyticsLevel: string
+  geofencesPerWallet?: number
 }
 
 export interface BillingSubscription {
