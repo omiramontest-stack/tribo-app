@@ -1,5 +1,6 @@
 <template>
   <div class="geo-page">
+
     <!-- ── Header ── -->
     <div class="page-header">
       <button class="btn-back-nav" @click="router.push({ name: 'WalletDetail', params: { id: walletId } })">
@@ -16,35 +17,16 @@
       </div>
     </div>
 
-    <!-- ── Plan upgrade gate ── -->
-    <div v-if="planBlocked" class="plan-gate">
-      <div class="plan-gate-inner">
-        <div class="plan-gate-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 22s-8-4.5-8-11.8A8 8 0 0112 2a8 8 0 018 8.2c0 7.3-8 11.8-8 11.8z"/>
-            <circle cx="12" cy="10" r="3"/>
-          </svg>
-        </div>
-        <h3 class="plan-gate-title">Geofences no disponibles en tu plan</h3>
-        <p class="plan-gate-body">
-          Las notificaciones por ubicación requieren un plan superior. Cuando un cliente con el pase en Apple Wallet se acerque a tu negocio, recibirá un aviso automático en su pantalla de bloqueo.
-        </p>
-        <button class="btn-upgrade" @click="router.push({ name: 'Billing' })">
-          Ver planes disponibles →
-        </button>
-      </div>
-    </div>
-
     <!-- ── Main layout ── -->
-    <div v-else class="geo-layout">
+    <div class="geo-layout">
 
       <!-- LEFT — list -->
       <div class="geo-list-col">
         <!-- List header -->
         <div class="list-header">
           <div class="list-counters">
-            <span class="counter-main">{{ geofenceStore.geofences.length }} / {{ planLimit ?? '∞' }} ubicaciones</span>
-            <span v-if="activeCount >= APPLE_MAX" class="counter-warn">
+            <span class="counter-main">{{ geofenceStore.geofences.length }} / {{ MAX_GEOFENCES }} ubicaciones</span>
+            <span v-if="activeCount >= MAX_GEOFENCES" class="counter-warn">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               Límite Apple: 10 activas
             </span>
@@ -52,8 +34,9 @@
           <button
             v-if="canEdit"
             class="btn-add"
-            :class="{ 'btn-add--disabled': atPlanLimit }"
-            :disabled="atPlanLimit"
+            :class="{ 'btn-add--disabled': atLimit }"
+            :disabled="atLimit"
+            :title="atLimit ? 'Límite de 10 ubicaciones alcanzado' : ''"
             @click="openCreate"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -79,7 +62,7 @@
           </div>
           <p class="empty-title">Sin ubicaciones configuradas</p>
           <p class="empty-body">Agrega una ubicación y tus clientes recibirán una notificación automática en su iPhone cuando se acerquen.</p>
-          <button class="btn-add btn-add--cta" @click="openCreate">
+          <button v-if="canEdit" class="btn-add btn-add--cta" @click="openCreate">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Agregar primera ubicación
           </button>
@@ -101,20 +84,35 @@
                 </span>
               </div>
               <p class="geo-message">{{ geo.message }}</p>
-              <div class="geo-meta">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                Radio: {{ geo.radiusMeters }} m
-                <span class="geo-coords">{{ geo.latitude.toFixed(4) }}, {{ geo.longitude.toFixed(4) }}</span>
+              <!-- Schedule summary -->
+              <div class="geo-schedule">
+                <div
+                  v-for="(line, li) in getScheduleLines(geo)"
+                  :key="li"
+                  class="schedule-line"
+                  :class="{ 'schedule-line--first': li === 0 }"
+                >
+                  <svg v-if="li === 0" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  {{ line }}
+                </div>
+              </div>
+              <!-- Meta: radius + coordinates -->
+              <div class="geo-meta-row">
+                <span class="geo-radius">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/></svg>
+                  {{ geo.radiusMeters }} m
+                </span>
+                <span class="geo-coords-text">{{ geo.latitude.toFixed(4) }}, {{ geo.longitude.toFixed(4) }}</span>
               </div>
             </div>
             <div class="geo-card-actions">
-              <!-- Toggle active — only owner/admin -->
+              <!-- Toggle active -->
               <button
                 v-if="canEdit"
                 class="geo-btn geo-btn--toggle"
-                :class="{ 'geo-btn--toggle-on': geo.isActive, 'geo-btn--disabled': !geo.isActive && activeCount >= APPLE_MAX }"
-                :title="!geo.isActive && activeCount >= APPLE_MAX ? 'Límite de 10 activas alcanzado' : (geo.isActive ? 'Pausar' : 'Activar')"
-                @click.stop="!geo.isActive && activeCount >= APPLE_MAX ? showToast('Límite Apple: máximo 10 geofences activas', 'error') : toggleActive(geo)"
+                :class="{ 'geo-btn--toggle-on': geo.isActive, 'geo-btn--disabled': !geo.isActive && activeCount >= MAX_GEOFENCES }"
+                :title="!geo.isActive && activeCount >= MAX_GEOFENCES ? 'Límite Apple: 10 activas' : (geo.isActive ? 'Pausar' : 'Activar')"
+                @click.stop="!geo.isActive && activeCount >= MAX_GEOFENCES ? showToast('Límite Apple: máximo 10 geofences activas', 'error') : toggleActive(geo)"
               >
                 <svg v-if="geo.isActive" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                   <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
@@ -123,14 +121,14 @@
                   <polygon points="5 3 19 12 5 21 5 3"/>
                 </svg>
               </button>
-              <!-- Edit — only owner/admin -->
+              <!-- Edit -->
               <button v-if="canEdit" class="geo-btn" title="Editar" @click.stop="openEdit(geo)">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                   <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
                   <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
                 </svg>
               </button>
-              <!-- Delete — only owner/admin -->
+              <!-- Delete -->
               <button v-if="canEdit" class="geo-btn geo-btn--danger" title="Eliminar" @click.stop="confirmDelete(geo)">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                   <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
@@ -141,7 +139,7 @@
         </div>
       </div>
 
-      <!-- RIGHT — form panel or idle hint (only for owner/admin) -->
+      <!-- RIGHT — form panel (only for owner/admin) -->
       <div v-if="canEdit" class="geo-form-col">
         <!-- Idle hint -->
         <div v-if="!showForm" class="form-idle">
@@ -154,52 +152,17 @@
           <p class="form-idle-text">Selecciona una ubicación para editarla o crea una nueva</p>
         </div>
 
-        <!-- Form -->
+        <!-- Form panel -->
         <div v-else class="form-panel">
           <div class="form-panel-header">
             <h3 class="form-title">{{ isEditing ? 'Editar ubicación' : 'Nueva ubicación' }}</h3>
-            <button class="form-close" @click="closeForm">
+            <button class="form-close" @click="closeForm" title="Cerrar">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
           </div>
 
-          <!-- Map -->
-          <div class="map-wrap">
-            <div ref="mapEl" class="geo-map"></div>
-            <div class="map-hint">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0112 2a8 8 0 018 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
-              Haz clic en el mapa para colocar el pin
-            </div>
-            <!-- Address search -->
-            <div class="addr-search">
-              <input
-                v-model="addrQuery"
-                class="addr-input"
-                type="text"
-                placeholder="Buscar dirección…"
-                @keydown.enter.prevent="searchAddress"
-                @keydown.esc="addrResults = []"
-                @blur="dismissAddrResults"
-              />
-              <button class="addr-btn" :disabled="!addrQuery.trim() || addrLoading" @click="searchAddress">
-                <svg v-if="!addrLoading" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <span v-else class="addr-spinner"></span>
-              </button>
-            </div>
-            <!-- Address results -->
-            <ul v-if="addrResults.length" class="addr-results">
-              <li
-                v-for="r in addrResults"
-                :key="r.place_id"
-                class="addr-result-item"
-                @mousedown.prevent="selectAddress(r)"
-              >{{ r.display_name }}</li>
-            </ul>
-          </div>
-
-          <!-- Form fields -->
           <div class="form-fields">
-            <!-- Label -->
+            <!-- NOMBRE INTERNO -->
             <div class="field-group">
               <label class="field-label">Nombre interno <span class="field-required">*</span></label>
               <input
@@ -213,42 +176,96 @@
               <p v-if="fieldErrors.label" class="field-error">{{ fieldErrors.label }}</p>
             </div>
 
-            <!-- Coordinates (read-only display) -->
-            <div v-if="form.latitude && form.longitude" class="coords-row">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0112 2a8 8 0 018 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
-              {{ form.latitude.toFixed(6) }}, {{ form.longitude.toFixed(6) }}
-            </div>
-            <p v-if="fieldErrors.latitude || fieldErrors.longitude" class="field-error">{{ fieldErrors.latitude || fieldErrors.longitude }}</p>
-
-            <!-- Radius slider -->
+            <!-- UBICACIÓN -->
             <div class="field-group">
               <label class="field-label">
-                Radio de detección
-                <span class="radius-value">{{ form.radiusMeters }} m</span>
-                <span class="radius-desc">{{ radiusDescription }}</span>
+                Ubicación en el mapa <span class="field-required">*</span>
               </label>
-              <input
-                v-model.number="form.radiusMeters"
-                class="radius-slider"
-                type="range"
-                min="100"
-                max="5000"
-                step="50"
-                @input="updateMapCircle"
-              />
-              <div class="radius-labels">
-                <span>100 m</span>
-                <span>5 000 m</span>
+
+              <!-- Address search -->
+              <div class="addr-search-wrap">
+                <div class="addr-search">
+                  <input
+                    v-model="addrQuery"
+                    class="addr-input"
+                    type="text"
+                    placeholder="Buscar dirección…"
+                    @keydown.enter.prevent="searchAddress"
+                    @keydown.esc="addrResults = []"
+                    @blur="dismissAddrResults"
+                  />
+                  <button class="addr-btn" :disabled="!addrQuery.trim() || addrLoading" @click="searchAddress">
+                    <svg v-if="!addrLoading" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <span v-else class="addr-spinner"></span>
+                  </button>
+                </div>
+                <ul v-if="addrResults.length" class="addr-results">
+                  <li
+                    v-for="r in addrResults"
+                    :key="r.place_id"
+                    class="addr-result-item"
+                    @mousedown.prevent="selectAddress(r)"
+                  >{{ r.display_name }}</li>
+                </ul>
               </div>
-              <p v-if="fieldErrors.radiusMeters" class="field-error">{{ fieldErrors.radiusMeters }}</p>
+
+              <!-- Map -->
+              <div class="map-wrap">
+                <div ref="mapEl" class="geo-map"></div>
+                <button
+                  class="geo-locate-btn"
+                  :class="{ 'geo-locate-btn--loading': locating }"
+                  type="button"
+                  title="Ver mi ubicación"
+                  @click="geolocate"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+                  </svg>
+                </button>
+                <div v-if="!pinPlaced" class="map-hint">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0112 2a8 8 0 018 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+                  Haz clic en el mapa para colocar el pin
+                </div>
+              </div>
+
+              <!-- Coordinates display -->
+              <div v-if="pinPlaced" class="coords-row">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0112 2a8 8 0 018 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+                {{ form.latitude.toFixed(6) }}, {{ form.longitude.toFixed(6) }}
+              </div>
+              <p v-if="fieldErrors.latitude" class="field-error">{{ fieldErrors.latitude }}</p>
+
+              <!-- Radio slider -->
+              <div class="radius-field">
+                <div class="radius-header">
+                  <span class="radius-label-text">Radio de detección</span>
+                  <span class="radius-value">{{ form.radiusMeters }} m</span>
+                  <span class="radius-desc">· {{ radiusDescription }}</span>
+                </div>
+                <input
+                  v-model.number="form.radiusMeters"
+                  class="radius-slider"
+                  type="range"
+                  :min="MIN_RADIUS"
+                  :max="MAX_RADIUS"
+                  step="5"
+                  @input="updateMapCircle"
+                />
+                <div class="radius-labels">
+                  <span>{{ MIN_RADIUS }} m</span>
+                  <span>{{ MAX_RADIUS }} m</span>
+                </div>
+              </div>
             </div>
 
-            <!-- Message -->
+            <!-- MENSAJE DE NOTIFICACIÓN -->
             <div class="field-group">
               <label class="field-label">
                 Mensaje de notificación <span class="field-required">*</span>
-                <span class="char-counter" :class="{ 'char-counter--warn': form.message.length > 180, 'char-counter--over': form.message.length > 200 }">
-                  {{ form.message.length }} / 200
+                <span class="char-counter" :class="{ 'char-counter--warn': form.message.length > 180, 'char-counter--over': form.message.length > MAX_MESSAGE_LEN }">
+                  {{ form.message.length }} / {{ MAX_MESSAGE_LEN }}
                 </span>
               </label>
               <textarea
@@ -256,13 +273,13 @@
                 class="field-textarea"
                 :class="{ 'field-input--error': fieldErrors.message }"
                 rows="3"
-                maxlength="200"
+                :maxlength="MAX_MESSAGE_LEN"
                 placeholder="ej. Hace rato no te vemos. ¡Vuelve hoy y suma para tu premio!"
               ></textarea>
               <p v-if="fieldErrors.message" class="field-error">{{ fieldErrors.message }}</p>
             </div>
 
-            <!-- iOS preview -->
+            <!-- iOS PREVIEW -->
             <div class="ios-preview-wrap">
               <p class="preview-label">Vista previa en iPhone</p>
               <div class="ios-screen">
@@ -286,16 +303,96 @@
               </div>
             </div>
 
+            <!-- HORARIOS (collapsible) -->
+            <div class="form-section">
+              <button class="section-toggle" type="button" @click="scheduleOpen = !scheduleOpen">
+                <span class="section-toggle-label">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  Horarios de notificación
+                </span>
+                <span v-if="!scheduleOpen && form.scheduleEnabled" class="section-badge">Activo</span>
+                <svg class="section-chevron" :class="{ 'section-chevron--open': scheduleOpen }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+
+              <div v-if="scheduleOpen" class="section-body">
+                <!-- Enable toggle -->
+                <div class="toggle-row">
+                  <div class="toggle-label-wrap">
+                    <span class="toggle-label">Activar horarios</span>
+                    <span class="toggle-desc">La notificación solo se enviará en los horarios configurados</span>
+                  </div>
+                  <button
+                    type="button"
+                    class="toggle-switch"
+                    :class="{ 'toggle-switch--on': form.scheduleEnabled }"
+                    @click="form.scheduleEnabled = !form.scheduleEnabled"
+                  >
+                    <span class="toggle-thumb"></span>
+                  </button>
+                </div>
+
+                <!-- Window builder (visible when enabled) -->
+                <div v-if="form.scheduleEnabled" class="windows-builder">
+                  <div v-for="(win, idx) in form.schedule" :key="idx" class="window-row">
+                    <!-- Day chips -->
+                    <div class="window-days">
+                      <button
+                        v-for="day in DAY_DEFS"
+                        :key="day.value"
+                        type="button"
+                        class="day-chip"
+                        :class="{ 'day-chip--on': win.days.includes(day.value) }"
+                        :title="day.title"
+                        @click="toggleDay(win, day.value)"
+                      >{{ day.label }}</button>
+                    </div>
+                    <!-- Times -->
+                    <div class="window-times">
+                      <span class="time-lbl">De</span>
+                      <input type="time" v-model="win.startTime" class="time-in" />
+                      <span class="time-lbl">a</span>
+                      <input type="time" v-model="win.endTime" class="time-in" />
+                      <button type="button" class="btn-remove-win" title="Eliminar ventana" @click="removeWindow(idx)">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                      </button>
+                    </div>
+                    <!-- Inline validation error -->
+                    <p v-if="win.error" class="window-error">{{ win.error }}</p>
+                  </div>
+
+                  <!-- Add window -->
+                  <button
+                    v-if="form.schedule.length < MAX_WINDOWS"
+                    type="button"
+                    class="btn-add-win"
+                    @click="addWindow"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Agregar ventana de horario
+                  </button>
+
+                  <!-- Timezone -->
+                  <div class="field-group">
+                    <label class="field-label">Zona horaria</label>
+                    <select v-model="form.timezone" class="field-select">
+                      <option v-for="tz in TIMEZONES" :key="tz.value" :value="tz.value">{{ tz.label }}</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Submit error -->
             <p v-if="submitError" class="submit-error">{{ submitError }}</p>
 
             <!-- Form actions -->
             <div class="form-actions">
-              <button class="btn-cancel-form" @click="closeForm">Cancelar</button>
+              <button class="btn-cancel-form" type="button" @click="closeForm">Cancelar</button>
               <button
                 class="btn-save"
                 :class="{ 'btn-save--loading': saving }"
                 :disabled="saving"
+                type="button"
                 @click="submit"
               >
                 {{ saving ? 'Guardando…' : (isEditing ? 'Guardar cambios' : 'Crear ubicación') }}
@@ -345,27 +442,121 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { Map as LMap, Marker, Circle } from 'leaflet'
 
-import { useGeofenceStore }      from '@/app/stores/geofence/GeofenceStore'
-import { useWalletStore }        from '@/app/stores/wallet/WalletStore'
-import { useBillingStore }       from '@/app/stores/billing/BillingStore'
-import { useOrganizationStore }  from '@/app/stores/organization/OrganizationStore'
-import { useAuthStore }          from '@/app/stores/auth/AuthStore'
-import { ApiError }              from '@/infrastructure/http/ApiClient'
-import type { Geofence }         from '@/domain/geofence/entities/Geofence'
+import { useGeofenceStore }     from '@/app/stores/geofence/GeofenceStore'
+import { useWalletStore }       from '@/app/stores/wallet/WalletStore'
+import { useOrganizationStore } from '@/app/stores/organization/OrganizationStore'
+import { useAuthStore }         from '@/app/stores/auth/AuthStore'
+import { ApiError }             from '@/infrastructure/http/ApiClient'
+import type { Geofence }        from '@/domain/geofence/entities/Geofence'
 
-const APPLE_MAX = 10
+// ── Constants ──────────────────────────────────────────────────
+const MAX_GEOFENCES   = 10
+const MAX_WINDOWS     = 10
+const MAX_MESSAGE_LEN = 200
+const MIN_RADIUS      = 10
+const MAX_RADIUS      = 100
+const DEFAULT_LAT     = 20.6597
+const DEFAULT_LNG     = -103.3496
+const DEFAULT_TZ      = 'America/Mexico_City'
 
-const route   = useRoute()
-const router  = useRouter()
+const TIMEZONES = [
+  { label: 'Ciudad de México (CDT)', value: 'America/Mexico_City' },
+  { label: 'Monterrey (CDT)',        value: 'America/Monterrey' },
+  { label: 'Tijuana (PDT)',          value: 'America/Tijuana' },
+  { label: 'Cancún (EST)',           value: 'America/Cancun' },
+  { label: 'Bogotá (COT)',           value: 'America/Bogota' },
+  { label: 'Buenos Aires (ART)',     value: 'America/Argentina/Buenos_Aires' },
+  { label: 'Santiago (CLT)',         value: 'America/Santiago' },
+] as const
+
+const DAY_DEFS = [
+  { label: 'L', value: 1, title: 'Lunes' },
+  { label: 'M', value: 2, title: 'Martes' },
+  { label: 'X', value: 3, title: 'Miércoles' },
+  { label: 'J', value: 4, title: 'Jueves' },
+  { label: 'V', value: 5, title: 'Viernes' },
+  { label: 'S', value: 6, title: 'Sábado' },
+  { label: 'D', value: 0, title: 'Domingo' },
+] as const
+
+const DAY_NAMES: Record<number, string> = {
+  0: 'Dom', 1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie', 6: 'Sáb',
+}
+
+// ── Window form type ───────────────────────────────────────────
+interface WindowForm {
+  days: number[]
+  startTime: string
+  endTime: string
+  error: string
+}
+
+// ── Pure utilities ─────────────────────────────────────────────
+function formatTime(t: string): string {
+  return t.replace(/^0/, '')
+}
+
+function formatDays(days: number[]): string {
+  if (!days.length) return ''
+  const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0]
+  const ordered = WEEK_ORDER.filter(d => days.includes(d))
+  if (ordered.length === 7) return 'Todos los días'
+  const indices = ordered.map(d => WEEK_ORDER.indexOf(d))
+  const isConsecutive = indices.every((v, i) => i === 0 || v === indices[i - 1] + 1)
+  if (isConsecutive && ordered.length > 1) {
+    return `${DAY_NAMES[ordered[0]]}–${DAY_NAMES[ordered[ordered.length - 1]]}`
+  }
+  return ordered.map(d => DAY_NAMES[d]).join(', ')
+}
+
+function getScheduleLines(geo: Geofence): string[] {
+  if (!geo.scheduleEnabled || !geo.schedule?.length) return ['24/7']
+  return geo.schedule.map(w =>
+    `${formatDays(w.days)}  ${formatTime(w.startTime)}–${formatTime(w.endTime)}`
+  )
+}
+
+function toWindowForms(windows: Geofence['schedule']): WindowForm[] {
+  return (windows ?? []).map(w => ({ ...w, error: '' }))
+}
+
+function defaultWindow(): WindowForm {
+  return { days: [1, 2, 3, 4, 5], startTime: '08:00', endTime: '20:00', error: '' }
+}
+
+function validateWindows(windows: WindowForm[]): boolean {
+  let valid = true
+  for (const w of windows) {
+    w.error = ''
+    if (!w.days.length) {
+      w.error = 'Selecciona al menos un día'
+      valid = false
+      continue
+    }
+    if (!w.startTime || !w.endTime) {
+      w.error = 'Completa ambos horarios'
+      valid = false
+      continue
+    }
+    if (w.startTime >= w.endTime) {
+      w.error = 'La hora de fin debe ser mayor que la de inicio'
+      valid = false
+    }
+  }
+  return valid
+}
+
+// ── Setup ──────────────────────────────────────────────────────
+const route    = useRoute()
+const router   = useRouter()
 const walletId = route.params.id as string
 
 const geofenceStore = useGeofenceStore()
 const walletStore   = useWalletStore()
-const billingStore  = useBillingStore()
 const orgStore      = useOrganizationStore()
 const authStore     = useAuthStore()
 
@@ -375,45 +566,83 @@ const canEdit = computed(() => {
   return myMember?.role === 'owner' || myMember?.role === 'admin'
 })
 
-// ── Plan / limits ──────────────────────────────────────────────
-const planBlocked = ref(false)
-const planLimit   = computed<number | null>(() =>
-  billingStore.status?.plan?.geofencesPerWallet ?? null
+// ── Limits ─────────────────────────────────────────────────────
+const atLimit = computed(() =>
+  geofenceStore.geofences.length >= MAX_GEOFENCES
 )
 const activeCount = computed(() =>
   geofenceStore.geofences.filter(g => g.isActive).length
 )
-const atPlanLimit = computed(() =>
-  planLimit.value !== null && geofenceStore.geofences.length >= planLimit.value
-)
 
 // ── Form state ─────────────────────────────────────────────────
-const showForm  = ref(false)
-const isEditing = ref(false)
-const editingId = ref<string | null>(null)
+const showForm    = ref(false)
+const isEditing   = ref(false)
+const editingId   = ref<string | null>(null)
+const pinPlaced   = ref(false)
+const scheduleOpen = ref(false)
 
 const form = reactive({
-  label: '',
-  latitude: 0,
-  longitude: 0,
-  radiusMeters: 100,
-  message: '',
+  label:           '',
+  latitude:        0,
+  longitude:       0,
+  radiusMeters:    MAX_RADIUS,
+  message:         '',
+  scheduleEnabled: false,
+  schedule:        [] as WindowForm[],
+  timezone:        DEFAULT_TZ,
 })
-const pinPlaced = ref(false)
+
+const radiusDescription = computed(() => {
+  const m = form.radiusMeters
+  if (m <= 20) return 'muy preciso'
+  if (m <= 50) return 'preciso'
+  if (m <= 75) return 'moderado'
+  return 'amplio'
+})
 
 const fieldErrors = reactive<Record<string, string>>({})
 const submitError = ref('')
 const saving      = ref(false)
 
+// ── Schedule management ────────────────────────────────────────
+watch(() => form.scheduleEnabled, (enabled) => {
+  if (enabled && form.schedule.length === 0) addWindow()
+})
+
+function addWindow() {
+  if (form.schedule.length < MAX_WINDOWS) {
+    form.schedule.push(defaultWindow())
+  }
+}
+
+function removeWindow(index: number) {
+  form.schedule.splice(index, 1)
+}
+
+function toggleDay(win: WindowForm, day: number) {
+  const idx = win.days.indexOf(day)
+  if (idx >= 0) {
+    win.days.splice(idx, 1)
+  } else {
+    win.days.push(day)
+  }
+  win.error = ''
+}
+
+// ── Form lifecycle ─────────────────────────────────────────────
 function clearForm() {
-  form.label        = ''
-  form.latitude     = 0
-  form.longitude    = 0
-  form.radiusMeters = 100
-  form.message      = ''
-  pinPlaced.value   = false
+  form.label           = ''
+  form.latitude        = 0
+  form.longitude       = 0
+  form.radiusMeters    = MAX_RADIUS
+  form.message         = ''
+  form.scheduleEnabled = false
+  form.schedule        = []
+  form.timezone        = DEFAULT_TZ
+  pinPlaced.value      = false
+  scheduleOpen.value   = false
   Object.keys(fieldErrors).forEach(k => delete fieldErrors[k])
-  submitError.value = ''
+  submitError.value    = ''
 }
 
 function openCreate() {
@@ -426,15 +655,19 @@ function openCreate() {
 
 function openEdit(geo: Geofence) {
   clearForm()
-  form.label        = geo.label
-  form.latitude     = geo.latitude
-  form.longitude    = geo.longitude
-  form.radiusMeters = geo.radiusMeters
-  form.message      = geo.message
-  pinPlaced.value   = true
-  isEditing.value   = true
-  editingId.value   = geo.id
-  showForm.value    = true
+  form.label           = geo.label
+  form.latitude        = geo.latitude
+  form.longitude       = geo.longitude
+  form.radiusMeters    = geo.radiusMeters ?? MAX_RADIUS
+  form.message         = geo.message
+  form.scheduleEnabled = geo.scheduleEnabled ?? false
+  form.schedule        = toWindowForms(geo.schedule ?? [])
+  form.timezone        = geo.timezone ?? DEFAULT_TZ
+  pinPlaced.value      = true
+  scheduleOpen.value   = geo.scheduleEnabled ?? false
+  isEditing.value      = true
+  editingId.value      = geo.id
+  showForm.value       = true
   initMapWhenReady(geo.latitude, geo.longitude)
 }
 
@@ -444,47 +677,47 @@ function closeForm() {
   destroyMap()
 }
 
-// ── Radius description ─────────────────────────────────────────
-const radiusDescription = computed(() => {
-  const m = form.radiusMeters
-  if (m <= 150)  return '~1 cuadra'
-  if (m <= 300)  return '~2 cuadras'
-  if (m <= 500)  return '~media colonia'
-  if (m <= 1000) return '~1 km'
-  if (m <= 2000) return '~2 km'
-  return `~${(m / 1000).toFixed(1)} km`
-})
+// ── Leaflet loader (cached per instance) ──────────────────────
+let _L: typeof import('leaflet').default | null = null
+
+async function loadLeaflet() {
+  if (_L) return _L
+  _L = (await import('leaflet')).default
+  await import('leaflet/dist/leaflet.css')
+  return _L
+}
 
 // ── Map ────────────────────────────────────────────────────────
-const mapEl      = ref<HTMLDivElement | null>(null)
+const mapEl    = ref<HTMLDivElement | null>(null)
+const locating = ref(false)
 let mapInstance: LMap   | null = null
-let markerInst:  Marker | null = null
-let circleInst:  Circle | null = null
+let markerInst: Marker  | null = null
+let circleInst: Circle  | null = null
 
 async function initMapWhenReady(lat?: number, lng?: number) {
   await nextTick()
   if (!mapEl.value) return
-
-  const L = (await import('leaflet')).default
-  await import('leaflet/dist/leaflet.css')
+  const L = await loadLeaflet()
 
   if (mapInstance) { mapInstance.remove(); mapInstance = null }
 
-  const centerLat = lat ?? 20.6597
-  const centerLng = lng ?? -103.3496
+  const centerLat = lat ?? DEFAULT_LAT
+  const centerLng = lng ?? DEFAULT_LNG
 
   mapInstance = L.map(mapEl.value, { zoomControl: true }).setView([centerLat, centerLng], 15)
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
+    attribution: '© <a href="https://openstreetmap.org" target="_blank">OpenStreetMap</a>',
     maxZoom: 19,
   }).addTo(mapInstance)
 
-  if (lat !== undefined && lng !== undefined) placeMapPin(L, lat, lng)
+  if (lat !== undefined && lng !== undefined) {
+    placeMapPin(L, lat, lng)
+  }
 
   mapInstance.on('click', (e: { latlng: { lat: number; lng: number } }) => {
-    form.latitude  = +e.latlng.lat.toFixed(6)
-    form.longitude = +e.latlng.lng.toFixed(6)
+    form.latitude   = +e.latlng.lat.toFixed(6)
+    form.longitude  = +e.latlng.lng.toFixed(6)
     pinPlaced.value = true
     placeMapPin(L, form.latitude, form.longitude)
   })
@@ -496,54 +729,66 @@ function placeMapPin(L: typeof import('leaflet').default, lat: number, lng: numb
   const icon = L.divIcon({
     className: '',
     html: '<div class="geo-pin"></div>',
-    iconSize:   [20, 20],
+    iconSize: [20, 20],
     iconAnchor: [10, 10],
   })
 
-  if (markerInst) markerInst.remove()
-  if (circleInst) circleInst.remove()
+  markerInst?.remove()
+  circleInst?.remove()
 
   markerInst = L.marker([lat, lng], { icon }).addTo(mapInstance)
   circleInst = L.circle([lat, lng], {
-    radius: form.radiusMeters,
-    color: '#1B3A2D',
-    fillColor: '#1B3A2D',
+    radius:      form.radiusMeters,
+    color:       '#1B3A2D',
+    fillColor:   '#1B3A2D',
     fillOpacity: 0.12,
-    weight: 2,
+    weight:      2,
   }).addTo(mapInstance)
 }
 
 function updateMapCircle() {
-  if (!circleInst) return
-  circleInst.setRadius(form.radiusMeters)
+  circleInst?.setRadius(form.radiusMeters)
+}
+
+function geolocate() {
+  if (!('geolocation' in navigator)) {
+    showToast('Tu navegador no soporta geolocalización', 'error')
+    return
+  }
+  locating.value = true
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      form.latitude   = +pos.coords.latitude.toFixed(6)
+      form.longitude  = +pos.coords.longitude.toFixed(6)
+      pinPlaced.value = true
+      locating.value  = false
+      const L = await loadLeaflet()
+      if (mapInstance) {
+        mapInstance.setView([form.latitude, form.longitude], 17)
+        placeMapPin(L, form.latitude, form.longitude)
+      }
+    },
+    () => {
+      locating.value = false
+      showToast('No se pudo obtener tu ubicación', 'error')
+    },
+    { timeout: 5000 }
+  )
 }
 
 function destroyMap() {
-  if (mapInstance) { mapInstance.remove(); mapInstance = null }
-  markerInst = null
-  circleInst = null
+  mapInstance?.remove()
+  mapInstance = null
+  markerInst  = null
+  circleInst  = null
 }
-
-onBeforeUnmount(() => {
-  destroyMap()
-  clearTimeout(toastTimer)
-})
 
 // ── Address search (Nominatim) ─────────────────────────────────
-interface NominatimResult {
-  place_id: number
-  display_name: string
-  lat: string
-  lon: string
-}
+interface NominatimResult { place_id: number; display_name: string; lat: string; lon: string }
 
 const addrQuery   = ref('')
 const addrResults = ref<NominatimResult[]>([])
 const addrLoading = ref(false)
-
-function dismissAddrResults() {
-  setTimeout(() => { addrResults.value = [] }, 150)
-}
 
 async function searchAddress() {
   const q = addrQuery.value.trim()
@@ -556,9 +801,15 @@ async function searchAddress() {
       { headers: { 'Accept-Language': 'es' } }
     )
     addrResults.value = await res.json()
+  } catch {
+    showToast('Error al buscar la dirección', 'error')
   } finally {
     addrLoading.value = false
   }
+}
+
+function dismissAddrResults() {
+  setTimeout(() => { addrResults.value = [] }, 150)
 }
 
 async function selectAddress(r: NominatimResult) {
@@ -567,8 +818,7 @@ async function selectAddress(r: NominatimResult) {
   pinPlaced.value   = true
   addrResults.value = []
   addrQuery.value   = ''
-
-  const L = (await import('leaflet')).default
+  const L = await loadLeaflet()
   if (mapInstance) {
     mapInstance.setView([form.latitude, form.longitude], 16)
     placeMapPin(L, form.latitude, form.longitude)
@@ -590,20 +840,38 @@ async function submit() {
   Object.keys(fieldErrors).forEach(k => delete fieldErrors[k])
   submitError.value = ''
 
-  if (!form.label.trim()) { fieldErrors.label = 'Requerido'; return }
-  if (!pinPlaced.value) { fieldErrors.latitude = 'Coloca un pin en el mapa'; return }
-  if (form.message.length > 200) { fieldErrors.message = 'Máximo 200 caracteres'; return }
-  if (!form.message.trim()) { fieldErrors.message = 'Requerido'; return }
+  if (!form.label.trim())   { fieldErrors.label   = 'Requerido'; return }
+  if (!pinPlaced.value)     { fieldErrors.latitude = 'Coloca un pin en el mapa'; return }
+  if (!form.message.trim()) { fieldErrors.message  = 'Requerido'; return }
+  if (form.message.length > MAX_MESSAGE_LEN) { fieldErrors.message = `Máximo ${MAX_MESSAGE_LEN} caracteres`; return }
+
+  if (form.scheduleEnabled) {
+    if (!form.schedule.length) {
+      scheduleOpen.value = true
+      submitError.value  = 'Agrega al menos una ventana de horario o desactiva los horarios'
+      return
+    }
+    if (!validateWindows(form.schedule)) {
+      scheduleOpen.value = true
+      return
+    }
+  }
 
   saving.value = true
   try {
     const dto = {
-      label:        form.label.trim(),
-      latitude:     form.latitude,
-      longitude:    form.longitude,
-      radiusMeters: form.radiusMeters,
-      message:      form.message.trim(),
+      label:           form.label.trim(),
+      latitude:        form.latitude,
+      longitude:       form.longitude,
+      radiusMeters:    form.radiusMeters,
+      message:         form.message.trim(),
+      scheduleEnabled: form.scheduleEnabled,
+      schedule:        form.scheduleEnabled
+        ? form.schedule.map(({ days, startTime, endTime }) => ({ days, startTime, endTime }))
+        : [],
+      timezone: form.timezone,
     }
+
     if (isEditing.value && editingId.value) {
       await geofenceStore.updateGeofence(walletId, editingId.value, dto)
       showToast('Ubicación actualizada', 'success')
@@ -613,16 +881,9 @@ async function submit() {
     }
     closeForm()
   } catch (e) {
-    if (e instanceof ApiError) {
+    if (e instanceof ApiError && e.status === 400) {
       const body = e.body as Record<string, unknown> | null
-      const code = body?.code as string | undefined
-      if (code === 'PLAN_UPGRADE_REQUIRED') { planBlocked.value = true; return }
-      if (code === 'GEOFENCE_LIMIT_REACHED') { submitError.value = 'Has alcanzado el límite de ubicaciones de tu plan.'; return }
-      if (e.status === 400 && body?.details) {
-        const details = body.details as Record<string, string>
-        Object.assign(fieldErrors, details)
-        return
-      }
+      if (body?.details) { Object.assign(fieldErrors, body.details as Record<string, string>); return }
     }
     submitError.value = parseError(e)
   } finally {
@@ -634,9 +895,7 @@ async function submit() {
 const deleteTarget = ref<Geofence | null>(null)
 const deleting     = ref(false)
 
-function confirmDelete(geo: Geofence) {
-  deleteTarget.value = geo
-}
+function confirmDelete(geo: Geofence) { deleteTarget.value = geo }
 
 async function executeDelete() {
   if (!deleteTarget.value) return
@@ -660,48 +919,42 @@ let toastTimer: ReturnType<typeof setTimeout>
 function showToast(msg: string, type: 'success' | 'error') {
   clearTimeout(toastTimer)
   toast.value = { msg, type }
-  toastTimer = setTimeout(() => { toast.value = null }, 3000)
+  toastTimer  = setTimeout(() => { toast.value = null }, 3000)
 }
 
 // ── Error parser ───────────────────────────────────────────────
 function parseError(e: unknown): string {
   if (e instanceof ApiError) {
     const body = e.body as Record<string, unknown> | null
-    const msg = body?.message ?? body?.error ?? body?.detail
+    const msg  = body?.message ?? body?.error ?? body?.detail
     if (typeof msg === 'string' && msg) return msg
     return `Error del servidor (${e.status})`
   }
   return 'Error inesperado. Intenta de nuevo.'
 }
 
-// ── Init ───────────────────────────────────────────────────────
+// ── Lifecycle ──────────────────────────────────────────────────
 onMounted(async () => {
   if (!walletStore.currentWallet) await walletStore.fetchWalletById(walletId)
-  try {
-    await geofenceStore.fetchGeofences(walletId)
-  } catch (e) {
-    if (e instanceof ApiError && e.status === 403) {
-      const body = e.body as Record<string, unknown> | null
-      if (body?.code === 'PLAN_UPGRADE_REQUIRED') planBlocked.value = true
-    }
-  }
+  await geofenceStore.fetchGeofences(walletId)
+})
+
+onBeforeUnmount(() => {
+  destroyMap()
+  clearTimeout(toastTimer)
 })
 </script>
 
 <style scoped>
 /* ── Page layout ─────────────────────────────────────────────── */
-.geo-page   { min-height: 100vh; background: var(--bg-page); padding: 0 0 60px; }
+.geo-page { min-height: 100vh; background: var(--bg-page); padding: 0 0 60px; }
 
 .page-header {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+  display: flex; align-items: center; gap: 14px;
   padding: 20px 28px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-surface);
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  position: sticky; top: 0; z-index: 10;
 }
 .btn-back-nav {
   display: flex; align-items: center; gap: 6px;
@@ -714,9 +967,7 @@ onMounted(async () => {
   display: flex; align-items: center; gap: 8px;
   font-size: 15px; font-weight: 700; color: var(--text-ink);
 }
-.header-wallet-name {
-  font-weight: 400; color: var(--text-muted); font-size: 13px;
-}
+.header-wallet-name { font-weight: 400; color: var(--text-muted); font-size: 13px; }
 
 .geo-layout {
   display: grid;
@@ -729,42 +980,16 @@ onMounted(async () => {
   .geo-form-col { border-left: none; border-top: 1px solid var(--border); }
 }
 
-/* ── Plan gate ───────────────────────────────────────────────── */
-.plan-gate { padding: 60px 28px; display: flex; justify-content: center; }
-.plan-gate-inner {
-  max-width: 440px;
-  text-align: center;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 40px 32px;
-}
-.plan-gate-icon { color: var(--primary); margin-bottom: 16px; }
-.plan-gate-title { font-size: 17px; font-weight: 700; color: var(--text-ink); margin: 0 0 10px; }
-.plan-gate-body { font-size: 13.5px; color: var(--text-muted); line-height: 1.6; margin: 0 0 24px; }
-.btn-upgrade {
-  background: var(--primary); color: #fff;
-  border: none; border-radius: 10px; padding: 11px 22px;
-  font-size: 13.5px; font-weight: 600; cursor: pointer;
-  transition: opacity 0.15s;
-}
-.btn-upgrade:hover { opacity: 0.88; }
-
 /* ── Left column — list ──────────────────────────────────────── */
 .geo-list-col {
   border-right: 1px solid var(--border);
   background: var(--bg-surface);
-  display: flex;
-  flex-direction: column;
+  display: flex; flex-direction: column;
   overflow-y: auto;
 }
 .list-header {
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  padding: 16px 18px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
 }
 .list-counters { display: flex; flex-direction: column; gap: 3px; }
 .counter-main  { font-size: 12px; font-weight: 600; color: var(--text-muted); }
@@ -776,11 +1001,9 @@ onMounted(async () => {
 .btn-add {
   display: flex; align-items: center; gap: 6px;
   font-size: 13px; font-weight: 600; color: var(--primary);
-  background: var(--primary-light);
-  border: 1.5px solid transparent;
-  border-radius: 9px; padding: 7px 13px;
-  cursor: pointer; white-space: nowrap;
-  transition: background 0.15s, border-color 0.15s;
+  background: var(--primary-light); border: 1.5px solid transparent;
+  border-radius: 9px; padding: 7px 13px; cursor: pointer; white-space: nowrap;
+  transition: background 0.15s;
 }
 .btn-add:hover          { background: #d6e8dc; }
 .btn-add--disabled      { opacity: 0.45; cursor: not-allowed; }
@@ -804,12 +1027,15 @@ onMounted(async () => {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: 40px 24px; text-align: center;
 }
-.empty-icon    { color: var(--text-faint); margin-bottom: 12px; }
-.empty-title   { font-size: 14px; font-weight: 600; color: var(--text-ink); margin: 0 0 6px; }
-.empty-body    { font-size: 13px; color: var(--text-muted); line-height: 1.5; max-width: 240px; margin: 0 auto; }
+.empty-icon  { color: var(--text-faint); margin-bottom: 12px; }
+.empty-title { font-size: 14px; font-weight: 600; color: var(--text-ink); margin: 0 0 6px; }
+.empty-body  { font-size: 13px; color: var(--text-muted); line-height: 1.5; max-width: 240px; margin: 0 auto; }
 
-/* Cards */
-.geo-cards { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+/* Geofence cards */
+.geo-cards {
+  flex: 1; overflow-y: auto;
+  padding: 12px; display: flex; flex-direction: column; gap: 8px;
+}
 .geo-card {
   background: var(--bg-page); border: 1.5px solid var(--border);
   border-radius: 12px; overflow: hidden;
@@ -821,12 +1047,28 @@ onMounted(async () => {
 .geo-card-body    { padding: 12px 14px 10px; }
 .geo-card-top     { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
 .geo-label        { font-size: 13px; font-weight: 600; color: var(--text-ink); }
-.geo-badge        { font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+.geo-badge        { font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; flex-shrink: 0; }
 .geo-badge--active  { background: rgba(22,163,74,0.12); color: var(--success); }
 .geo-badge--paused  { background: var(--bg-subtle); color: var(--text-muted); }
-.geo-message      { font-size: 12px; color: var(--text-muted); margin: 0 0 8px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.geo-meta         { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-faint); }
-.geo-coords       { margin-left: 6px; }
+.geo-message      {
+  font-size: 12px; color: var(--text-muted); margin: 0 0 7px; line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* Card schedule lines */
+.geo-schedule    { display: flex; flex-direction: column; gap: 2px; margin-bottom: 5px; }
+.schedule-line   {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.schedule-line:not(.schedule-line--first) { padding-left: 14px; }
+
+/* Card coordinates */
+.geo-coords-row  {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--text-faint); font-family: monospace;
+}
 
 .geo-card-actions {
   display: flex; align-items: center; gap: 4px;
@@ -841,70 +1083,107 @@ onMounted(async () => {
   color: var(--text-muted); cursor: pointer;
   transition: background 0.12s, color 0.12s;
 }
-.geo-btn:hover            { background: var(--bg-subtle); color: var(--text-ink); }
-.geo-btn--toggle          { color: var(--text-faint); }
-.geo-btn--toggle-on       { color: var(--success); border-color: rgba(22,163,74,0.3); background: rgba(22,163,74,0.08); }
-.geo-btn--toggle-on:hover { background: rgba(22,163,74,0.15); }
-.geo-btn--disabled        { opacity: 0.35; cursor: not-allowed; }
-.geo-btn--disabled:hover  { background: none; color: var(--text-faint); }
-.geo-btn--danger          { margin-left: auto; }
-.geo-btn--danger:hover    { background: var(--danger-bg); color: var(--danger); border-color: transparent; }
-.geo-btn:disabled         { opacity: 0.35; cursor: not-allowed; }
+.geo-btn:hover              { background: var(--bg-subtle); color: var(--text-ink); }
+.geo-btn--toggle            { color: var(--text-faint); }
+.geo-btn--toggle-on         { color: var(--success); border-color: rgba(22,163,74,0.3); background: rgba(22,163,74,0.08); }
+.geo-btn--toggle-on:hover   { background: rgba(22,163,74,0.15); }
+.geo-btn--disabled          { opacity: 0.35; cursor: not-allowed; }
+.geo-btn--disabled:hover    { background: none; color: var(--text-faint); }
+.geo-btn--danger            { margin-left: auto; }
+.geo-btn--danger:hover      { background: var(--danger-bg); color: var(--danger); border-color: transparent; }
+.geo-btn:disabled           { opacity: 0.35; cursor: not-allowed; }
 
 /* ── Right column — form ─────────────────────────────────────── */
-.geo-form-col {
-  background: var(--bg-page);
-  overflow-y: auto;
-}
+.geo-form-col { background: var(--bg-page); overflow-y: auto; }
+
 .form-idle {
   height: 100%;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 12px; color: var(--text-faint); padding: 40px;
-  text-align: center;
+  gap: 12px; padding: 40px; text-align: center;
 }
-.form-idle-icon  { color: var(--border); }
-.form-idle-text  { font-size: 13px; color: var(--text-muted); max-width: 200px; line-height: 1.5; }
+.form-idle-icon { color: var(--border); }
+.form-idle-text { font-size: 13px; color: var(--text-muted); max-width: 200px; line-height: 1.5; }
 
 .form-panel { padding: 22px 24px; }
 .form-panel-header {
-  display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;
 }
 .form-title  { font-size: 15px; font-weight: 700; color: var(--text-ink); margin: 0; }
 .form-close {
   width: 28px; height: 28px; border-radius: 7px;
   background: none; border: 1px solid var(--border);
-  color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.12s;
 }
 .form-close:hover { background: var(--bg-subtle); }
 
-/* ── Map ─────────────────────────────────────────────────────── */
-.map-wrap { position: relative; margin-bottom: 16px; border-radius: 12px; border: 1px solid var(--border); }
-.geo-map  { width: 100%; height: 260px; border-radius: 11px; overflow: hidden; }
-.map-hint {
-  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
-  background: rgba(0,0,0,0.6); color: #fff;
-  font-size: 11.5px; padding: 4px 10px; border-radius: 20px;
-  display: flex; align-items: center; gap: 5px;
-  pointer-events: none; white-space: nowrap; z-index: 500;
+/* ── Form fields ─────────────────────────────────────────────── */
+.form-fields { display: flex; flex-direction: column; gap: 18px; }
+.field-group { display: flex; flex-direction: column; gap: 6px; }
+.field-label { font-size: 12px; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+.field-required { color: var(--danger); }
+.field-input, .field-textarea, .field-select {
+  background: var(--bg-surface); border: 1.5px solid var(--border);
+  border-radius: 9px; padding: 9px 12px; font-size: 13.5px;
+  color: var(--text-ink); width: 100%; box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.field-input:focus, .field-textarea:focus, .field-select:focus {
+  outline: none; border-color: var(--primary);
+}
+.field-input--error { border-color: var(--danger) !important; }
+.field-textarea { resize: vertical; }
+.field-select   { cursor: pointer; }
+.field-error    { font-size: 11.5px; color: var(--danger); margin: 0; }
+
+/* Radius slider */
+.radius-field  { display: flex; flex-direction: column; gap: 4px; }
+.radius-header { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+.radius-label-text { font-weight: 600; color: var(--text-muted); }
+.radius-value  { color: var(--primary); font-weight: 700; }
+.radius-desc   { color: var(--text-faint); }
+.radius-slider { width: 100%; accent-color: var(--primary); cursor: pointer; }
+.radius-labels { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--text-faint); }
+
+/* Card meta */
+.geo-meta-row {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 11px; color: var(--text-faint);
+}
+.geo-radius { display: flex; align-items: center; gap: 3px; }
+.geo-coords-text { font-family: monospace; }
+
+/* Char counter */
+.char-counter      { font-size: 11px; font-weight: 400; color: var(--text-faint); margin-left: auto; }
+.char-counter--warn { color: var(--warning); }
+.char-counter--over { color: var(--danger); font-weight: 600; }
+
+/* Coordinates row */
+.coords-row {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text-muted); font-family: monospace;
+  background: var(--bg-subtle); border-radius: 7px; padding: 6px 10px;
 }
 
-/* Address search */
-.addr-search {
-  position: absolute; top: 10px; left: 10px; right: 10px;
-  display: flex; gap: 6px; z-index: 500;
-}
+/* ── Address search ──────────────────────────────────────────── */
+.addr-search-wrap { position: relative; }
+.addr-search { display: flex; gap: 6px; }
 .addr-input {
-  flex: 1; height: 34px; background: var(--bg-surface);
-  border: 1px solid var(--border); border-radius: 8px;
+  flex: 1; height: 36px; background: var(--bg-surface);
+  border: 1.5px solid var(--border); border-radius: 9px;
   padding: 0 12px; font-size: 13px; color: var(--text-ink);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: border-color 0.15s;
 }
+.addr-input:focus { outline: none; border-color: var(--primary); }
 .addr-btn {
-  width: 34px; height: 34px; border-radius: 8px;
+  width: 36px; height: 36px; border-radius: 9px;
   background: var(--primary); border: none; color: #fff;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  cursor: pointer; flex-shrink: 0;
+  transition: opacity 0.15s;
 }
+.addr-btn:hover   { opacity: 0.88; }
 .addr-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .addr-spinner {
   width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.4);
@@ -913,69 +1192,53 @@ onMounted(async () => {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .addr-results {
-  position: absolute; top: 50px; left: 0; right: 0;
-  background: var(--bg-surface); border: 1px solid var(--border);
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: var(--bg-surface); border: 1.5px solid var(--border);
   border-radius: 10px; overflow: hidden;
-  list-style: none; margin: 6px 10px 0; padding: 0;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15); z-index: 600;
+  list-style: none; margin: 0; padding: 0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12); z-index: 20;
   max-height: 180px; overflow-y: auto;
 }
 .addr-result-item {
   padding: 9px 12px; font-size: 12.5px; color: var(--text-ink);
-  cursor: pointer; border-bottom: 1px solid var(--border);
-  line-height: 1.4;
+  cursor: pointer; border-bottom: 1px solid var(--border); line-height: 1.4;
 }
 .addr-result-item:last-child { border-bottom: none; }
 .addr-result-item:hover { background: var(--primary-light); }
 
+/* ── Map ─────────────────────────────────────────────────────── */
+.map-wrap {
+  position: relative; border-radius: 12px;
+  border: 1px solid var(--border); overflow: hidden;
+}
+.geo-map { width: 100%; height: 340px; }
+
+.geo-locate-btn {
+  position: absolute; bottom: 10px; right: 10px; z-index: 500;
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--bg-surface); border: 1px solid var(--border);
+  color: var(--primary); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: background 0.12s, color 0.12s;
+}
+.geo-locate-btn:hover { background: var(--primary-light); }
+.geo-locate-btn--loading { animation: pulse 1s ease-in-out infinite; }
+
+.map-hint {
+  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.6); color: #fff;
+  font-size: 11.5px; padding: 4px 10px; border-radius: 20px;
+  display: flex; align-items: center; gap: 5px;
+  pointer-events: none; white-space: nowrap; z-index: 500;
+}
+
 /* Leaflet custom pin */
 :deep(.geo-pin) {
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  background: var(--primary);
-  border: 3px solid #fff;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--primary); border: 3px solid #fff;
   box-shadow: 0 2px 8px rgba(0,0,0,0.35);
 }
-
-/* ── Form fields ─────────────────────────────────────────────── */
-.form-fields    { display: flex; flex-direction: column; gap: 16px; }
-.field-group    { display: flex; flex-direction: column; gap: 5px; }
-.field-label    { font-size: 12px; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
-.field-required { color: var(--danger); }
-.field-input, .field-textarea {
-  background: var(--bg-surface); border: 1.5px solid var(--border);
-  border-radius: 9px; padding: 9px 12px; font-size: 13.5px;
-  color: var(--text-ink); width: 100%; box-sizing: border-box;
-  transition: border-color 0.15s;
-}
-.field-input:focus, .field-textarea:focus { outline: none; border-color: var(--primary); }
-.field-input--error { border-color: var(--danger) !important; }
-.field-textarea { resize: vertical; }
-.field-error    { font-size: 11.5px; color: var(--danger); margin: 0; }
-
-.coords-row {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 12px; color: var(--text-muted); font-family: monospace;
-  background: var(--bg-subtle); border-radius: 7px; padding: 6px 10px;
-}
-
-/* Radius slider */
-.radius-value { color: var(--primary); font-weight: 700; }
-.radius-desc  { color: var(--text-faint); font-weight: 400; font-size: 11px; }
-.radius-slider {
-  width: 100%;
-  accent-color: var(--primary);
-  cursor: pointer;
-}
-.radius-labels {
-  display: flex; justify-content: space-between;
-  font-size: 10.5px; color: var(--text-faint); margin-top: 2px;
-}
-
-/* Char counter */
-.char-counter      { font-size: 11px; font-weight: 400; color: var(--text-faint); margin-left: auto; }
-.char-counter--warn { color: var(--warning); }
-.char-counter--over { color: var(--danger); font-weight: 600; }
 
 /* ── iOS preview ─────────────────────────────────────────────── */
 .ios-preview-wrap { display: flex; flex-direction: column; gap: 8px; }
@@ -985,8 +1248,7 @@ onMounted(async () => {
   border-radius: 16px; padding: 16px; border: 1px solid #333;
 }
 .ios-notif {
-  background: rgba(255,255,255,0.14);
-  backdrop-filter: blur(10px);
+  background: rgba(255,255,255,0.14); backdrop-filter: blur(10px);
   border-radius: 14px; padding: 12px 14px;
   display: flex; gap: 10px;
   border: 1px solid rgba(255,255,255,0.08);
@@ -1002,7 +1264,112 @@ onMounted(async () => {
 .ios-app-name        { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.65); letter-spacing: 0.02em; }
 .ios-time            { font-size: 11px; color: rgba(255,255,255,0.4); }
 .ios-notif-title     { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.92); margin-bottom: 2px; }
-.ios-notif-body      { font-size: 12px; color: rgba(255,255,255,0.65); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ios-notif-body      {
+  font-size: 12px; color: rgba(255,255,255,0.65); line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* ── Schedule section (collapsible) ─────────────────────────── */
+.form-section { border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+
+.section-toggle {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  padding: 12px 14px; background: var(--bg-subtle); border: none;
+  cursor: pointer; text-align: left;
+  transition: background 0.12s;
+}
+.section-toggle:hover { background: var(--primary-light); }
+.section-toggle-label {
+  flex: 1; display: flex; align-items: center; gap: 7px;
+  font-size: 13px; font-weight: 600; color: var(--text-ink);
+}
+.section-badge {
+  font-size: 11px; font-weight: 600;
+  color: var(--success); background: rgba(22,163,74,0.1);
+  padding: 2px 8px; border-radius: 20px;
+}
+.section-chevron { color: var(--text-muted); transition: transform 0.2s; flex-shrink: 0; }
+.section-chevron--open { transform: rotate(180deg); }
+
+.section-body {
+  padding: 14px; border-top: 1.5px solid var(--border);
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+/* ── Toggle switch ───────────────────────────────────────────── */
+.toggle-row {
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.toggle-label-wrap { flex: 1; }
+.toggle-label { font-size: 13px; font-weight: 600; color: var(--text-ink); display: block; }
+.toggle-desc  { font-size: 12px; color: var(--text-muted); line-height: 1.4; display: block; margin-top: 2px; }
+
+.toggle-switch {
+  flex-shrink: 0; width: 44px; height: 26px; border-radius: 13px;
+  background: var(--border); border: none; cursor: pointer;
+  padding: 3px; position: relative;
+  transition: background 0.2s;
+}
+.toggle-switch--on { background: var(--primary); }
+.toggle-thumb {
+  display: block; width: 20px; height: 20px;
+  border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  transition: transform 0.2s;
+}
+.toggle-switch--on .toggle-thumb { transform: translateX(18px); }
+
+/* ── Window builder ──────────────────────────────────────────── */
+.windows-builder { display: flex; flex-direction: column; gap: 10px; }
+
+.window-row {
+  background: var(--bg-subtle); border-radius: 10px;
+  padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;
+}
+.window-days { display: flex; gap: 4px; }
+.day-chip {
+  width: 32px; height: 32px; border-radius: 50%;
+  font-size: 11px; font-weight: 700;
+  background: var(--bg-surface); border: 1.5px solid var(--border);
+  color: var(--text-muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  flex-shrink: 0;
+}
+.day-chip--on              { background: var(--primary); color: #fff; border-color: var(--primary); }
+.day-chip:hover:not(.day-chip--on) { background: var(--primary-light); border-color: var(--primary); }
+
+.window-times {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.time-lbl { font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
+.time-in {
+  height: 34px; padding: 0 8px; font-size: 13px;
+  background: var(--bg-surface); border: 1.5px solid var(--border);
+  border-radius: 8px; color: var(--text-ink); flex: 1; min-width: 90px;
+  transition: border-color 0.15s;
+}
+.time-in:focus { outline: none; border-color: var(--primary); }
+
+.btn-remove-win {
+  margin-left: auto; width: 28px; height: 28px; border-radius: 7px;
+  background: none; border: 1px solid var(--border);
+  color: var(--text-muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.12s, color 0.12s;
+  flex-shrink: 0;
+}
+.btn-remove-win:hover { background: var(--danger-bg); color: var(--danger); border-color: transparent; }
+.window-error { font-size: 11.5px; color: var(--danger); margin: 0; }
+
+.btn-add-win {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 12.5px; font-weight: 600; color: var(--primary);
+  background: none; border: 1.5px dashed var(--primary);
+  border-radius: 9px; padding: 8px 14px; cursor: pointer; width: 100%;
+  transition: background 0.12s;
+}
+.btn-add-win:hover { background: var(--primary-light); }
 
 /* ── Form actions ────────────────────────────────────────────── */
 .submit-error { font-size: 12px; color: var(--danger); margin: 0; }
@@ -1019,39 +1386,30 @@ onMounted(async () => {
   font-size: 13px; font-weight: 600; cursor: pointer;
   transition: opacity 0.15s;
 }
-.btn-save:hover           { opacity: 0.9; }
-.btn-save:disabled        { opacity: 0.55; cursor: not-allowed; }
+.btn-save:hover    { opacity: 0.9; }
+.btn-save:disabled { opacity: 0.55; cursor: not-allowed; }
 
 /* ── Delete modal ────────────────────────────────────────────── */
 .modal-backdrop {
   position: fixed; inset: 0; background: rgba(0,0,0,0.45);
   display: flex; align-items: center; justify-content: center; z-index: 1000;
 }
-.modal-card {
-  background: var(--bg-surface); border-radius: 16px;
-  width: 90%; max-width: 440px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-}
+.modal-card { background: var(--bg-surface); border-radius: 16px; width: 90%; max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
 .modal-card--sm { max-width: 380px; }
-.modal-header {
-  display: flex; align-items: center; gap: 12px;
-  padding: 20px 22px 0;
-}
+.modal-header { display: flex; align-items: center; gap: 12px; padding: 20px 22px 0; }
 .modal-icon--danger {
   width: 36px; height: 36px; border-radius: 10px;
   background: var(--danger-bg); color: var(--danger);
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.modal-title    { font-size: 15px; font-weight: 700; color: var(--text-ink); margin: 0; }
-.modal-body     { padding: 12px 22px 0; font-size: 13.5px; color: var(--text-muted); line-height: 1.6; }
-.modal-footer   { display: flex; gap: 10px; justify-content: flex-end; padding: 20px 22px; }
-.btn-cancel     { background: none; border: 1.5px solid var(--border); border-radius: 9px; padding: 8px 16px; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; }
+.modal-title  { font-size: 15px; font-weight: 700; color: var(--text-ink); margin: 0; }
+.modal-body   { padding: 12px 22px 0; font-size: 13.5px; color: var(--text-muted); line-height: 1.6; }
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; padding: 20px 22px; }
+.btn-cancel   { background: none; border: 1.5px solid var(--border); border-radius: 9px; padding: 8px 16px; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; }
 .btn-cancel:hover { background: var(--bg-subtle); }
 .btn-confirm-danger {
-  background: var(--danger); color: #fff;
-  border: none; border-radius: 9px; padding: 8px 18px;
-  font-size: 13px; font-weight: 600; cursor: pointer;
+  background: var(--danger); color: #fff; border: none;
+  border-radius: 9px; padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
   transition: opacity 0.15s;
 }
 .btn-confirm-danger:hover    { opacity: 0.88; }
@@ -1061,10 +1419,8 @@ onMounted(async () => {
 .geo-toast {
   position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
   display: flex; align-items: center; gap: 8px;
-  font-size: 13px; font-weight: 500;
-  padding: 10px 18px; border-radius: 24px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.18);
-  z-index: 2000; pointer-events: none; white-space: nowrap;
+  font-size: 13px; font-weight: 500; padding: 10px 18px; border-radius: 24px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.18); z-index: 2000; pointer-events: none; white-space: nowrap;
 }
 .geo-toast--success { background: var(--success); color: #fff; }
 .geo-toast--error   { background: var(--danger);  color: #fff; }
