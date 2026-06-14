@@ -55,6 +55,20 @@ const giftcardAction = ref<'add_giftcard' | 'subtract_giftcard'>('add_giftcard')
 const giftcardAmount = ref('')
 const giftcardModalError = ref('')
 
+// Renew / claim modal (stamps, points, bundle completed)
+const showRenewModal = ref(false)
+const renewError = ref('')
+
+const renewRewardLabel = computed(() => {
+  if (!passResult.value) return ''
+  const { type } = passResult.value.pass.data
+  const rules = passResult.value.wallet.rules
+  if (type === 'stamps') return (rules as StampsRules).reward
+  if (type === 'points') return (rules as PointsRules).reward
+  if (type === 'bundle') return (rules as BundleRules).label
+  return ''
+})
+
 const walletInitials = computed(() =>
   (passResult.value?.wallet.businessName ?? '')
     .split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
@@ -301,6 +315,35 @@ function getSuccessMessage(action: 'add_stamp' | 'add_points' | 'renew_membershi
   return '¡Visita registrada!'
 }
 
+function openRenewModal() {
+  renewError.value = ''
+  showRenewModal.value = true
+}
+
+async function claimAndReset() {
+  if (!scannedToken.value || !passResult.value) return
+  loading.value = true
+  renewError.value = ''
+  try {
+    const renewedPass = await passStore.renewPass(scannedToken.value)
+    passResult.value = { pass: renewedPass, wallet: passResult.value.wallet }
+    showRenewModal.value = false
+    successMsg.value = renewedPass.data.type === 'bundle' ? 'Paquete recargado ✓' : 'Premio entregado ✓'
+    step.value = 'success'
+  } catch (e) {
+    const code = e instanceof ApiError ? (e.body as { error?: string } | null)?.error : undefined
+    if (code === PassErrorCodes.NOT_COMPLETED) {
+      renewError.value = 'El pase no está completo aún.'
+    } else if (e instanceof ApiError && e.status === 403) {
+      renewError.value = 'Sin permiso para realizar esta acción.'
+    } else {
+      renewError.value = 'Ocurrió un error, intenta de nuevo.'
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
 async function scanAnother() {
   await startScanner()
 }
@@ -386,8 +429,8 @@ startScanner()
                 }"
               />
             </div>
-            <p v-if="passResult.pass.data.currentStamps >= (passResult.wallet.rules as StampsRules).totalStamps" class="pass-reward-hint">
-              ¡Recompensa lista para canjear!
+            <p v-if="passResult.pass.status === 'completed'" class="pass-reward-hint">
+              🎁 Premio listo: {{ (passResult.wallet.rules as StampsRules).reward }}
             </p>
           </template>
 
@@ -406,6 +449,9 @@ startScanner()
               />
             </div>
             <p class="pass-data-sub">Meta: {{ (passResult.wallet.rules as PointsRules).rewardThreshold }} · {{ (passResult.wallet.rules as PointsRules).reward }}</p>
+            <p v-if="passResult.pass.status === 'completed'" class="pass-reward-hint">
+              🎁 Premio listo: {{ (passResult.wallet.rules as PointsRules).reward }}
+            </p>
           </template>
 
           <!-- Membership -->
@@ -482,21 +528,41 @@ startScanner()
       <div class="action-group">
 
         <!-- Stamps -->
-        <button
-          v-if="passResult.pass.data.type === 'stamps'"
-          class="btn-action-primary"
-          :disabled="loading"
-          @click="applyAction('add_stamp')"
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
-          {{ loading ? 'Agregando…' : 'Agregar sello' }}
-        </button>
+        <template v-if="passResult.pass.data.type === 'stamps'">
+          <div v-if="passResult.pass.status === 'completed'" class="completed-state">
+            <div class="completed-banner">
+              <p class="completed-title">🎁 Premio listo</p>
+              <p class="completed-reward">{{ (passResult.wallet.rules as StampsRules).reward }}</p>
+            </div>
+            <button class="btn-action-claim" :disabled="loading" @click="openRenewModal()">
+              {{ loading ? 'Procesando…' : 'Reclamar premio' }}
+            </button>
+          </div>
+          <button
+            v-else
+            class="btn-action-primary"
+            :disabled="loading"
+            @click="applyAction('add_stamp')"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            {{ loading ? 'Agregando…' : 'Agregar sello' }}
+          </button>
+        </template>
 
         <!-- Points -->
         <template v-else-if="passResult.pass.data.type === 'points'">
-          <div class="points-row">
+          <div v-if="passResult.pass.status === 'completed'" class="completed-state">
+            <div class="completed-banner">
+              <p class="completed-title">🎁 Premio listo</p>
+              <p class="completed-reward">{{ (passResult.wallet.rules as PointsRules).reward }}</p>
+            </div>
+            <button class="btn-action-claim" :disabled="loading" @click="openRenewModal()">
+              {{ loading ? 'Procesando…' : 'Canjear recompensa' }}
+            </button>
+          </div>
+          <div v-else class="points-row">
             <div class="stepper-wrap">
               <button type="button" class="stepper-btn" :disabled="pointsAmount <= 1" @click="pointsAmount = Math.max(1, pointsAmount - 1)">−</button>
               <input v-model.number="pointsAmount" type="number" min="1" class="stepper-input" />
@@ -548,20 +614,31 @@ startScanner()
         </button>
 
         <!-- Bundle -->
-        <button
-          v-else-if="passResult.pass.data.type === 'bundle'"
-          class="btn-action-primary"
-          :class="{ 'btn-disabled': passResult.pass.data.remainingUses <= 0 }"
-          :disabled="loading || passResult.pass.data.remainingUses <= 0"
-          @click="useBundle"
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 6L9 17l-5-5"/>
-          </svg>
-          {{ passResult.pass.data.remainingUses <= 0
-            ? 'Sin usos disponibles'
-            : (loading ? 'Registrando…' : `Registrar uso`) }}
-        </button>
+        <template v-else-if="passResult.pass.data.type === 'bundle'">
+          <div v-if="passResult.pass.status === 'completed'" class="completed-state">
+            <div class="completed-banner">
+              <p class="completed-title">Paquete agotado</p>
+              <p class="completed-reward">{{ (passResult.wallet.rules as BundleRules).label }}</p>
+            </div>
+            <button class="btn-action-claim" :disabled="loading" @click="openRenewModal()">
+              {{ loading ? 'Procesando…' : 'Recargar paquete' }}
+            </button>
+          </div>
+          <button
+            v-else
+            class="btn-action-primary"
+            :class="{ 'btn-disabled': passResult.pass.data.remainingUses <= 0 }"
+            :disabled="loading || passResult.pass.data.remainingUses <= 0"
+            @click="useBundle"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 6L9 17l-5-5"/>
+            </svg>
+            {{ passResult.pass.data.remainingUses <= 0
+              ? 'Sin usos disponibles'
+              : (loading ? 'Registrando…' : `Registrar uso`) }}
+          </button>
+        </template>
 
         <!-- Giftcard -->
         <template v-else-if="passResult.pass.data.type === 'giftcard'">
@@ -657,7 +734,7 @@ startScanner()
         <template v-if="passResult.pass.data.type === 'stamps'">
           <p class="result-state-val">
             {{ passResult.pass.data.currentStamps }} / {{ (passResult.wallet.rules as StampsRules).totalStamps }} sellos
-            <span v-if="passResult.pass.data.currentStamps >= (passResult.wallet.rules as StampsRules).totalStamps"> · ¡Recompensa lista!</span>
+            <span v-if="passResult.pass.status === 'completed'"> · ¡Recompensa lista!</span>
           </p>
         </template>
         <template v-else-if="passResult.pass.data.type === 'points'">
@@ -710,6 +787,33 @@ startScanner()
         Intentar de nuevo
       </button>
     </div>
+
+    <!-- ── Renew / Claim Modal ───────────────────────────────── -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showRenewModal" class="modal-backdrop" @click.self="showRenewModal = false">
+          <div class="modal-card">
+            <div class="modal-header">
+              <p class="modal-title">
+                {{ passResult?.pass.data.type === 'bundle' ? 'Recargar paquete' : 'Entregar premio' }}
+              </p>
+              <p class="modal-sub">
+                {{ passResult?.pass.data.type === 'bundle'
+                  ? `¿Recargar el paquete "${renewRewardLabel}"?`
+                  : `¿Entregar el premio: ${renewRewardLabel}?` }}
+              </p>
+            </div>
+            <p v-if="renewError" class="modal-error">{{ renewError }}</p>
+            <div class="modal-actions">
+              <button class="modal-btn-cancel" :disabled="loading" @click="showRenewModal = false">Cancelar</button>
+              <button class="modal-btn-confirm modal-btn-confirm--claim" :disabled="loading" @click="claimAndReset()">
+                {{ loading ? 'Procesando…' : 'Confirmar' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- ── Giftcard Modal ───────────────────────────────────── -->
     <Teleport to="body">
@@ -1416,4 +1520,51 @@ startScanner()
 .modal-leave-active .modal-card { transition: transform 0.2s ease; }
 .modal-enter-from .modal-card,
 .modal-leave-to .modal-card { transform: translateY(16px) scale(0.98); }
+
+.modal-btn-confirm--claim { background: #d97706; }
+.modal-btn-confirm--claim:hover:not(:disabled) { background: #b45309; }
+
+/* ── Completed state (premio listo / paquete agotado) ──── */
+.completed-state { display: flex; flex-direction: column; gap: 10px; }
+
+.completed-banner {
+  background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(251,191,36,0.12));
+  border: 1.5px solid rgba(245,158,11,0.3);
+  border-radius: 12px;
+  padding: 14px 16px;
+  text-align: center;
+}
+
+.completed-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-ink);
+  margin: 0 0 4px;
+}
+
+.completed-reward {
+  font-size: 13px;
+  color: var(--text-medium);
+  margin: 0;
+}
+
+.btn-action-claim {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 14px 20px;
+  border-radius: 12px;
+  background: #d97706;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.btn-action-claim:hover:not(:disabled) { background: #b45309; }
+.btn-action-claim:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
