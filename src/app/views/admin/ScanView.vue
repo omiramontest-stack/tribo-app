@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
-import { BrowserQRCodeReader } from '@zxing/browser'
+import { BrowserMultiFormatReader } from '@zxing/browser'
 import { usePassStore } from '@/app/stores/pass/PassStore'
 import { apiClient, ApiError } from '@/infrastructure/http/ApiClient'
 import type { PassWithWallet } from '@/application/pass/useCase/GetPassByTokenUseCase'
@@ -252,14 +252,14 @@ async function startScanner() {
   await new Promise((r) => setTimeout(r, 100))
   if (!videoRef.value) return
 
-  const reader = new BrowserQRCodeReader()
+  const reader = new BrowserMultiFormatReader()
   const controls = await reader.decodeFromVideoDevice(undefined, videoRef.value, async (result, err, ctrl) => {
     if (!result) return
     ctrl.stop()
     const text = result.getText()
     const token = extractToken(text)
     if (!token) {
-      errorMsg.value = 'QR inválido — no corresponde a un pase.'
+      errorMsg.value = 'Codigo invalido — no corresponde a un pase.'
       step.value = 'error'
       return
     }
@@ -362,7 +362,7 @@ startScanner()
     <!-- ── Scanning ─────────────────────────────────────────── -->
     <div v-if="step === 'scanning'" class="scan-state">
       <div class="scan-header">
-        <p class="scan-hint">Apunta la cámara al código QR del cliente</p>
+        <p class="scan-hint">Apunta la camara al QR o codigo de barras del cliente</p>
       </div>
 
       <div class="viewfinder-wrap">
@@ -380,7 +380,7 @@ startScanner()
 
       <div class="scan-status">
         <span class="scan-dot" />
-        <span class="scan-status-text">Buscando código QR…</span>
+        <span class="scan-status-text">Buscando QR o codigo de barras...</span>
       </div>
     </div>
 
