@@ -5,8 +5,10 @@ import { walletTypeConfig } from '@/app/config/walletTypeConfig'
 import { useImgbbUpload } from '@/app/composables/useImgbbUpload'
 import { parseApiError } from '@/app/composables/useApiError'
 import WalletRulesForm from '@/app/components/Wallet/WalletRulesForm.vue'
+import ThemeEditor from '@/app/components/Wallet/ThemeEditor.vue'
 import type { Wallet } from '@/domain/wallet/entities/Wallet'
 import type { WalletRules } from '@/domain/wallet/entities/WalletRules'
+import type { WalletThemeOverrides } from '@/domain/wallet/entities/WalletTheme'
 
 // ─── Props / Emits ─────────────────────────────────────────────────────────────
 const props = defineProps<{ modelValue: boolean; wallet: Wallet }>()
@@ -44,8 +46,11 @@ const wt = computed(
     ?? { label: props.wallet.type, iconColor: 'var(--text-muted)', iconBg: 'var(--bg-page)', iconPath: '' },
 )
 
+// ─── Tab navigation ────────────────────────────────────────────────────────────
+type Tab = 'brand' | 'rules' | 'design'
+const activeTab = ref<Tab>('brand')
+
 // ─── Form state ────────────────────────────────────────────────────────────────
-// Deep-clone on every open so canceling leaves the original intact.
 interface EditForm {
   businessName: string
   logoUrl: string
@@ -54,6 +59,7 @@ interface EditForm {
   description: string
   businessRules: string
   rules: WalletRules
+  theme: WalletThemeOverrides
 }
 
 function buildForm(w: Wallet): EditForm {
@@ -65,20 +71,29 @@ function buildForm(w: Wallet): EditForm {
     description:   w.description ?? '',
     businessRules: w.businessRules ?? '',
     rules:         JSON.parse(JSON.stringify(w.rules)) as WalletRules,
+    theme:         JSON.parse(JSON.stringify(w.theme ?? {})) as WalletThemeOverrides,
   }
 }
 
 const form = reactive<EditForm>(buildForm(props.wallet))
 
+// Base computed for ThemeEditor preview (derived from the current primary/accent being edited)
+const themeBase = computed(() => ({
+  primaryColor: form.primaryColor,
+  accentColor:  form.accentColor,
+  logoUrl:      form.logoUrl || null,
+  businessName: form.businessName || props.wallet.businessName,
+}))
+
 watch(
   () => props.modelValue,
   (open) => {
     if (open) {
-      // Re-sync with the current wallet every time the drawer opens
       Object.assign(form, buildForm(props.wallet))
       uploadError.value = ''
       apiError.value    = ''
       apiSuccess.value  = false
+      activeTab.value   = 'brand'
     }
   },
 )
@@ -104,6 +119,7 @@ async function save() {
       description:   form.description.trim(),
       businessRules: form.businessRules.trim() || null,
       rules:         form.rules,
+      theme:         Object.keys(form.theme).length > 0 ? form.theme : null,
     })
     apiSuccess.value = true
     emit('updated', updated)
@@ -154,6 +170,41 @@ function close() {
           </button>
         </div>
 
+        <!-- ── Tab navigation ───────────────────────────────────────────── -->
+        <div class="drawer-tabs">
+          <button
+            class="tab-btn"
+            :class="{ 'tab-btn--active': activeTab === 'brand' }"
+            @click="activeTab = 'brand'"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+            </svg>
+            Marca
+          </button>
+          <button
+            class="tab-btn"
+            :class="{ 'tab-btn--active': activeTab === 'rules' }"
+            @click="activeTab = 'rules'"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+            </svg>
+            Reglas
+          </button>
+          <button
+            class="tab-btn"
+            :class="{ 'tab-btn--active': activeTab === 'design' }"
+            @click="activeTab = 'design'"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="13.5" cy="6.5" r="2.5"/><circle cx="19" cy="17" r="2"/><circle cx="6" cy="17" r="2"/>
+              <path d="M12 22s-5-2-5-10M12 22s5-2 5-10M6.5 8.5l3.5 7M17.5 8.5l-3.5 7"/>
+            </svg>
+            Diseño
+          </button>
+        </div>
+
         <!-- ── Scrollable body ───────────────────────────────────────────── -->
         <div class="drawer-body">
 
@@ -177,128 +228,143 @@ function close() {
             </div>
           </Transition>
 
-          <!-- ── Branding section ──────────────────────────────────────── -->
-          <section class="form-section">
-            <p class="section-title">Branding</p>
+          <!-- ── Tab: Marca ───────────────────────────────────────────────── -->
+          <template v-if="activeTab === 'brand'">
+            <section class="form-section">
+              <p class="section-title">Branding</p>
 
-            <!-- Business name -->
-            <div class="field">
-              <label class="field-label">Nombre del negocio <span class="required">*</span></label>
-              <input
-                v-model="form.businessName"
-                type="text"
-                placeholder="Ej. Cucara Macara Espresso"
-                class="field-input"
-              />
-            </div>
-
-            <!-- Logo upload -->
-            <div class="field">
-              <label class="field-label">Logo <span class="field-label-hint">(opcional)</span></label>
-              <input ref="logoFileInput" type="file" accept="image/*" style="display:none;" @change="onLogoFileChange" />
-
-              <div v-if="form.logoUrl && !uploadingLogo" class="image-preview-row">
-                <img :src="form.logoUrl" alt="Logo" class="image-thumb" />
-                <div class="image-preview-info">
-                  <p class="image-preview-title">Logo cargado</p>
-                  <p class="image-preview-url">{{ form.logoUrl }}</p>
-                </div>
-                <button type="button" class="btn-change" @click="form.logoUrl = ''">Cambiar</button>
+              <div class="field">
+                <label class="field-label">Nombre del negocio <span class="required">*</span></label>
+                <input
+                  v-model="form.businessName"
+                  type="text"
+                  placeholder="Ej. Cucara Macara Espresso"
+                  class="field-input"
+                />
               </div>
 
-              <div
-                v-else
-                class="upload-zone"
-                :class="{ 'upload-zone--disabled': uploadingLogo }"
-                @click="logoFileInput?.click()"
-                @dragover.prevent
-                @drop.prevent="onLogoDrop"
-              >
-                <div v-if="uploadingLogo" class="upload-state">
-                  <svg class="spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="1.8" stroke-linecap="round">
-                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-                  </svg>
-                  <p class="upload-label">Subiendo imagen…</p>
-                </div>
-                <div v-else class="upload-state">
-                  <div class="upload-icon-wrap">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
-                    </svg>
+              <!-- Logo upload -->
+              <div class="field">
+                <label class="field-label">Logo <span class="field-label-hint">(opcional)</span></label>
+                <input ref="logoFileInput" type="file" accept="image/*" style="display:none;" @change="onLogoFileChange" />
+
+                <div v-if="form.logoUrl && !uploadingLogo" class="image-preview-row">
+                  <img :src="form.logoUrl" alt="Logo" class="image-thumb" />
+                  <div class="image-preview-info">
+                    <p class="image-preview-title">Logo cargado</p>
+                    <p class="image-preview-url">{{ form.logoUrl }}</p>
                   </div>
-                  <p class="upload-title">Haz clic o arrastra una imagen</p>
-                  <p class="upload-label">PNG, JPG, SVG · Máx. 4 MB</p>
+                  <button type="button" class="btn-change" @click="form.logoUrl = ''">Cambiar</button>
+                </div>
+
+                <div
+                  v-else
+                  class="upload-zone"
+                  :class="{ 'upload-zone--disabled': uploadingLogo }"
+                  @click="logoFileInput?.click()"
+                  @dragover.prevent
+                  @drop.prevent="onLogoDrop"
+                >
+                  <div v-if="uploadingLogo" class="upload-state">
+                    <svg class="spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="1.8" stroke-linecap="round">
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                    </svg>
+                    <p class="upload-label">Subiendo imagen…</p>
+                  </div>
+                  <div v-else class="upload-state">
+                    <div class="upload-icon-wrap">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                      </svg>
+                    </div>
+                    <p class="upload-title">Haz clic o arrastra una imagen</p>
+                    <p class="upload-label">PNG, JPG, SVG · Máx. 4 MB</p>
+                  </div>
+                </div>
+                <p v-if="uploadError" class="field-error">{{ uploadError }}</p>
+              </div>
+
+              <!-- Colors -->
+              <div class="form-grid-2">
+                <div class="field">
+                  <label class="field-label">Color principal</label>
+                  <div class="color-picker-row">
+                    <input v-model="form.primaryColor" type="color" class="color-swatch" />
+                    <span class="color-hex">{{ form.primaryColor }}</span>
+                    <span class="color-preview-dot" :style="{ background: form.primaryColor }" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label class="field-label">Color acento</label>
+                  <div class="color-picker-row">
+                    <input v-model="form.accentColor" type="color" class="color-swatch" />
+                    <span class="color-hex">{{ form.accentColor }}</span>
+                    <span class="color-preview-dot accent" :style="{ background: form.accentColor }" />
+                  </div>
                 </div>
               </div>
-              <p v-if="uploadError" class="field-error">{{ uploadError }}</p>
-            </div>
 
-            <!-- Colors -->
-            <div class="form-grid-2">
+              <!-- Color preview strip -->
+              <div class="color-preview-strip">
+                <div class="strip-fill" :style="{ background: `linear-gradient(135deg, ${form.primaryColor}, ${form.accentColor})` }" />
+                <div class="strip-info">
+                  <div class="strip-dot" :style="{ background: form.primaryColor }" />
+                  <span class="strip-label">Vista previa de colores</span>
+                  <div class="strip-dot accent" :style="{ background: form.accentColor }" />
+                </div>
+              </div>
+
+              <!-- Description -->
               <div class="field">
-                <label class="field-label">Color principal</label>
-                <div class="color-picker-row">
-                  <input v-model="form.primaryColor" type="color" class="color-swatch" />
-                  <span class="color-hex">{{ form.primaryColor }}</span>
-                  <span class="color-preview-dot" :style="{ background: form.primaryColor }" />
-                </div>
+                <label class="field-label">Descripción <span class="field-label-hint">(opcional)</span></label>
+                <textarea
+                  v-model="form.description"
+                  rows="2"
+                  placeholder="Descripción breve del programa de lealtad…"
+                  class="field-input"
+                  style="resize: none;"
+                />
               </div>
+
+              <!-- Business rules / T&C -->
               <div class="field">
-                <label class="field-label">Color acento</label>
-                <div class="color-picker-row">
-                  <input v-model="form.accentColor" type="color" class="color-swatch" />
-                  <span class="color-hex">{{ form.accentColor }}</span>
-                  <span class="color-preview-dot accent" :style="{ background: form.accentColor }" />
-                </div>
+                <label class="field-label">
+                  Reglas del negocio / Términos y condiciones
+                  <span class="field-label-hint">(opcional)</span>
+                </label>
+                <textarea
+                  v-model="form.businessRules"
+                  rows="4"
+                  placeholder="Ej: Válido solo en sucursal principal. No acumulable con otras promociones."
+                  class="field-input"
+                  style="resize: vertical;"
+                />
+                <p class="field-hint">
+                  Este texto aparece en el reverso del pase físico (Apple Wallet y Google Wallet) de tus clientes.
+                </p>
               </div>
-            </div>
+            </section>
+          </template>
 
-            <!-- Color preview strip -->
-            <div class="color-preview-strip">
-              <div class="strip-fill" :style="{ background: `linear-gradient(135deg, ${form.primaryColor}, ${form.accentColor})` }" />
-              <div class="strip-info">
-                <div class="strip-dot" :style="{ background: form.primaryColor }" />
-                <span class="strip-label">Vista previa de colores</span>
-                <div class="strip-dot accent" :style="{ background: form.accentColor }" />
-              </div>
-            </div>
+          <!-- ── Tab: Reglas ──────────────────────────────────────────────── -->
+          <template v-else-if="activeTab === 'rules'">
+            <section class="form-section">
+              <p class="section-title">Reglas de {{ wt.label }}</p>
+              <WalletRulesForm :type="wallet.type" :rules="form.rules" />
+            </section>
+          </template>
 
-            <!-- Description -->
-            <div class="field">
-              <label class="field-label">Descripción <span class="field-label-hint">(opcional)</span></label>
-              <textarea
-                v-model="form.description"
-                rows="2"
-                placeholder="Descripción breve del programa de lealtad…"
-                class="field-input"
-                style="resize: none;"
-              />
-            </div>
-
-            <!-- Business rules / T&C -->
-            <div class="field">
-              <label class="field-label">
-                Reglas del negocio / Términos y condiciones
-                <span class="field-label-hint">(opcional)</span>
-              </label>
-              <textarea
-                v-model="form.businessRules"
-                rows="4"
-                placeholder="Ej: Válido solo en sucursal principal. No acumulable con otras promociones. El establecimiento se reserva el derecho de modificar los términos."
-                class="field-input"
-                style="resize: vertical;"
-              />
-              <p class="field-hint">
-                Este texto aparece en el reverso del pase físico (Apple Wallet y Google Wallet) de tus clientes.
+          <!-- ── Tab: Diseño ──────────────────────────────────────────────── -->
+          <template v-else-if="activeTab === 'design'">
+            <section class="form-section">
+              <p class="section-title">Personalización visual avanzada</p>
+              <p class="section-hint">
+                Personaliza colores, tipografía, código de barras y datos de contacto del pase.
+                Estos ajustes son opcionales — los campos vacíos usan los valores de "Marca".
               </p>
-            </div>
-          </section>
-
-          <!-- ── Rules section ─────────────────────────────────────────── -->
-          <section class="form-section">
-            <p class="section-title">Reglas de {{ wt.label }}</p>
-            <WalletRulesForm :type="wallet.type" :rules="form.rules" />
-          </section>
+              <ThemeEditor :theme="form.theme" :base="themeBase" />
+            </section>
+          </template>
 
         </div>
 
@@ -408,6 +474,38 @@ function close() {
 .drawer-close:hover { background: var(--bg-page); color: var(--text-ink); }
 .drawer-close:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* ── Tab navigation ────────────────────────────────────────────────────────── */
+.drawer-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--bg-surface);
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.13s, color 0.13s, border-color 0.13s;
+}
+.tab-btn:hover { background: var(--bg-page); color: var(--text-ink); }
+.tab-btn--active {
+  background: var(--primary-light);
+  color: var(--primary-text);
+  border-color: var(--primary-border, transparent);
+}
+
 /* ── Body ──────────────────────────────────────────────────────────────────── */
 .drawer-body {
   flex: 1;
@@ -457,7 +555,14 @@ function close() {
   margin: 0;
 }
 
-/* ── Fields (shared with WalletCreateView) ─────────────────────────────────── */
+.section-hint {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Fields ────────────────────────────────────────────────────────────────── */
 .field {
   display: flex;
   flex-direction: column;

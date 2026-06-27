@@ -3,8 +3,11 @@ import type { Pass } from '@/domain/pass/entities/Pass'
 import type { Wallet } from '@/domain/wallet/entities/Wallet'
 import type { DaypassData } from '@/domain/pass/entities/PassData'
 import type { DaypassRules } from '@/domain/wallet/entities/WalletRules'
+import { usePassTheme } from '@/app/composables/usePassTheme'
 
 const props = defineProps<{ pass: Pass; wallet: Wallet }>()
+
+const { bgStyle, logoUrl, resolved } = usePassTheme(props.wallet)
 
 const rules = props.wallet.rules as DaypassRules
 const data = props.pass.data as DaypassData
@@ -28,7 +31,7 @@ function formatDate(iso: string): string {
       class="relative px-5 pt-6 pb-8"
       :style="rules.imageUrl
         ? { backgroundImage: `url(${rules.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-        : { background: `linear-gradient(135deg, ${wallet.primaryColor}, ${wallet.accentColor})` }
+        : bgStyle
       "
     >
       <!-- Overlay for readability when using image -->
@@ -36,7 +39,7 @@ function formatDate(iso: string): string {
 
       <div class="relative z-10">
         <div class="flex items-center justify-between mb-4">
-          <img v-if="wallet.logoUrl" :src="wallet.logoUrl" class="w-10 h-10 rounded-full object-cover" alt="" />
+          <img v-if="logoUrl" :src="logoUrl" class="w-10 h-10 rounded-full object-cover" alt="" />
           <span
             class="ml-auto text-xs font-semibold px-3 py-1 rounded-full"
             :class="data.used
@@ -55,7 +58,7 @@ function formatDate(iso: string): string {
     <!-- Event details -->
     <div
       class="px-5 py-4 space-y-3"
-      :style="{ background: `linear-gradient(to bottom, ${wallet.primaryColor}cc, ${wallet.accentColor})` }"
+      :style="{ background: `linear-gradient(to bottom, ${resolved.background}cc, ${resolved.accent})` }"
     >
       <div class="flex items-start gap-2">
         <span class="text-white/60 text-lg">📅</span>
@@ -76,7 +79,7 @@ function formatDate(iso: string): string {
     <!-- Footer -->
     <div
       class="px-5 pb-5 pt-3 border-t border-white/10"
-      :style="{ backgroundColor: wallet.accentColor }"
+      :style="{ backgroundColor: resolved.accent }"
     >
       <p class="text-white/60 text-xs uppercase tracking-wide">Titular</p>
       <p class="text-white font-semibold text-sm">{{ pass.firstName }} {{ pass.lastName }}</p>

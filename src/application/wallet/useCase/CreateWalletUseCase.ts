@@ -26,6 +26,7 @@ export default class CreateWalletUseCase implements UseCase<CreateWalletInput, W
       description: dto.description,
       businessRules: dto.businessRules ?? null,
       rules: dto.rules,
+      theme: dto.theme ?? null,
       createdAt: new Date().toISOString(),
     }
     return this._walletRepository.save(orgId, wallet)

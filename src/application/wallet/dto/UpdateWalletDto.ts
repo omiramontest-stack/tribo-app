@@ -1,4 +1,5 @@
 import type { WalletRules } from '@/domain/wallet/entities/WalletRules'
+import type { WalletThemeOverrides } from '@/domain/wallet/entities/WalletTheme'
 
 export interface UpdateWalletDto {
   businessName?: string
@@ -8,4 +9,5 @@ export interface UpdateWalletDto {
   description?: string
   businessRules?: string | null
   rules?: WalletRules
+  theme?: WalletThemeOverrides | null
 }

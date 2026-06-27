@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { Pass } from '@/domain/pass/entities/Pass'
 import type { Wallet } from '@/domain/wallet/entities/Wallet'
 import type { StampsData } from '@/domain/pass/entities/PassData'
 import type { StampsRules } from '@/domain/wallet/entities/WalletRules'
 import { getStampIcon } from '@/app/config/stampIcons'
+import { usePassTheme } from '@/app/composables/usePassTheme'
 
 const props = defineProps<{ pass: Pass; wallet: Wallet }>()
 
@@ -11,17 +13,19 @@ const rules = props.wallet.rules as StampsRules
 const data  = props.pass.data as StampsData
 const icon  = getStampIcon(rules.stampIcon)
 
-/** Para ícono custom usamos el SVG completo; para el resto, el path interno. */
 const isCustomIcon = rules.stampIcon === 'custom' && !!rules.stampCustomSvg
 
 const COLS = 5
 const filled = (i: number) => i <= data.currentStamps
+
+const { bgStyle, logoUrl, resolved } = usePassTheme(props.wallet)
+const stampIconColor = computed(() => resolved.value.background)
 </script>
 
 <template>
   <div
     class="stamps-card"
-    :style="{ background: `linear-gradient(135deg, ${wallet.primaryColor} 0%, ${wallet.accentColor} 100%)` }"
+    :style="bgStyle"
   >
     <!-- Header -->
     <div class="sc-header">
@@ -29,8 +33,8 @@ const filled = (i: number) => i <= data.currentStamps
         <p class="sc-business">{{ wallet.businessName }}</p>
         <p v-if="wallet.description" class="sc-desc">{{ wallet.description }}</p>
       </div>
-      <div v-if="wallet.logoUrl" class="sc-logo-wrap">
-        <img :src="wallet.logoUrl" class="sc-logo" :alt="wallet.businessName" />
+      <div v-if="logoUrl" class="sc-logo-wrap">
+        <img :src="logoUrl" class="sc-logo" :alt="wallet.businessName" />
       </div>
     </div>
 
@@ -159,7 +163,7 @@ const filled = (i: number) => i <= data.currentStamps
   height: 100%;
 }
 .sc-stamp--filled .sc-stamp-icon {
-  color: v-bind('wallet.primaryColor');
+  color: v-bind('stampIconColor');
   filter: brightness(0.75);
 }
 .sc-stamp--empty .sc-stamp-icon {

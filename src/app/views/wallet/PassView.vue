@@ -11,10 +11,14 @@ import BundleCard from '@/app/components/Wallet/BundleCard.vue'
 import GiftcardCard from '@/app/components/Wallet/GiftcardCard.vue'
 import CouponCard from '@/app/components/Wallet/CouponCard.vue'
 import WalletQR from '@/app/components/Wallet/WalletQR.vue'
+import TierProgressBadge from '@/app/components/Wallet/TierProgressBadge.vue'
+import PassBackSection from '@/app/components/Wallet/PassBackSection.vue'
 import { usePassStore } from '@/app/stores/pass/PassStore'
 import { ApiError, apiClient } from '@/infrastructure/http/ApiClient'
 import type { CashbackRules } from '@/domain/wallet/entities/WalletRules'
 import type { CashbackTransaction } from '@/domain/pass/repository/PassRepository'
+import { resolveTheme } from '@/application/wallet/utils/themeResolver'
+import { FONT_FAMILY_MAP } from '@/app/composables/usePassTheme'
 
 const route = useRoute()
 const router = useRouter()
@@ -60,6 +64,18 @@ const isCoupon = computed(() => passStore.currentPassWallet?.type === 'coupon')
 const cashbackRules = computed(() =>
   isCashback.value ? (passStore.currentPassWallet!.rules as CashbackRules) : null,
 )
+
+const resolvedTheme = computed(() =>
+  passStore.currentPassWallet
+    ? resolveTheme(passStore.currentPassWallet.theme, passStore.currentPassWallet)
+    : null,
+)
+
+const wrapperFontStyle = computed(() => ({
+  fontFamily: FONT_FAMILY_MAP[resolvedTheme.value?.fontKey ?? 'system'],
+}))
+
+const passData = computed(() => passStore.currentPass?.data as Record<string, unknown> | undefined)
 
 function dlParam(sep: '?' | '&' = '?') {
   return dl.value ? `${sep}dl=${encodeURIComponent(dl.value)}` : ''
@@ -113,7 +129,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div v-else-if="passStore.currentPass && passStore.currentPassWallet" class="w-full max-w-sm space-y-4">
+    <div v-else-if="passStore.currentPass && passStore.currentPassWallet" class="w-full max-w-sm space-y-4" :style="wrapperFontStyle">
       <!-- Download-link countdown -->
       <div
         v-if="secondsLeft !== null"
@@ -166,6 +182,18 @@ onMounted(async () => {
         v-else-if="isCoupon"
         :pass="passStore.currentPass"
         :wallet="passStore.currentPassWallet"
+      />
+
+      <!-- Tier progress (shown only for level 2+) -->
+      <TierProgressBadge
+        :tier-level="(passData?.tierLevel as number | undefined)"
+        :completed-cycles="(passData?.completedCycles as number | undefined)"
+      />
+
+      <!-- Back-of-card contact info -->
+      <PassBackSection
+        v-if="resolvedTheme"
+        :back="resolvedTheme.back"
       />
 
       <!-- QR -->

@@ -11,6 +11,7 @@ import { walletTypeConfig } from '@/app/config/walletTypeConfig'
 import PassTable from '@/app/components/Admin/PassTable.vue'
 import GeneratePassModal from '@/app/components/Admin/GeneratePassModal.vue'
 import WalletEditModal from '@/app/components/Wallet/WalletEditModal.vue'
+import WalletTiersPanel from '@/app/components/Wallet/WalletTiersPanel.vue'
 import type { Pass, PassStatus } from '@/domain/pass/entities/Pass'
 
 const route = useRoute()
@@ -330,6 +331,13 @@ function formatDate(iso: string): string {
         <p class="business-rules-text">{{ walletStore.currentWallet.businessRules }}</p>
       </div>
     </div>
+
+    <!-- Tiers panel -->
+    <WalletTiersPanel
+      v-if="walletStore.currentWallet"
+      :wallet="walletStore.currentWallet"
+      :can-edit="canEdit"
+    />
 
     <!-- Stats grid -->
     <div class="stats-grid">

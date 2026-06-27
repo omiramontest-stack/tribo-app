@@ -1,4 +1,5 @@
 import type { WalletRules } from './WalletRules'
+import type { WalletThemeOverrides } from './WalletTheme'
 
 export type WalletType = 'stamps' | 'membership' | 'points' | 'cashback' | 'daypass' | 'bundle' | 'giftcard' | 'coupon'
 
@@ -13,6 +14,7 @@ export interface Wallet {
   description: string
   businessRules?: string | null
   rules: WalletRules
+  theme?: WalletThemeOverrides | null
   createdAt: string
   deletedAt?: string | null
 }

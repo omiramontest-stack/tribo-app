@@ -3,9 +3,11 @@ import type { Pass } from '@/domain/pass/entities/Pass'
 import type { Wallet } from '@/domain/wallet/entities/Wallet'
 import type { CashbackData } from '@/domain/pass/entities/PassData'
 import type { CashbackRules } from '@/domain/wallet/entities/WalletRules'
+import { usePassTheme } from '@/app/composables/usePassTheme'
 
 const props = defineProps<{ pass: Pass; wallet: Wallet }>()
 
+const { bgStyle, logoUrl } = usePassTheme(props.wallet)
 const rules = props.wallet.rules as CashbackRules
 const data = props.pass.data as CashbackData
 </script>
@@ -13,7 +15,7 @@ const data = props.pass.data as CashbackData
 <template>
   <div
     class="w-full max-w-sm rounded-2xl overflow-hidden shadow-xl"
-    :style="{ background: `linear-gradient(135deg, ${wallet.primaryColor}, ${wallet.accentColor})` }"
+    :style="bgStyle"
   >
     <!-- Header -->
     <div class="px-5 pt-5 pb-3 flex items-center justify-between">
@@ -21,7 +23,7 @@ const data = props.pass.data as CashbackData
         <p class="text-white font-bold text-lg leading-tight">{{ wallet.businessName }}</p>
         <p v-if="wallet.description" class="text-white/70 text-xs mt-0.5">{{ wallet.description }}</p>
       </div>
-      <img v-if="wallet.logoUrl" :src="wallet.logoUrl" class="w-10 h-10 rounded-full object-cover" alt="" />
+      <img v-if="logoUrl" :src="logoUrl" class="w-10 h-10 rounded-full object-cover" alt="" />
     </div>
 
     <!-- Balance -->
