@@ -147,18 +147,6 @@ async function loadMorePasses() {
 
 useInfiniteScroll(passesSentinelRef, loadMorePasses)
 
-async function switchStatusTab(tab: PassStatus) {
-  statusTab.value = tab
-  passesPage.value = 1
-  searching.value = true
-  try {
-    await passStore.fetchPassesByWallet(id, 1, debouncedSearch.value, tab)
-    displayPasses.value = [...passStore.passes]
-  } finally {
-    searching.value = false
-  }
-}
-
 async function switchTab(tab: 'pases' | 'canjeados') {
   activeTab.value = tab
   if (tab === 'canjeados' && scannedPasses.value.length === 0) {
@@ -379,22 +367,6 @@ function formatDate(iso: string): string {
           </button>
         </div>
 
-        <!-- Non-daypass: Activos / Completados / Archivados -->
-        <div v-else class="tab-group">
-          <button
-            v-for="tab in [
-              { id: 'active',    label: `Activos` },
-              { id: 'completed', label: `Completados` },
-              { id: 'archived',  label: `Archivados` },
-            ]"
-            :key="tab.id"
-            class="tab-btn"
-            :class="{ 'tab-btn--active': statusTab === tab.id }"
-            @click="switchStatusTab(tab.id as 'active' | 'completed' | 'archived')"
-          >
-            {{ tab.label }}
-          </button>
-        </div>
 
         <button
           v-if="isDaypass ? activeTab === 'pases' : statusTab === 'active'"
