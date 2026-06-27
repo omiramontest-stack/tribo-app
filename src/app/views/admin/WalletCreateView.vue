@@ -28,8 +28,6 @@ const fileInput = ref<HTMLInputElement | null>(null)
 
 const { uploading: uploadingLogo, error: uploadError, upload: uploadImage } = useImgbbUpload()
 
-const themeOverrides = ref<WalletThemeOverrides>({})
-
 const form = reactive<CreateWalletDto>({
   type: 'stamps',
   businessName: '',
@@ -38,19 +36,18 @@ const form = reactive<CreateWalletDto>({
   accentColor: '#F5A623',
   description: '',
   businessRules: '',
+  theme: {} as WalletThemeOverrides,
   rules: findWalletTypeConfig('stamps').defaultRules(),
 })
+
+// Non-nullable typed view of form.theme for ThemeEditor
+const formTheme = computed<WalletThemeOverrides>(() => (form.theme as WalletThemeOverrides) ?? {})
 
 const themeBase = computed(() => ({
   primaryColor: form.primaryColor,
   accentColor:  form.accentColor,
   logoUrl:      form.logoUrl || null,
   businessName: form.businessName || 'Vista previa',
-}))
-
-const previewWallet = computed(() => ({
-  ...form,
-  theme: themeOverrides.value,
 }))
 
 watch(
@@ -102,11 +99,11 @@ function onDrop(e: DragEvent) {
 async function handleSubmit() {
   try {
     loading.value = true
-    const theme = themeOverrides.value
+    const theme = form.theme as WalletThemeOverrides | undefined
     await walletStore.createWallet({
       ...form,
       businessRules: form.businessRules?.trim() || null,
-      theme: Object.keys(theme).length > 0 ? theme : null,
+      theme: theme && Object.keys(theme).length > 0 ? theme : null,
     })
     router.push({ name: 'Wallets' })
   } finally {
@@ -363,7 +360,7 @@ async function handleSubmit() {
       <div class="form-card">
         <div class="theme-editor-wrap">
           <ThemeEditor
-            :theme="themeOverrides"
+            :theme="formTheme"
             :base="themeBase"
             :hide-logo-override="true"
           />
@@ -424,14 +421,14 @@ async function handleSubmit() {
 
       <!-- Card preview -->
       <div class="card-preview-wrap">
-        <StampsCard     v-if="form.type === 'stamps'"         :pass="getPreviewPass()" :wallet="(previewWallet as any)" />
-        <MembershipCard v-else-if="form.type === 'membership'" :pass="getPreviewPass()" :wallet="(previewWallet as any)" />
-        <PointsCard     v-else-if="form.type === 'points'"    :pass="getPreviewPass()" :wallet="(previewWallet as any)" />
-        <CashbackCard   v-else-if="form.type === 'cashback'"  :pass="getPreviewPass()" :wallet="(previewWallet as any)" />
-        <DaypassCard    v-else-if="form.type === 'daypass'"   :pass="getPreviewPass()" :wallet="(previewWallet as any)" />
-        <BundleCard     v-else-if="form.type === 'bundle'"    :pass="getPreviewPass()" :wallet="(previewWallet as any)" />
-        <GiftcardCard   v-else-if="form.type === 'giftcard'"  :pass="getPreviewPass()" :wallet="(previewWallet as any)" />
-        <CouponCard     v-else-if="form.type === 'coupon'"    :pass="getPreviewPass()" :wallet="(previewWallet as any)" />
+        <StampsCard     v-if="form.type === 'stamps'"         :pass="getPreviewPass()" :wallet="(form as any)" />
+        <MembershipCard v-else-if="form.type === 'membership'" :pass="getPreviewPass()" :wallet="(form as any)" />
+        <PointsCard     v-else-if="form.type === 'points'"    :pass="getPreviewPass()" :wallet="(form as any)" />
+        <CashbackCard   v-else-if="form.type === 'cashback'"  :pass="getPreviewPass()" :wallet="(form as any)" />
+        <DaypassCard    v-else-if="form.type === 'daypass'"   :pass="getPreviewPass()" :wallet="(form as any)" />
+        <BundleCard     v-else-if="form.type === 'bundle'"    :pass="getPreviewPass()" :wallet="(form as any)" />
+        <GiftcardCard   v-else-if="form.type === 'giftcard'"  :pass="getPreviewPass()" :wallet="(form as any)" />
+        <CouponCard     v-else-if="form.type === 'coupon'"    :pass="getPreviewPass()" :wallet="(form as any)" />
         <p class="card-preview-caption">Vista previa · No representa el diseño final exacto</p>
       </div>
 

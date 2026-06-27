@@ -10,6 +10,9 @@ const props = defineProps<{ wallet: Wallet; canEdit: boolean }>()
 
 const tierStore = useTierStore()
 
+// ─── Expand / collapse ────────────────────────────────────────────────────────
+const isExpanded = ref(false)
+
 // ─── Loading / error state ─────────────────────────────────────────────────────
 const loading  = ref(false)
 const loadErr  = ref('')
@@ -89,7 +92,7 @@ function thresholdLabel(threshold: number): string {
   <div class="tiers-panel">
 
     <!-- Panel header -->
-    <div class="panel-header">
+    <button class="panel-header" @click="isExpanded = !isExpanded">
       <div class="panel-title-row">
         <div class="panel-icon">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary-text)" stroke-width="2" stroke-linecap="round">
@@ -99,41 +102,56 @@ function thresholdLabel(threshold: number): string {
         <div>
           <p class="panel-title">Programa de Niveles</p>
           <p class="panel-subtitle">
-            {{ tierStore.tiers.length === 0 ? 'Sin niveles configurados' : `${tierStore.tiers.length + 1} niveles` }}
+            <span v-if="loading">Cargando…</span>
+            <span v-else-if="tierStore.tiers.length === 0">Sin niveles configurados</span>
+            <span v-else>{{ tierStore.tiers.length + 1 }} niveles activos</span>
           </p>
         </div>
       </div>
-      <button
-        v-if="canEdit"
-        class="btn-add-tier"
-        @click="openCreate"
-        :disabled="loading"
-      >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-          <path d="M12 5v14M5 12h14"/>
-        </svg>
-        Añadir Nivel {{ nextLevel }}
-      </button>
-    </div>
 
-    <!-- Loading -->
-    <div v-if="loading" class="panel-loading">
-      <svg class="spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.5" stroke-linecap="round">
-        <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
-      </svg>
-      Cargando niveles…
-    </div>
+      <div class="panel-header-right">
+        <button
+          v-if="canEdit && isExpanded"
+          class="btn-add-tier"
+          @click.stop="openCreate"
+          :disabled="loading"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          Añadir Nivel {{ nextLevel }}
+        </button>
 
-    <!-- Load error -->
-    <div v-else-if="loadErr" class="panel-error">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-        <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
-      </svg>
-      {{ loadErr }}
-    </div>
+        <div class="panel-chevron" :class="{ 'panel-chevron--open': isExpanded }">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </div>
+      </div>
+    </button>
 
-    <!-- Evolution path -->
-    <div v-else class="evolution-path">
+    <!-- Collapsible body -->
+    <Transition name="panel-body">
+      <div v-if="isExpanded" class="panel-body">
+
+        <!-- Loading -->
+        <div v-if="loading" class="panel-loading">
+          <svg class="spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.5" stroke-linecap="round">
+            <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
+          </svg>
+          Cargando niveles…
+        </div>
+
+        <!-- Load error -->
+        <div v-else-if="loadErr" class="panel-error">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+          </svg>
+          {{ loadErr }}
+        </div>
+
+        <!-- Evolution path -->
+        <div v-else class="evolution-path">
 
       <!-- Nivel 1: base wallet (always shown) -->
       <div class="tier-node tier-node--base">
@@ -278,7 +296,10 @@ function thresholdLabel(threshold: number): string {
         </div>
       </div>
 
-    </div>
+        </div><!-- /evolution-path -->
+
+      </div><!-- /panel-body -->
+    </Transition>
 
   </div>
 
@@ -336,7 +357,35 @@ function thresholdLabel(threshold: number): string {
 
 .panel-header {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 14px 18px; border-bottom: 1px solid var(--border);
+  padding: 14px 18px;
+  width: 100%; background: none; border: none; cursor: pointer;
+  font-family: inherit; text-align: left;
+  transition: background 0.12s;
+}
+.panel-header:hover { background: var(--bg-field); }
+
+.panel-header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+.panel-chevron {
+  color: var(--text-faint);
+  transition: transform 0.22s ease;
+  display: flex; align-items: center;
+}
+.panel-chevron--open { transform: rotate(180deg); }
+
+/* Panel body collapsible */
+.panel-body { border-top: 1px solid var(--border); }
+
+.panel-body-enter-active,
+.panel-body-leave-active {
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+  overflow: hidden;
+  max-height: 1000px;
+}
+.panel-body-enter-from,
+.panel-body-leave-to {
+  max-height: 0;
+  opacity: 0;
 }
 
 .panel-title-row { display: flex; align-items: center; gap: 10px; }
