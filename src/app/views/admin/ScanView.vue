@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
 import { BrowserMultiFormatReader } from '@zxing/browser'
+import { BarcodeFormat, DecodeHintType } from '@zxing/library'
 import { usePassStore } from '@/app/stores/pass/PassStore'
 import { apiClient, ApiError } from '@/infrastructure/http/ApiClient'
 import type { PassWithWallet } from '@/application/pass/useCase/GetPassByTokenUseCase'
@@ -252,7 +253,14 @@ async function startScanner() {
   await new Promise((r) => setTimeout(r, 100))
   if (!videoRef.value) return
 
-  const reader = new BrowserMultiFormatReader()
+  const hints = new Map()
+  hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+    BarcodeFormat.QR_CODE,
+    BarcodeFormat.PDF_417,
+    BarcodeFormat.CODE_128,
+  ])
+  hints.set(DecodeHintType.TRY_HARDER, true)
+  const reader = new BrowserMultiFormatReader(hints)
   const controls = await reader.decodeFromVideoDevice(undefined, videoRef.value, async (result, err, ctrl) => {
     if (!result) return
     ctrl.stop()
@@ -270,9 +278,14 @@ async function startScanner() {
   stopScanning = () => controls.stop()
 }
 
-function extractToken(url: string): string | null {
-  const match = url.match(/\/w\/([^/?#]+)/)
-  return match ? match[1] : null
+function extractToken(raw: string): string | null {
+  const text = raw.trim()
+  // Full URL: https://app.example.com/w/TOKEN
+  const urlMatch = text.match(/\/w\/([^/?#]+)/)
+  if (urlMatch) return urlMatch[1]
+  // Plain token encoded directly (PDF417 / Code 128)
+  if (text && !text.includes(' ') && !text.includes('/')) return text
+  return null
 }
 
 async function loadPass(token: string) {
