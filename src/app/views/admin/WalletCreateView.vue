@@ -25,6 +25,7 @@ const walletStore = useWalletStore()
 const step    = ref(1)
 const loading = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
+const showOptionalFields = ref(false)
 
 const { uploading: uploadingLogo, error: uploadError, upload: uploadImage } = useImgbbUpload()
 
@@ -287,34 +288,42 @@ async function handleSubmit() {
             </div>
           </div>
 
-          <!-- Description -->
+          <!-- Optional fields: description + T&C (collapsed by default) -->
           <div class="field full-span">
-            <label class="field-label">Descripción <span class="field-label-hint">(opcional)</span></label>
-            <textarea
-              v-model="form.description"
-              rows="2"
-              placeholder="Descripción breve del programa de lealtad..."
-              class="field-input"
-              style="resize: none;"
-            />
-          </div>
-
-          <!-- Business rules / T&C -->
-          <div class="field full-span">
-            <label class="field-label">
-              Reglas del negocio / Términos y condiciones
-              <span class="field-label-hint">(opcional)</span>
-            </label>
-            <textarea
-              v-model="form.businessRules"
-              rows="4"
-              placeholder="Ej: Válido solo en sucursal principal. No acumulable con otras promociones. El establecimiento se reserva el derecho de modificar los términos."
-              class="field-input"
-              style="resize: vertical;"
-            />
-            <p class="field-hint">
-              Este texto aparece en el reverso del pase físico (Apple Wallet y Google Wallet) de tus clientes.
-            </p>
+            <button type="button" class="opt-toggle" @click="showOptionalFields = !showOptionalFields">
+              <span class="opt-toggle-label">Descripcion y terminos de uso</span>
+              <span class="opt-toggle-badge">Opcional</span>
+              <svg class="opt-toggle-chevron" :class="{ 'opt-toggle-chevron--open': showOptionalFields }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </button>
+            <Transition name="opt-collapse">
+              <div v-if="showOptionalFields" class="opt-body">
+                <div class="field">
+                  <label class="field-label">Descripcion</label>
+                  <textarea
+                    v-model="form.description"
+                    rows="2"
+                    placeholder="Descripcion breve del programa de lealtad..."
+                    class="field-input"
+                    style="resize: none;"
+                  />
+                </div>
+                <div class="field">
+                  <label class="field-label">Reglas / Terminos y condiciones</label>
+                  <textarea
+                    v-model="form.businessRules"
+                    rows="4"
+                    placeholder="Ej: Valido solo en sucursal principal. No acumulable con otras promociones."
+                    class="field-input"
+                    style="resize: vertical;"
+                  />
+                  <p class="field-hint">
+                    Aparece en el reverso del pase en Apple Wallet y Google Wallet.
+                  </p>
+                </div>
+              </div>
+            </Transition>
           </div>
         </div>
 
@@ -350,11 +359,12 @@ async function handleSubmit() {
       <div class="step-heading">
         <div class="step-heading-row">
           <div>
-            <h2 class="step-title">Diseño avanzado</h2>
-            <p class="step-subtitle">Tipografía, colores de texto, código de barras y datos de contacto.</p>
+            <h2 class="step-title">Personaliza el diseño</h2>
+            <p class="step-subtitle">Colores, tipografia, codigo de barras y datos de contacto del pase.</p>
           </div>
           <span class="badge-optional">Opcional</span>
         </div>
+        <p class="step-skip-hint">Puedes omitir este paso y ajustarlo despues desde la configuracion del wallet.</p>
       </div>
 
       <div class="form-card">
@@ -372,8 +382,9 @@ async function handleSubmit() {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
             <path d="M19 12H5M12 5l-7 7 7 7"/>
           </svg>
-          Atrás
+          Atras
         </button>
+        <button class="btn-ghost" @click="step = 4">Omitir</button>
         <button class="btn-primary" @click="step = 4">
           Continuar
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
@@ -415,61 +426,69 @@ async function handleSubmit() {
     <!-- ── Step 5: Vista previa ────────────────────────────── -->
     <div v-if="step === 5" class="step-content">
       <div class="step-heading">
-        <h2 class="step-title">Vista previa del pase</h2>
-        <p class="step-subtitle">Así verá el cliente su pase digital antes de descargarlo.</p>
+        <h2 class="step-title">Todo listo para crear</h2>
+        <p class="step-subtitle">Revisa como quedara el pase de tus clientes y confirma la informacion.</p>
       </div>
 
-      <!-- Card preview -->
-      <div class="card-preview-wrap">
-        <StampsCard     v-if="form.type === 'stamps'"         :pass="getPreviewPass()" :wallet="(form as any)" />
-        <MembershipCard v-else-if="form.type === 'membership'" :pass="getPreviewPass()" :wallet="(form as any)" />
-        <PointsCard     v-else-if="form.type === 'points'"    :pass="getPreviewPass()" :wallet="(form as any)" />
-        <CashbackCard   v-else-if="form.type === 'cashback'"  :pass="getPreviewPass()" :wallet="(form as any)" />
-        <DaypassCard    v-else-if="form.type === 'daypass'"   :pass="getPreviewPass()" :wallet="(form as any)" />
-        <BundleCard     v-else-if="form.type === 'bundle'"    :pass="getPreviewPass()" :wallet="(form as any)" />
-        <GiftcardCard   v-else-if="form.type === 'giftcard'"  :pass="getPreviewPass()" :wallet="(form as any)" />
-        <CouponCard     v-else-if="form.type === 'coupon'"    :pass="getPreviewPass()" :wallet="(form as any)" />
-        <p class="card-preview-caption">Vista previa · No representa el diseño final exacto</p>
-      </div>
+      <div class="step5-layout">
+        <!-- Card preview column -->
+        <div class="step5-card-col">
+          <StampsCard     v-if="form.type === 'stamps'"          :pass="getPreviewPass()" :wallet="(form as any)" />
+          <MembershipCard v-else-if="form.type === 'membership'" :pass="getPreviewPass()" :wallet="(form as any)" />
+          <PointsCard     v-else-if="form.type === 'points'"     :pass="getPreviewPass()" :wallet="(form as any)" />
+          <CashbackCard   v-else-if="form.type === 'cashback'"   :pass="getPreviewPass()" :wallet="(form as any)" />
+          <DaypassCard    v-else-if="form.type === 'daypass'"    :pass="getPreviewPass()" :wallet="(form as any)" />
+          <BundleCard     v-else-if="form.type === 'bundle'"     :pass="getPreviewPass()" :wallet="(form as any)" />
+          <GiftcardCard   v-else-if="form.type === 'giftcard'"   :pass="getPreviewPass()" :wallet="(form as any)" />
+          <CouponCard     v-else-if="form.type === 'coupon'"     :pass="getPreviewPass()" :wallet="(form as any)" />
+          <p class="card-preview-caption">Vista previa · El diseno final puede variar por dispositivo</p>
+        </div>
 
-      <!-- Summary -->
-      <div class="summary-card">
-        <div class="summary-row">
-          <span class="summary-key">Negocio</span>
-          <span class="summary-val">{{ form.businessName }}</span>
-        </div>
-        <div class="summary-row">
-          <span class="summary-key">Tipo</span>
-          <span class="summary-val" :style="{ color: selectedWt.iconColor }">{{ selectedWt.label }}</span>
-        </div>
-        <div class="summary-row">
-          <span class="summary-key">Colores</span>
-          <span class="summary-val summary-colors">
-            <span class="color-dot" :style="{ background: form.primaryColor }" :title="form.primaryColor" />
-            <span class="color-dot" :style="{ background: form.accentColor }" :title="form.accentColor" />
-            <span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">
-              {{ form.primaryColor }} · {{ form.accentColor }}
-            </span>
-          </span>
-        </div>
-      </div>
+        <!-- Summary + actions column -->
+        <div class="step5-aside">
+          <div class="summary-card">
+            <div class="summary-row">
+              <span class="summary-key">Negocio</span>
+              <span class="summary-val">{{ form.businessName }}</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-key">Tipo</span>
+              <span class="summary-val" :style="{ color: selectedWt.iconColor }">{{ selectedWt.label }}</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-key">Colores</span>
+              <span class="summary-val summary-colors">
+                <span class="color-dot" :style="{ background: form.primaryColor }" :title="form.primaryColor" />
+                <span class="color-dot" :style="{ background: form.accentColor }" :title="form.accentColor" />
+                <span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">
+                  {{ form.primaryColor }} · {{ form.accentColor }}
+                </span>
+              </span>
+            </div>
+            <div v-if="form.description" class="summary-row">
+              <span class="summary-key">Descripcion</span>
+              <span class="summary-val summary-val--muted">{{ form.description }}</span>
+            </div>
+          </div>
 
-      <div class="step-actions">
-        <button class="btn-back" @click="step = 4">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-            <path d="M19 12H5M12 5l-7 7 7 7"/>
-          </svg>
-          Atrás
-        </button>
-        <button class="btn-primary" :disabled="loading" @click="handleSubmit">
-          <svg v-if="loading" class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-            <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
-          </svg>
-          <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-            <path d="M20 6L9 17l-5-5"/>
-          </svg>
-          {{ loading ? 'Guardando…' : 'Crear wallet' }}
-        </button>
+          <div class="step-actions">
+            <button class="btn-back" @click="step = 4">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                <path d="M19 12H5M12 5l-7 7 7 7"/>
+              </svg>
+              Atras
+            </button>
+            <button class="btn-primary" :disabled="loading" @click="handleSubmit">
+              <svg v-if="loading" class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M12 3a9 9 0 019 9"/>
+              </svg>
+              <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                <path d="M20 6L9 17l-5-5"/>
+              </svg>
+              {{ loading ? 'Guardando...' : 'Crear wallet' }}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -630,10 +649,135 @@ async function handleSubmit() {
   margin-top: 2px;
 }
 
+.step-skip-hint {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin: 4px 0 0;
+  line-height: 1.45;
+}
+
 .theme-editor-wrap {
   display: flex;
   flex-direction: column;
+}
+
+/* Optional fields collapse (Step 2) */
+.opt-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-field);
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+.opt-toggle:hover { border-color: var(--text-faint); background: var(--bg-subtle); }
+
+.opt-toggle-label {
+  flex: 1;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-medium);
+}
+
+.opt-toggle-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 7px;
+  flex-shrink: 0;
+}
+
+.opt-toggle-chevron {
+  color: var(--text-faint);
+  flex-shrink: 0;
+  transition: transform 0.22s ease;
+}
+.opt-toggle-chevron--open { transform: rotate(180deg); }
+
+.opt-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 14px;
+}
+
+.opt-collapse-enter-active {
+  transition: max-height 0.28s ease, opacity 0.22s ease;
+  overflow: hidden;
+  max-height: 500px;
+}
+.opt-collapse-leave-active {
+  transition: max-height 0.22s ease, opacity 0.18s ease;
+  overflow: hidden;
+  max-height: 500px;
+}
+.opt-collapse-enter-from,
+.opt-collapse-leave-to {
+  max-height: 0 !important;
+  opacity: 0;
+}
+
+/* Ghost / skip button */
+.btn-ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.12s, background 0.12s;
+}
+.btn-ghost:hover { color: var(--text-ink); background: var(--bg-field); border-radius: 10px; }
+
+/* Step 5: 2-col layout */
+.step5-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 24px;
+  align-items: start;
+}
+@media (max-width: 680px) {
+  .step5-layout { grid-template-columns: 1fr; }
+}
+
+.step5-card-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.step5-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 20px;
+}
+
+.summary-val--muted {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+  white-space: normal;
+  line-height: 1.4;
 }
 
 .step-title {
@@ -943,17 +1087,7 @@ async function handleSubmit() {
 .upload-title { font-size: 13px; font-weight: 600; color: var(--text-medium); margin: 0; }
 .upload-label { font-size: 11px; color: var(--text-faint); margin: 0; }
 
-/* Card preview (step 4) */
-.card-preview-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 4px 0;
-  max-width: 390px;
-  margin: 0 auto;
-  width: 100%;
-}
-
+/* Card preview caption */
 .card-preview-caption {
   font-size: 11px;
   color: var(--text-faint);
