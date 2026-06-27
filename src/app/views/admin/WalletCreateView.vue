@@ -5,6 +5,7 @@ import { useWalletStore } from '@/app/stores/wallet/WalletStore'
 import { walletTypeConfig, findWalletTypeConfig } from '@/app/config/walletTypeConfig'
 import { useImgbbUpload } from '@/app/composables/useImgbbUpload'
 import WalletRulesForm from '@/app/components/Wallet/WalletRulesForm.vue'
+import ThemeEditor from '@/app/components/Wallet/ThemeEditor.vue'
 import StampsCard from '@/app/components/Wallet/StampsCard.vue'
 import MembershipCard from '@/app/components/Wallet/MembershipCard.vue'
 import PointsCard from '@/app/components/Wallet/PointsCard.vue'
@@ -14,6 +15,7 @@ import BundleCard from '@/app/components/Wallet/BundleCard.vue'
 import GiftcardCard from '@/app/components/Wallet/GiftcardCard.vue'
 import CouponCard from '@/app/components/Wallet/CouponCard.vue'
 import type { CreateWalletDto } from '@/application/wallet/dto/CreateWalletDto'
+import type { WalletThemeOverrides } from '@/domain/wallet/entities/WalletTheme'
 import type { WalletType } from '@/domain/wallet/entities/Wallet'
 import type { Pass } from '@/domain/pass/entities/Pass'
 
@@ -26,6 +28,8 @@ const fileInput = ref<HTMLInputElement | null>(null)
 
 const { uploading: uploadingLogo, error: uploadError, upload: uploadImage } = useImgbbUpload()
 
+const themeOverrides = ref<WalletThemeOverrides>({})
+
 const form = reactive<CreateWalletDto>({
   type: 'stamps',
   businessName: '',
@@ -36,6 +40,18 @@ const form = reactive<CreateWalletDto>({
   businessRules: '',
   rules: findWalletTypeConfig('stamps').defaultRules(),
 })
+
+const themeBase = computed(() => ({
+  primaryColor: form.primaryColor,
+  accentColor:  form.accentColor,
+  logoUrl:      form.logoUrl || null,
+  businessName: form.businessName || 'Vista previa',
+}))
+
+const previewWallet = computed(() => ({
+  ...form,
+  theme: themeOverrides.value,
+}))
 
 watch(
   () => form.type,
@@ -61,10 +77,11 @@ function getPreviewPass(): Pass {
 }
 
 const steps = [
-  { n: 1, label: 'Tipo' },
-  { n: 2, label: 'Branding' },
-  { n: 3, label: 'Reglas' },
-  { n: 4, label: 'Vista previa' },
+  { n: 1, label: 'Tipo'         },
+  { n: 2, label: 'Branding'     },
+  { n: 3, label: 'Diseño'       },
+  { n: 4, label: 'Reglas'       },
+  { n: 5, label: 'Vista previa' },
 ]
 
 async function handleLogoFile(file: File) {
@@ -85,9 +102,11 @@ function onDrop(e: DragEvent) {
 async function handleSubmit() {
   try {
     loading.value = true
+    const theme = themeOverrides.value
     await walletStore.createWallet({
       ...form,
       businessRules: form.businessRules?.trim() || null,
+      theme: Object.keys(theme).length > 0 ? theme : null,
     })
     router.push({ name: 'Wallets' })
   } finally {
@@ -329,8 +348,46 @@ async function handleSubmit() {
       </div>
     </div>
 
-    <!-- ── Step 3: Reglas ──────────────────────────────────── -->
+    <!-- ── Step 3: Diseño ───────────────────────────────────── -->
     <div v-if="step === 3" class="step-content">
+      <div class="step-heading">
+        <div class="step-heading-row">
+          <div>
+            <h2 class="step-title">Diseño avanzado</h2>
+            <p class="step-subtitle">Tipografía, colores de texto, código de barras y datos de contacto.</p>
+          </div>
+          <span class="badge-optional">Opcional</span>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <div class="theme-editor-wrap">
+          <ThemeEditor
+            :theme="themeOverrides"
+            :base="themeBase"
+            :hide-logo-override="true"
+          />
+        </div>
+      </div>
+
+      <div class="step-actions">
+        <button class="btn-back" @click="step = 2">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M19 12H5M12 5l-7 7 7 7"/>
+          </svg>
+          Atrás
+        </button>
+        <button class="btn-primary" @click="step = 4">
+          Continuar
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Step 4: Reglas ──────────────────────────────────── -->
+    <div v-if="step === 4" class="step-content">
       <div class="step-heading">
         <h2 class="step-title">Configura las reglas</h2>
         <p class="step-subtitle">Define cómo funciona este tipo de wallet para tus clientes.</p>
@@ -343,13 +400,13 @@ async function handleSubmit() {
       </div>
 
       <div class="step-actions">
-        <button class="btn-back" @click="step = 2">
+        <button class="btn-back" @click="step = 3">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
             <path d="M19 12H5M12 5l-7 7 7 7"/>
           </svg>
           Atrás
         </button>
-        <button class="btn-primary" @click="step = 4">
+        <button class="btn-primary" @click="step = 5">
           Ver vista previa
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
             <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -358,8 +415,8 @@ async function handleSubmit() {
       </div>
     </div>
 
-    <!-- ── Step 4: Vista previa ────────────────────────────── -->
-    <div v-if="step === 4" class="step-content">
+    <!-- ── Step 5: Vista previa ────────────────────────────── -->
+    <div v-if="step === 5" class="step-content">
       <div class="step-heading">
         <h2 class="step-title">Vista previa del pase</h2>
         <p class="step-subtitle">Así verá el cliente su pase digital antes de descargarlo.</p>
@@ -367,14 +424,14 @@ async function handleSubmit() {
 
       <!-- Card preview -->
       <div class="card-preview-wrap">
-        <StampsCard     v-if="form.type === 'stamps'"     :pass="getPreviewPass()" :wallet="(form as any)" />
-        <MembershipCard v-else-if="form.type === 'membership'" :pass="getPreviewPass()" :wallet="(form as any)" />
-        <PointsCard     v-else-if="form.type === 'points'"    :pass="getPreviewPass()" :wallet="(form as any)" />
-        <CashbackCard   v-else-if="form.type === 'cashback'"  :pass="getPreviewPass()" :wallet="(form as any)" />
-        <DaypassCard    v-else-if="form.type === 'daypass'"   :pass="getPreviewPass()" :wallet="(form as any)" />
-        <BundleCard     v-else-if="form.type === 'bundle'"    :pass="getPreviewPass()" :wallet="(form as any)" />
-        <GiftcardCard   v-else-if="form.type === 'giftcard'"  :pass="getPreviewPass()" :wallet="(form as any)" />
-        <CouponCard     v-else-if="form.type === 'coupon'"    :pass="getPreviewPass()" :wallet="(form as any)" />
+        <StampsCard     v-if="form.type === 'stamps'"         :pass="getPreviewPass()" :wallet="(previewWallet as any)" />
+        <MembershipCard v-else-if="form.type === 'membership'" :pass="getPreviewPass()" :wallet="(previewWallet as any)" />
+        <PointsCard     v-else-if="form.type === 'points'"    :pass="getPreviewPass()" :wallet="(previewWallet as any)" />
+        <CashbackCard   v-else-if="form.type === 'cashback'"  :pass="getPreviewPass()" :wallet="(previewWallet as any)" />
+        <DaypassCard    v-else-if="form.type === 'daypass'"   :pass="getPreviewPass()" :wallet="(previewWallet as any)" />
+        <BundleCard     v-else-if="form.type === 'bundle'"    :pass="getPreviewPass()" :wallet="(previewWallet as any)" />
+        <GiftcardCard   v-else-if="form.type === 'giftcard'"  :pass="getPreviewPass()" :wallet="(previewWallet as any)" />
+        <CouponCard     v-else-if="form.type === 'coupon'"    :pass="getPreviewPass()" :wallet="(previewWallet as any)" />
         <p class="card-preview-caption">Vista previa · No representa el diseño final exacto</p>
       </div>
 
@@ -401,7 +458,7 @@ async function handleSubmit() {
       </div>
 
       <div class="step-actions">
-        <button class="btn-back" @click="step = 3">
+        <button class="btn-back" @click="step = 4">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
             <path d="M19 12H5M12 5l-7 7 7 7"/>
           </svg>
@@ -554,6 +611,33 @@ async function handleSubmit() {
 }
 
 .step-heading { display: flex; flex-direction: column; gap: 4px; }
+
+.step-heading-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.badge-optional {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  background: var(--bg-field);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 10px;
+  margin-top: 2px;
+}
+
+.theme-editor-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
 
 .step-title {
   font-size: 15px;

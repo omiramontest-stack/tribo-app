@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { WalletThemeOverrides, BarcodeFormat, FontKey } from '@/domain/wallet/entities/WalletTheme'
 import { resolveTheme } from '@/application/wallet/utils/themeResolver'
 import { meetsWcagAA, isValidHex } from '@/application/wallet/utils/contrastValidator'
+import { useImgbbUpload } from '@/app/composables/useImgbbUpload'
 
 interface WalletBase {
   primaryColor: string
@@ -12,8 +13,35 @@ interface WalletBase {
 }
 
 // Mutates `theme` directly — same pattern as WalletRulesForm
-const props = defineProps<{ theme: WalletThemeOverrides; base: WalletBase }>()
+const props = defineProps<{
+  theme: WalletThemeOverrides
+  base: WalletBase
+  /** Show the live mini-preview card above the fields. Default: false */
+  showPreview?: boolean
+  /** Hide the logo URL override field (e.g. when logo is handled upstream). Default: false */
+  hideLogoOverride?: boolean
+}>()
 
+// ── Upload state ───────────────────────────────────────────────────────────
+const logoFileInput  = ref<HTMLInputElement | null>(null)
+const stripFileInput = ref<HTMLInputElement | null>(null)
+
+const { uploading: uploadingLogo,  error: logoUploadError,  upload: uploadLogoImg  } = useImgbbUpload()
+const { uploading: uploadingStrip, error: stripUploadError, upload: uploadStripImg } = useImgbbUpload()
+
+async function handleLogoFile(file: File) {
+  ensureAssets()
+  const url = await uploadLogoImg(file)
+  if (url) props.theme.assets!.logoUrl = url
+}
+
+async function handleStripFile(file: File) {
+  ensureAssets()
+  const url = await uploadStripImg(file)
+  if (url) props.theme.assets!.stripImageUrl = url
+}
+
+// ── Resolve & contrast ─────────────────────────────────────────────────────
 const resolved = computed(() => resolveTheme(props.theme, props.base))
 
 const previewStyle = computed(() => {
@@ -38,6 +66,7 @@ const labelOk = computed(() => {
   return meetsWcagAA(lbl, resolved.value.background)
 })
 
+// ── Constants ──────────────────────────────────────────────────────────────
 const fontFamilyMap: Record<FontKey, string> = {
   system:  'system-ui, -apple-system, sans-serif',
   rounded: '"Plus Jakarta Sans", system-ui, sans-serif',
@@ -46,18 +75,19 @@ const fontFamilyMap: Record<FontKey, string> = {
 }
 
 const FONT_OPTIONS: { value: FontKey; label: string }[] = [
-  { value: 'system',  label: 'Sistema'     },
-  { value: 'rounded', label: 'Redondeada'  },
-  { value: 'serif',   label: 'Serif'       },
-  { value: 'mono',    label: 'Mono'        },
+  { value: 'system',  label: 'Sistema'    },
+  { value: 'rounded', label: 'Redondeada' },
+  { value: 'serif',   label: 'Serif'      },
+  { value: 'mono',    label: 'Mono'       },
 ]
 
 const BARCODE_OPTIONS: { value: BarcodeFormat; label: string; hint: string }[] = [
-  { value: 'qr',      label: 'QR Code',   hint: 'Universal' },
-  { value: 'pdf417',  label: 'PDF417',    hint: 'Apple Wallet' },
-  { value: 'code128', label: 'Code 128',  hint: 'Lineal'    },
+  { value: 'qr',      label: 'QR Code',  hint: 'Universal'    },
+  { value: 'pdf417',  label: 'PDF417',   hint: 'Apple Wallet' },
+  { value: 'code128', label: 'Code 128', hint: 'Lineal'       },
 ]
 
+// ── Mutations ──────────────────────────────────────────────────────────────
 function ensureColors()     { if (!props.theme.colors)     props.theme.colors     = {} }
 function ensureTypography() { if (!props.theme.typography) props.theme.typography = {} }
 function ensureBarcode()    { if (!props.theme.barcode)    props.theme.barcode    = {} }
@@ -94,8 +124,8 @@ function setBarcodeFormat(v: BarcodeFormat) {
 </script>
 
 <template>
-  <!-- ── Live preview ──────────────────────────────────────────────────────── -->
-  <div class="te-preview-wrap">
+  <!-- ── Live preview (opt-in) ─────────────────────────────────────────────── -->
+  <div v-if="showPreview" class="te-preview-wrap">
     <div class="te-preview-card" :style="previewStyle">
       <div class="te-preview-header">
         <img
@@ -110,7 +140,6 @@ function setBarcodeFormat(v: BarcodeFormat) {
         </span>
       </div>
       <div class="te-preview-barcode">
-        <!-- QR placeholder -->
         <div v-if="resolved.barcode.format === 'qr'" class="te-barcode-qr">
           <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
             <rect x="2" y="2" width="15" height="15" rx="2" fill="currentColor" opacity="0.9"/>
@@ -125,7 +154,6 @@ function setBarcodeFormat(v: BarcodeFormat) {
             <rect x="29" y="29" width="4" height="4" fill="currentColor" opacity="0.9"/>
           </svg>
         </div>
-        <!-- Barcode placeholder for pdf417 / code128 -->
         <div v-else class="te-barcode-linear">
           <svg width="80" height="32" viewBox="0 0 80 32" preserveAspectRatio="none">
             <rect v-for="i in 20" :key="i"
@@ -147,7 +175,6 @@ function setBarcodeFormat(v: BarcodeFormat) {
   <div class="te-section">
     <p class="te-section-title">Colores</p>
 
-    <!-- Background -->
     <div class="field">
       <label class="field-label">Fondo</label>
       <div class="color-row">
@@ -169,7 +196,6 @@ function setBarcodeFormat(v: BarcodeFormat) {
       </div>
     </div>
 
-    <!-- Foreground (text) -->
     <div class="field">
       <label class="field-label">Texto principal</label>
       <div class="color-row">
@@ -197,7 +223,6 @@ function setBarcodeFormat(v: BarcodeFormat) {
       </div>
     </div>
 
-    <!-- Label color -->
     <div class="field">
       <label class="field-label">Etiquetas</label>
       <div class="color-row">
@@ -225,7 +250,6 @@ function setBarcodeFormat(v: BarcodeFormat) {
       </div>
     </div>
 
-    <!-- Accent -->
     <div class="field">
       <label class="field-label">Color acento</label>
       <div class="color-row">
@@ -247,7 +271,6 @@ function setBarcodeFormat(v: BarcodeFormat) {
       </div>
     </div>
 
-    <!-- Gradient to (optional) -->
     <div class="field">
       <div class="gradient-toggle-row">
         <label class="field-label">Degradado de fondo</label>
@@ -328,26 +351,112 @@ function setBarcodeFormat(v: BarcodeFormat) {
   <!-- ── Assets visuales ──────────────────────────────────────────────────── -->
   <div class="te-section">
     <p class="te-section-title">Assets visuales</p>
-    <div class="field">
-      <label class="field-label">URL del logo <span class="field-label-hint">(sobreescribe logo de la wallet)</span></label>
+
+    <!-- Logo override (hidden when managed upstream, e.g. creation wizard) -->
+    <div v-if="!hideLogoOverride" class="field">
+      <label class="field-label">
+        Logo
+        <span class="field-label-hint">(sobreescribe el logo de la wallet)</span>
+      </label>
       <input
-        type="url"
-        class="field-input"
-        placeholder="https://…/logo.png"
-        :value="theme.assets?.logoUrl ?? ''"
-        @input="(ensureAssets(), props.theme.assets!.logoUrl = ($event.target as HTMLInputElement).value || null)"
+        ref="logoFileInput"
+        type="file"
+        accept="image/*"
+        style="display: none;"
+        @change="(e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) handleLogoFile(f) }"
       />
+
+      <div v-if="theme.assets?.logoUrl && !uploadingLogo" class="image-preview-row">
+        <img :src="theme.assets.logoUrl" alt="Logo" class="image-thumb-square" />
+        <div class="image-preview-info">
+          <p class="image-preview-title">Logo cargado</p>
+          <p class="image-preview-url">{{ theme.assets.logoUrl }}</p>
+        </div>
+        <button type="button" class="btn-change" @click="(ensureAssets(), props.theme.assets!.logoUrl = null)">
+          Cambiar
+        </button>
+      </div>
+
+      <div
+        v-else
+        class="upload-zone"
+        :class="{ 'upload-zone--disabled': uploadingLogo }"
+        @click="logoFileInput?.click()"
+        @dragover.prevent
+        @drop.prevent="(e) => { const f = e.dataTransfer?.files?.[0]; if (f) handleLogoFile(f) }"
+      >
+        <div v-if="uploadingLogo" class="upload-state">
+          <svg class="spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="1.8" stroke-linecap="round">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
+          <p class="upload-label">Subiendo...</p>
+        </div>
+        <div v-else class="upload-state">
+          <div class="upload-icon-wrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+            </svg>
+          </div>
+          <p class="upload-title">Haz clic o arrastra una imagen</p>
+          <p class="upload-label">PNG, JPG, SVG · Máx. 4 MB</p>
+        </div>
+      </div>
+
+      <p v-if="logoUploadError" class="field-error">{{ logoUploadError }}</p>
     </div>
+
+    <!-- Strip image -->
     <div class="field">
-      <label class="field-label">Imagen de franja <span class="field-label-hint">(stripImage — Apple Wallet)</span></label>
+      <label class="field-label">
+        Imagen de franja
+        <span class="field-label-hint">(stripImage · Apple Wallet)</span>
+      </label>
       <input
-        type="url"
-        class="field-input"
-        placeholder="https://…/strip.png"
-        :value="theme.assets?.stripImageUrl ?? ''"
-        @input="(ensureAssets(), props.theme.assets!.stripImageUrl = ($event.target as HTMLInputElement).value || null)"
+        ref="stripFileInput"
+        type="file"
+        accept="image/*"
+        style="display: none;"
+        @change="(e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) handleStripFile(f) }"
       />
-      <p class="field-hint">Imagen rectangular que Apple Wallet muestra en la parte superior de la tarjeta (1125×432 px).</p>
+
+      <div v-if="theme.assets?.stripImageUrl && !uploadingStrip" class="image-preview-row">
+        <img :src="theme.assets.stripImageUrl" alt="Strip" class="image-thumb-strip" />
+        <div class="image-preview-info">
+          <p class="image-preview-title">Imagen cargada</p>
+          <p class="image-preview-url">{{ theme.assets.stripImageUrl }}</p>
+        </div>
+        <button type="button" class="btn-change" @click="(ensureAssets(), props.theme.assets!.stripImageUrl = null)">
+          Cambiar
+        </button>
+      </div>
+
+      <div
+        v-else
+        class="upload-zone"
+        :class="{ 'upload-zone--disabled': uploadingStrip }"
+        @click="stripFileInput?.click()"
+        @dragover.prevent
+        @drop.prevent="(e) => { const f = e.dataTransfer?.files?.[0]; if (f) handleStripFile(f) }"
+      >
+        <div v-if="uploadingStrip" class="upload-state">
+          <svg class="spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="1.8" stroke-linecap="round">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
+          <p class="upload-label">Subiendo...</p>
+        </div>
+        <div v-else class="upload-state">
+          <div class="upload-icon-wrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+            </svg>
+          </div>
+          <p class="upload-title">Haz clic o arrastra una imagen</p>
+          <p class="upload-label">PNG, JPG · 1125 × 432 px recomendado</p>
+        </div>
+      </div>
+
+      <p v-if="stripUploadError" class="field-error">{{ stripUploadError }}</p>
+      <p class="field-hint">Imagen rectangular que Apple Wallet muestra en la parte superior de la tarjeta.</p>
     </div>
   </div>
 
@@ -528,6 +637,8 @@ function setBarcodeFormat(v: BarcodeFormat) {
   line-height: 1.5;
 }
 
+.field-error { font-size: 11px; color: var(--danger); }
+
 .field-input {
   width: 100%;
   padding: 9px 12px;
@@ -678,7 +789,7 @@ function setBarcodeFormat(v: BarcodeFormat) {
   min-width: 80px;
 }
 
-.pill-label { font-size: 12px; font-weight: 700; }
+.pill-label    { font-size: 12px; font-weight: 700; }
 .pill-sublabel { font-size: 10px; font-weight: 500; opacity: 0.65; }
 
 /* ── Input with prefix ───────────────────────────────────────────────────── */
@@ -696,4 +807,109 @@ function setBarcodeFormat(v: BarcodeFormat) {
 }
 
 .field-input.has-prefix { padding-left: 26px; }
+
+/* ── Image upload / preview ──────────────────────────────────────────────── */
+.image-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-surface);
+}
+
+.image-thumb-square {
+  width: 44px;
+  height: 44px;
+  border-radius: 7px;
+  object-fit: contain;
+  background: var(--bg-field);
+  padding: 3px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+
+.image-thumb-strip {
+  width: 72px;
+  height: 28px;
+  border-radius: 5px;
+  object-fit: cover;
+  background: var(--bg-field);
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+
+.image-preview-info {
+  flex: 1;
+  min-width: 0;
+}
+.image-preview-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-ink);
+  margin: 0 0 2px;
+}
+.image-preview-url {
+  font-size: 11px;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.btn-change {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-field);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 5px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.btn-change:hover { background: var(--bg-subtle); }
+
+.upload-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px 16px;
+  border-radius: 9px;
+  border: 1.5px dashed var(--border);
+  background: var(--bg-field);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.upload-zone:hover    { border-color: var(--amber); background: var(--amber-bg); }
+.upload-zone--disabled { pointer-events: none; opacity: 0.6; }
+
+.upload-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.upload-icon-wrap {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--bg-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2px;
+}
+
+.upload-title { font-size: 12px; font-weight: 600; color: var(--text-medium); margin: 0; }
+.upload-label { font-size: 10.5px; color: var(--text-faint); margin: 0; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.8s linear infinite; }
 </style>
