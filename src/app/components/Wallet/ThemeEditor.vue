@@ -2,7 +2,6 @@
 import { computed, ref } from 'vue'
 import type { WalletThemeOverrides, BarcodeFormat, FontKey } from '@/domain/wallet/entities/WalletTheme'
 import { resolveTheme } from '@/application/wallet/utils/themeResolver'
-import { meetsWcagAA, isValidHex } from '@/application/wallet/utils/contrastValidator'
 import { useImgbbUpload } from '@/app/composables/useImgbbUpload'
 
 interface WalletBase {
@@ -47,18 +46,6 @@ const previewStyle = computed(() => {
     color: resolved.value.foreground,
     fontFamily: fontFamilyMap[resolved.value.fontKey],
   }
-})
-
-const foregroundOk = computed(() => {
-  const fg = props.theme.colors?.foreground
-  if (!fg || !isValidHex(fg)) return true
-  return meetsWcagAA(fg, resolved.value.background)
-})
-
-const labelOk = computed(() => {
-  const lbl = props.theme.colors?.label
-  if (!lbl || !isValidHex(lbl)) return true
-  return meetsWcagAA(lbl, resolved.value.background)
 })
 
 const fontFamilyMap: Record<FontKey, string> = {
@@ -189,10 +176,6 @@ function setBarcodeFormat(v: BarcodeFormat) {
               <button v-if="theme.colors?.foreground" type="button" class="color-reset" title="Restaurar" @click="clearColor('foreground')">↩</button>
               <span v-else class="color-default-tag">default</span>
             </div>
-            <div v-if="!foregroundOk" class="contrast-warning">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10.29 3.86 1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"/></svg>
-              Contraste bajo (WCAG AA 4.5:1)
-            </div>
           </div>
           <div class="field">
             <label class="field-label">Etiquetas</label>
@@ -201,10 +184,6 @@ function setBarcodeFormat(v: BarcodeFormat) {
               <span class="color-hex">{{ resolved.label }}</span>
               <button v-if="theme.colors?.label" type="button" class="color-reset" title="Restaurar" @click="clearColor('label')">↩</button>
               <span v-else class="color-default-tag">default</span>
-            </div>
-            <div v-if="!labelOk" class="contrast-warning">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10.29 3.86 1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"/></svg>
-              Contraste bajo (WCAG AA 4.5:1)
             </div>
           </div>
           <div class="field">
@@ -697,21 +676,6 @@ function setBarcodeFormat(v: BarcodeFormat) {
   flex-shrink: 0;
   white-space: nowrap;
 }
-
-/* ── Contrast warning ────────────────────────────────────────────────────── */
-.contrast-warning {
-  display: flex;
-  align-items: flex-start;
-  gap: 5px;
-  font-size: 11px;
-  color: var(--amber, #b45309);
-  background: var(--amber-bg, #fef3c7);
-  border: 1px solid rgba(180, 83, 9, 0.2);
-  border-radius: 7px;
-  padding: 6px 8px;
-  line-height: 1.4;
-}
-.contrast-warning svg { flex-shrink: 0; margin-top: 1px; }
 
 /* ── Gradient toggle ─────────────────────────────────────────────────────── */
 .gradient-toggle-row {
