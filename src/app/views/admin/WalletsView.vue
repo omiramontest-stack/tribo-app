@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { useWalletStore } from '@/app/stores/wallet/WalletStore'
 import { useOrgWallets } from '@/app/composables/useOrgWallets'
 import { walletTypeConfig } from '@/app/config/walletTypeConfig'
+import { useWalletCreateModal } from '@/app/composables/useWalletCreateModal'
 import WalletCard from '@/app/components/Admin/WalletCard.vue'
 
 const walletStore = useWalletStore()
-const router = useRouter()
+const { open: openCreateWallet } = useWalletCreateModal()
 const { fetching } = useOrgWallets()
 
 const activeFilter = ref('all')
@@ -41,7 +41,7 @@ const filteredWallets = computed(() =>
             : `${walletStore.wallets.length} wallet${walletStore.wallets.length !== 1 ? 's' : ''} en tu organización` }}
         </p>
       </div>
-      <button class="btn-new" @click="router.push({ name: 'WalletCreate' })">
+      <button class="btn-new" @click="openCreateWallet()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
           <path d="M12 5v14M5 12h14"/>
         </svg>
@@ -105,7 +105,7 @@ const filteredWallets = computed(() =>
       <div
         v-if="filteredWallets.length"
         class="new-wallet-card"
-        @click="router.push({ name: 'WalletCreate' })"
+        @click="openCreateWallet()"
       >
         <div class="new-wallet-icon">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round">
@@ -127,7 +127,7 @@ const filteredWallets = computed(() =>
       </div>
       <p class="empty-title">No hay wallets creadas</p>
       <p class="empty-desc">Crea tu primera wallet para comenzar a emitir pases digitales.</p>
-      <button class="btn-new" @click="router.push({ name: 'WalletCreate' })">
+      <button class="btn-new" @click="openCreateWallet()">
         Crear primera wallet
       </button>
     </div>

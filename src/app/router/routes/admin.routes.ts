@@ -20,8 +20,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: 'wallets/create',
     name: 'WalletCreate',
-    component: () => import('@/app/views/admin/WalletCreateView.vue'),
-    meta: { requiresAuth: true },
+    redirect: { name: 'Wallets' },
   },
   {
     path: 'wallets/:id',

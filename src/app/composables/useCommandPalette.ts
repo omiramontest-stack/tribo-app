@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWalletStore } from '@/app/stores/wallet/WalletStore'
+import { useWalletCreateModal } from '@/app/composables/useWalletCreateModal'
 
 export interface CommandItem {
   id: string
@@ -44,8 +45,9 @@ const WALLET_TYPE_LABEL: Record<string, string> = {
 }
 
 export function useCommandPalette() {
-  const router      = useRouter()
-  const walletStore = useWalletStore()
+  const router           = useRouter()
+  const walletStore      = useWalletStore()
+  const { open: openCreateWallet } = useWalletCreateModal()
 
   function navigate(name: string, params?: Record<string, string>) {
     router.push({ name, params })
@@ -68,7 +70,7 @@ export function useCommandPalette() {
   ]
 
   const ACTIONS: CommandItem[] = [
-    { id: 'action-create-wallet', label: 'Nueva wallet',    sublabel: 'Crear una wallet nueva', iconPath: ICON.plus,   action: () => navigate('WalletCreate') },
+    { id: 'action-create-wallet', label: 'Nueva wallet',    sublabel: 'Crear una wallet nueva', iconPath: ICON.plus,   action: () => { close(); openCreateWallet() } },
     { id: 'action-invite',        label: 'Invitar miembro', sublabel: 'Añadir al equipo',       iconPath: ICON.invite, action: () => navigate('Team')         },
   ]
 

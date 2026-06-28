@@ -6,11 +6,14 @@ import { useOrganizationStore } from '@/app/stores/organization/OrganizationStor
 import OrgSwitcher from '@/app/components/Admin/OrgSwitcher.vue'
 import NotificationBell from '@/app/components/Shared/NotificationBell.vue'
 import CommandPalette from '@/app/components/Shared/CommandPalette.vue'
+import WalletCreateModal from '@/app/components/Wallet/WalletCreateModal.vue'
 import { useCommandPalette } from '@/app/composables/useCommandPalette'
+import { useWalletCreateModal } from '@/app/composables/useWalletCreateModal'
 import { useTheme } from '@/app/composables/useTheme'
 
 const { open: openPalette } = useCommandPalette()
 const { isDark, toggleTheme } = useTheme()
+const { isOpen: showCreateWallet } = useWalletCreateModal()
 import { apiClient } from '@/infrastructure/http/ApiClient'
 import { usePlanGate } from '@/app/composables/usePlanGate'
 import { useToast } from '@/app/composables/useToast'
@@ -673,6 +676,7 @@ const iconPaths: Record<string, string> = {
 
     <!-- ── Command Palette ── -->
     <CommandPalette />
+    <WalletCreateModal v-model="showCreateWallet" />
 
   </div>
 </template>
