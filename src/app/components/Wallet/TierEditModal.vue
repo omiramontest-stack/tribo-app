@@ -235,6 +235,7 @@ const NAV_ITEMS: { id: Tab; label: string; iconPath: string }[] = [
 
               <!-- Main content -->
               <div class="tem-content">
+                <div class="tem-inner">
 
                 <!-- Banners -->
                 <Transition name="banner">
@@ -320,6 +321,7 @@ const NAV_ITEMS: { id: Tab; label: string; iconPath: string }[] = [
                   <ThemeEditor :theme="form.theme" :base="themeBase" />
                 </template>
 
+                </div><!-- /tem-inner -->
               </div>
             </div>
 
@@ -577,11 +579,16 @@ const NAV_ITEMS: { id: Tab; label: string; iconPath: string }[] = [
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 24px 28px;
+  overscroll-behavior: contain;
+  min-width: 0;
+}
+
+.tem-inner {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  min-width: 0;
+  padding: 24px 28px;
+  box-sizing: border-box;
 }
 
 /* Tab heading */
@@ -809,7 +816,7 @@ const NAV_ITEMS: { id: Tab; label: string; iconPath: string }[] = [
   .tem-preview-wrap,
   .tem-sidebar-stat { display: none; }
 
-  .tem-content { padding: 16px; }
+  .tem-inner { padding: 16px; }
 }
 
 /* ── Transitions ──────────────────────────────────────────────────────────── */

@@ -242,6 +242,7 @@ async function handleSubmit() {
 
               <!-- Content -->
               <div class="wcm-content">
+                <div class="wcm-inner">
 
                 <!-- Step 1: Tipo -->
                 <template v-if="step === 1">
@@ -446,6 +447,7 @@ async function handleSubmit() {
                   </div>
                 </template>
 
+                </div><!-- /wcm-inner -->
               </div>
             </div>
 
@@ -651,9 +653,23 @@ async function handleSubmit() {
 .wcm-stat-val   { font-size: 13px; font-weight: 700; color: var(--primary-text); }
 
 /* ── Content ───────────────────────────────────────────────────────────────── */
+/* wcm-content: only scroll, no layout */
 .wcm-content {
-  flex: 1; min-height: 0; overflow-y: auto; padding: 24px 28px;
-  display: flex; flex-direction: column; gap: 20px; min-width: 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  min-width: 0;
+}
+
+/* wcm-inner: layout wrapper inside the scroller */
+.wcm-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px 28px;
+  min-height: 100%;
+  box-sizing: border-box;
 }
 
 /* Tab heading */
@@ -901,7 +917,7 @@ async function handleSubmit() {
   .wcm-preview,
   .wcm-sidebar-stat { display: none; }
 
-  .wcm-content { padding: 16px; }
+  .wcm-inner { padding: 16px; }
 
   /* Type grid 2 cols on mobile */
   .type-grid { grid-template-columns: repeat(2, 1fr); }
