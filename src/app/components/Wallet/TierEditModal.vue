@@ -103,14 +103,15 @@ async function save() {
   saving.value     = true
   apiError.value   = ''
   apiSuccess.value = false
-  const themePayload = Object.keys(form.theme).length > 0 ? form.theme : null
+  const hasTheme    = Object.keys(form.theme).length > 0
+  const themePayload = hasTheme ? form.theme : undefined
   try {
     let saved: WalletTier
     if (props.tier) {
       saved = await tierStore.updateTier(props.wallet.id, props.tier.id, {
         name:       form.name.trim(),
         rules:      form.rules,
-        config:     themePayload,
+        ...(hasTheme ? { config: themePayload } : {}),
         unlockRule: { type: 'cycles_completed', threshold: form.threshold },
       })
     } else {
@@ -118,7 +119,7 @@ async function save() {
         level:      props.nextLevel,
         name:       form.name.trim(),
         rules:      form.rules,
-        config:     themePayload,
+        ...(hasTheme ? { config: themePayload } : {}),
         unlockRule: { type: 'cycles_completed', threshold: form.threshold },
       })
     }
