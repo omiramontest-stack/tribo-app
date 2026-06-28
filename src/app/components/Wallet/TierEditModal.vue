@@ -575,6 +575,7 @@ const NAV_ITEMS: { id: Tab; label: string; iconPath: string }[] = [
 /* ── Content area ─────────────────────────────────────────────────────────── */
 .tem-content {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 24px 28px;
   display: flex;

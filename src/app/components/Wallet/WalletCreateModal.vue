@@ -652,7 +652,7 @@ async function handleSubmit() {
 
 /* ── Content ───────────────────────────────────────────────────────────────── */
 .wcm-content {
-  flex: 1; overflow-y: auto; padding: 24px 28px;
+  flex: 1; min-height: 0; overflow-y: auto; padding: 24px 28px;
   display: flex; flex-direction: column; gap: 20px; min-width: 0;
 }
 
