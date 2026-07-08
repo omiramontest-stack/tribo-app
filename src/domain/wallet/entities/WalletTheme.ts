@@ -1,4 +1,4 @@
-export type BarcodeFormat = 'qr' | 'pdf417' | 'code128'
+export type BarcodeFormat = 'qr'
 export type FontKey = 'system' | 'rounded' | 'serif' | 'mono'
 
 export interface WalletThemeColors {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { WalletThemeOverrides, BarcodeFormat, FontKey } from '@/domain/wallet/entities/WalletTheme'
+import type { WalletThemeOverrides, FontKey } from '@/domain/wallet/entities/WalletTheme'
 import { resolveTheme } from '@/application/wallet/utils/themeResolver'
 import { useImgbbUpload } from '@/app/composables/useImgbbUpload'
 
@@ -62,12 +62,6 @@ const FONT_OPTIONS: { value: FontKey; label: string }[] = [
   { value: 'mono',    label: 'Mono'       },
 ]
 
-const BARCODE_OPTIONS: { value: BarcodeFormat; label: string; hint: string }[] = [
-  { value: 'qr',      label: 'QR Code',  hint: 'Universal'    },
-  { value: 'pdf417',  label: 'PDF417',   hint: 'Apple Wallet' },
-  { value: 'code128', label: 'Code 128', hint: 'Lineal'       },
-]
-
 // ── Section collapse state: colors + typography open by default ────────────
 const openSections = ref<Set<string>>(new Set(['colors', 'typography']))
 function toggleSection(key: string) {
@@ -105,11 +99,6 @@ function setFontKey(v: FontKey) {
   ensureTypography()
   props.theme.typography!.fontKey = v
 }
-
-function setBarcodeFormat(v: BarcodeFormat) {
-  ensureBarcode()
-  props.theme.barcode!.format = v
-}
 </script>
 
 <template>
@@ -122,7 +111,7 @@ function setBarcodeFormat(v: BarcodeFormat) {
         <span class="te-preview-badge" :style="{ color: resolved.accent }">Nivel 1</span>
       </div>
       <div class="te-preview-barcode">
-        <div v-if="resolved.barcode.format === 'qr'" class="te-barcode-qr">
+        <div class="te-barcode-qr">
           <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
             <rect x="2"  y="2"  width="15" height="15" rx="2" fill="currentColor" opacity="0.9"/>
             <rect x="5"  y="5"  width="9"  height="9"  rx="1" :fill="resolved.background"/>
@@ -136,12 +125,7 @@ function setBarcodeFormat(v: BarcodeFormat) {
             <rect x="29" y="29" width="4"  height="4"  fill="currentColor" opacity="0.9"/>
           </svg>
         </div>
-        <div v-else class="te-barcode-linear">
-          <svg width="80" height="32" viewBox="0 0 80 32" preserveAspectRatio="none">
-            <rect v-for="i in 20" :key="i" :x="(i - 1) * 4" y="0" :width="i % 3 === 0 ? 3 : 2" height="32" fill="currentColor" :opacity="0.6 + (i % 4) * 0.1" />
-          </svg>
-        </div>
-        <span class="te-barcode-label">{{ resolved.barcode.format.toUpperCase() }}</span>
+        <span class="te-barcode-label">QR</span>
       </div>
     </div>
     <p class="te-preview-note">Vista previa en tiempo real · La tarjeta real varia por dispositivo</p>
@@ -243,11 +227,11 @@ function setBarcodeFormat(v: BarcodeFormat) {
     </Transition>
   </div>
 
-  <!-- ── Codigo de barras ──────────────────────────────────────────────────── -->
+  <!-- ── Codigo QR ─────────────────────────────────────────────────────────── -->
   <div class="te-section">
     <button class="te-section-toggle" type="button" @click="toggleSection('barcode')">
       <div class="te-section-title-row">
-        <span class="te-section-title">Codigo de barras</span>
+        <span class="te-section-title">Codigo QR</span>
         <span class="te-badge">Avanzado</span>
       </div>
       <svg class="te-chevron" :class="{ 'te-chevron--open': openSections.has('barcode') }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
@@ -256,15 +240,6 @@ function setBarcodeFormat(v: BarcodeFormat) {
     </button>
     <Transition name="te-collapse">
       <div v-if="openSections.has('barcode')" class="te-section-body">
-        <div class="field">
-          <label class="field-label">Formato</label>
-          <div class="pill-group">
-            <button v-for="opt in BARCODE_OPTIONS" :key="opt.value" type="button" class="pill pill--with-hint" :class="{ 'pill--active': resolved.barcode.format === opt.value }" @click="setBarcodeFormat(opt.value)">
-              <span class="pill-label">{{ opt.label }}</span>
-              <span class="pill-sublabel">{{ opt.hint }}</span>
-            </button>
-          </div>
-        </div>
         <div class="field">
           <label class="field-label">Texto alternativo <span class="field-label-hint">(opcional)</span></label>
           <input type="text" class="field-input" placeholder="Ej. ID del pase" :value="theme.barcode?.altText ?? ''" @input="(ensureBarcode(), props.theme.barcode!.altText = ($event.target as HTMLInputElement).value || null)" />
